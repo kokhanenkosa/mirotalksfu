@@ -14,6 +14,7 @@ npm-debug.log
 # personal
 .env
 config.js
+# апстрим-копия (.yml); наш Coolify-файл — docker-compose.yaml (коммитим)
 docker-compose.yml
 docker-push.sh
 data

@@ -1,0 +1,77 @@
+# MiroTalk SFU — Docker Compose для Coolify
+# Compose Location в Coolify: /docker-compose.yaml  (именно .yaml, не .yml)
+#
+# Обязательно в Env Coolify:
+#   SFU_ANNOUNCED_IP = публичный IPv4 сервера (не домен)
+#
+# Домен сервиса mirotalksfu в UI:
+#   https://meet.example.com:3010
+#
+# Firewall хоста: UDP+TCP 40000-40100
+
+services:
+  mirotalksfu:
+    image: mirotalk/sfu:latest
+    restart: unless-stopped
+    # НЕ network_mode: host — ломает Traefik Coolify
+    # НЕ объявлять networks: — Coolify создаёт сеть сам
+    environment:
+      # Coolify magic: домен → порт 3010; SERVER_HOST_URL берётся из сгенерированного URL
+      - SERVICE_URL_MIROTALKSFU_3010
+      - SERVER_HOST_URL=$SERVICE_URL_MIROTALKSFU
+
+      - NODE_ENV=production
+      - TRUST_PROXY=true
+      - SERVER_LISTEN_IP=0.0.0.0
+      - SERVER_LISTEN_PORT=3010
+
+      # Публичный IPv4 сервера Coolify (обязательно для ICE/WebRTC)
+      - SFU_ANNOUNCED_IP=${SFU_ANNOUNCED_IP:?}
+      - SFU_LISTEN_IP=0.0.0.0
+      - SFU_MIN_PORT=${SFU_MIN_PORT:-40000}
+      - SFU_MAX_PORT=${SFU_MAX_PORT:-40100}
+      - SFU_NUM_WORKERS=${SFU_NUM_WORKERS:-}
+      # true = 1 порт на worker (проще firewall)
+      - SFU_SERVER=${SFU_SERVER:-true}
+
+      - UI_LANGUAGE=${UI_LANGUAGE:-ru}
+      - APP_NAME=${APP_NAME:-MiroTalk SFU}
+
+      # Секреты: Coolify сгенерирует SERVICE_PASSWORD_64_* автоматически
+      - JWT_SECRET=${SERVICE_PASSWORD_64_JWT}
+      - API_KEY_SECRET=${SERVICE_PASSWORD_64_API}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-1h}
+
+      - HOST_PROTECTED=${HOST_PROTECTED:-false}
+      - HOST_USER_AUTH=${HOST_USER_AUTH:-false}
+      - HOST_USERS=${HOST_USERS:-}
+
+      - RECORDING_ENABLED=${RECORDING_ENABLED:-false}
+      - RTMP_ENABLED=${RTMP_ENABLED:-false}
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+
+    ports:
+      # WebRTC media — напрямую на хост (Traefik UDP не проксирует)
+      - '${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}:${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}/udp'
+      - '${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}:${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}/tcp'
+
+    volumes:
+      - mirotalksfu-rec:/src/app/rec
+      - mirotalksfu-rtmp:/src/app/rtmp
+
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3010').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  mirotalksfu-rec:
+  mirotalksfu-rtmp:
