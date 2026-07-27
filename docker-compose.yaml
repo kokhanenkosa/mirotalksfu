@@ -52,6 +52,21 @@ services:
       - RTMP_ENABLED=${RTMP_ENABLED:-false}
       - CORS_ORIGIN=${CORS_ORIGIN:-*}
 
+      # Скрыть ChatGPT / DeepSeek из списка чатов (пока нет API-ключей)
+      - ENABLE_CHAT_GPT=${ENABLE_CHAT_GPT:-false}
+      - ENABLE_DEEP_SEEK=${ENABLE_DEEP_SEEK:-false}
+      - CHATGPT_ENABLED=${CHATGPT_ENABLED:-false}
+      - DEEP_SEEK_ENABLED=${DEEP_SEEK_ENABLED:-false}
+      - VIDEOAI_ENABLED=${VIDEOAI_ENABLED:-false}
+
+      # Распознавание речи / транскрипция / голосовые команды — выкл
+      - SHOW_TRANSCRIPTION=${SHOW_TRANSCRIPTION:-false}
+      - SHOW_SPEECH_REC_BUTTON=${SHOW_SPEECH_REC_BUTTON:-false}
+      - SHOW_CHAT_SPEECH=${SHOW_CHAT_SPEECH:-false}
+
+      # Markdown в чате — выкл
+      - SHOW_CHAT_MARKDOWN=${SHOW_CHAT_MARKDOWN:-false}
+
     # Coolify/Traefik ходит сюда по HTTP (httpolyglot принимает HTTP)
     expose:
       - '3010'
