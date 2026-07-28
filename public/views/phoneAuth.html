@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <title>Вход по телефону — ОПТ РФ</title>
+        <link rel="shortcut icon" href="../images/logo-no-background.svg" />
+        <link rel="apple-touch-icon" href="../images/logo-no-background.svg" />
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content="Авторизация по номеру телефона для видеоконференций ОПТ РФ." />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="../css/phoneAuth.css" />
+    </head>
+    <body class="pa-body">
+        <div class="pa-bg" aria-hidden="true">
+            <div class="pa-orb pa-orb-a"></div>
+            <div class="pa-orb pa-orb-b"></div>
+            <div class="pa-orb pa-orb-c"></div>
+            <div class="pa-grid"></div>
+        </div>
+
+        <header class="pa-top">
+            <a class="pa-brand" href="/" aria-label="На главную">
+                <img src="../images/logo-no-background.svg" alt="ОПТ РФ" width="180" height="40" />
+            </a>
+        </header>
+
+        <main class="pa-main">
+            <section class="pa-panel" id="paPanel" aria-label="Вход по телефону">
+                <div class="pa-steps" aria-hidden="true">
+                    <span class="pa-step is-active" data-step="1"></span>
+                    <span class="pa-step-line" id="paStepLine"></span>
+                    <span class="pa-step" data-step="2" id="paStep2"></span>
+                </div>
+
+                    <div class="pa-icon-wrap pa-icon-wrap--lg" id="paIconWrap">
+                    <div class="pa-icon-ring"></div>
+                    <div
+                        class="pa-icon pa-orb-host pa-orb-host--lg"
+                        id="paIcon"
+                        data-thinking-orb
+                        data-orb-state="composing"
+                        data-orb-size="64"
+                        data-orb-display="128"
+                        data-orb-theme="light"
+                    ></div>
+                </div>
+
+                <h1 class="pa-title" id="paTitle">Подтвердите номер</h1>
+                <p class="pa-sub" id="paSub">
+                    Чтобы создать комнату или войти на встречу, нужен код из Telegram или SMS.
+                </p>
+
+                <div class="pa-stage">
+                    <div class="pa-step-view is-active" id="stepPhone">
+                        <label class="pa-label" for="phoneInput">Номер телефона</label>
+                        <div class="pa-field">
+                            <span class="pa-field-prefix">+7</span>
+                            <input
+                                id="phoneInput"
+                                class="pa-input"
+                                type="tel"
+                                inputmode="tel"
+                                placeholder="900 123-45-67"
+                                autocomplete="tel-national"
+                                maxlength="16"
+                                required
+                            />
+                        </div>
+                        <button id="sendCodeBtn" class="pa-btn" type="button">
+                            <span class="pa-btn-label">Получить код</span>
+                            <span
+                                class="pa-btn-orb"
+                                data-thinking-orb
+                                data-orb-state="composing"
+                                data-orb-size="20"
+                                data-orb-theme="dark"
+                                aria-hidden="true"
+                            ></span>
+                        </button>
+                    </div>
+
+                    <div class="pa-step-view" id="stepCode" hidden>
+                        <p class="pa-hint" id="codeHint"></p>
+                        <label class="pa-label" for="codeInput">Код подтверждения</label>
+                        <div class="pa-code-wrap">
+                            <div class="pa-otp" id="otpBoxes" aria-hidden="true">
+                                <span></span><span></span><span></span><span></span><span></span><span></span>
+                            </div>
+                            <input
+                                id="codeInput"
+                                class="pa-input-code"
+                                type="text"
+                                inputmode="numeric"
+                                autocomplete="one-time-code"
+                                maxlength="6"
+                                required
+                                aria-label="Код подтверждения"
+                            />
+                        </div>
+                        <button id="verifyCodeBtn" class="pa-btn" type="button">
+                            <span class="pa-btn-label">Войти</span>
+                            <span
+                                class="pa-btn-orb"
+                                data-thinking-orb
+                                data-orb-state="solving"
+                                data-orb-size="20"
+                                data-orb-theme="dark"
+                                aria-hidden="true"
+                            ></span>
+                        </button>
+                        <div class="pa-actions">
+                            <button id="resendBtn" class="pa-link" type="button">Отправить ещё раз</button>
+                            <button id="changePhoneBtn" class="pa-link" type="button">Другой номер</button>
+                        </div>
+                    </div>
+
+                    <div class="pa-step-view pa-success" id="stepSuccess" hidden>
+                        <div class="pa-check" aria-hidden="true">
+                            <svg viewBox="0 0 52 52">
+                                <circle cx="26" cy="26" r="24" fill="none" />
+                                <path fill="none" d="M14 27.5l7.5 7.5L38 17" />
+                            </svg>
+                        </div>
+                        <p class="pa-success-text">Готово. Открываем встречу…</p>
+                    </div>
+                </div>
+
+                <div id="phoneAuthError" class="pa-error" role="alert" aria-live="polite" hidden>
+                    <span id="phoneAuthErrorText"></span>
+                </div>
+            </section>
+        </main>
+
+        <footer class="pa-foot">
+            <a href="/privacy">Конфиденциальность</a>
+            <span>·</span>
+            <span>© 2026 ОПТ РФ</span>
+        </footer>
+
+        <script defer src="../js/ThinkingOrbs.js"></script>
+        <script defer src="../js/PhoneAuth.js"></script>
+    </body>
+</html>

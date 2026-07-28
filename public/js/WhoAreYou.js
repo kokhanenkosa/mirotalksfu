@@ -15,7 +15,7 @@ const loginLink = document.getElementById('loginLink');
 const waitingRoomNameEl = document.getElementById('waitingRoomName');
 const waitingRoomNameText = document.getElementById('waitingRoomNameText');
 const waitingElapsedText = document.getElementById('waitingElapsedText');
-const spinnerDots = document.querySelectorAll('.waiting-spinner-dot');
+const waitingOrb = document.getElementById('waitingOrb');
 
 window.sessionStorage.roomID = roomId;
 
@@ -50,7 +50,7 @@ function getWaitingRoomBrand(key, fallback) {
 }
 
 if (roomId && roomId !== 'whoAreYou') {
-    loginLink.href = '/login?room=' + encodeURIComponent(roomId);
+    loginLink.href = '/phone-auth?next=' + encodeURIComponent('/newroom');
 }
 
 function playSound(name) {
@@ -66,8 +66,10 @@ function playSound(name) {
 }
 
 function flashCheckingState() {
-    spinnerDots.forEach((dot) => dot.classList.add('checking'));
-    setTimeout(() => spinnerDots.forEach((dot) => dot.classList.remove('checking')), 600);
+    if (window.ThinkingOrbs && waitingOrb) {
+        window.ThinkingOrbs.update(waitingOrb, { state: 'searching' });
+        setTimeout(() => window.ThinkingOrbs.update(waitingOrb, { state: 'listening' }), 900);
+    }
 }
 
 function checkRoom() {

@@ -41,6 +41,7 @@
 
         <script async src="../js/Stats.js"></script>
         <script defer src="../js/Brand.js"></script>
+        <script defer src="../js/ThinkingOrbs.js"></script>
 
         <!-- xss -->
 
@@ -96,11 +97,15 @@
                                     <i class="fa-solid fa-door-open"></i>
                                     <span id="waitingRoomNameText"></span>
                                 </div>
-                                <div class="waiting-spinner">
-                                    <div class="waiting-spinner-dot"></div>
-                                    <div class="waiting-spinner-dot"></div>
-                                    <div class="waiting-spinner-dot"></div>
-                                </div>
+                                <div
+                                    class="waiting-spinner waiting-orb"
+                                    id="waitingOrb"
+                                    data-thinking-orb
+                                    data-orb-state="listening"
+                                    data-orb-size="64"
+                                    data-orb-theme="dark"
+                                    aria-hidden="true"
+                                ></div>
                                 <p class="waiting-status" id="waitingStatus" aria-live="assertive">
                                     Проверка статуса комнаты...
                                 </p>

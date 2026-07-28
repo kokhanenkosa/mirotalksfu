@@ -366,7 +366,7 @@ body {
     border-radius: 14px;
 }
 
-/* Custom CSS spinner */
+/* Custom CSS spinner / thinking-orbs host */
 .loading-spinner {
     position: relative;
     display: flex;
@@ -378,8 +378,30 @@ body {
     margin: 0 auto;
 }
 
+.loading-spinner.loading-orb {
+    width: 72px;
+    height: 72px;
+}
+
+.loading-spinner.loading-orb canvas {
+    margin: 0 auto;
+}
+
+.loading-spinner.loading-orb--lg {
+    width: 140px;
+    height: 140px;
+}
+
+.loading-spinner.loading-orb--lg canvas {
+    /* размер задаёт ThinkingOrbs через data-orb-display */
+}
+
 #loadingDiv .loading-spinner {
     margin-bottom: 15px;
+}
+
+.disconnect-banner__spinner canvas {
+    display: block;
 }
 
 .spinner-ring {

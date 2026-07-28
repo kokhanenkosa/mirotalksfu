@@ -110,38 +110,21 @@
     font-size: 12px;
 }
 
-/* Spinner */
+/* Spinner / thinking-orbs */
 .waiting-spinner {
     display: flex;
     justify-content: center;
+    align-items: center;
     gap: 10px;
     margin-bottom: 18px;
-}
-.waiting-spinner-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: #4678f9;
-    animation: dotBounce 1.4s ease-in-out infinite;
-}
-.waiting-spinner-dot:nth-child(2) {
-    animation-delay: 0.2s;
-}
-.waiting-spinner-dot:nth-child(3) {
-    animation-delay: 0.4s;
+    min-height: 72px;
 }
 
-@keyframes dotBounce {
-    0%,
-    80%,
-    100% {
-        transform: scale(0.6);
-        opacity: 0.35;
-    }
-    40% {
-        transform: scale(1);
-        opacity: 1;
-    }
+.waiting-spinner.waiting-orb {
+    width: 72px;
+    height: 72px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Status */

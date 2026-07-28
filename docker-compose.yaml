@@ -80,6 +80,22 @@ services:
       - HOST_USER_AUTH=${HOST_USER_AUTH:-false}
       - HOST_USERS=${HOST_USERS:-}
 
+      # Авторизация по телефону (Telegram Gateway + SMSC)
+      - PHONE_AUTH_ENABLED=${PHONE_AUTH_ENABLED:-true}
+      - PHONE_AUTH_JWT_EXP=${PHONE_AUTH_JWT_EXP:-7d}
+      # Номера организаторов через запятую, E.164: +79001234567,+79007654321
+      - PHONE_CREATORS=${PHONE_CREATORS:-}
+      - TELEGRAM_GATEWAY_TOKEN=${TELEGRAM_GATEWAY_TOKEN:-}
+      - TELEGRAM_GATEWAY_API_URL=${TELEGRAM_GATEWAY_API_URL:-https://gatewayapi.telegram.org/}
+      # ОБЯЗАТЕЛЬНО для Telegram Gateway
+      - PROXY_URL=${PROXY_URL:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - SMSC_LOGIN=${SMSC_LOGIN:-}
+      - SMSC_PASSWORD=${SMSC_PASSWORD:-}
+      - SMSC_SENDER=${SMSC_SENDER:-}
+      - SMSC_MESSAGE_TEMPLATE=${SMSC_MESSAGE_TEMPLATE:-Код входа в видеоконференции ОПТ РФ: %CODE%}
+
       - RECORDING_ENABLED=${RECORDING_ENABLED:-false}
       - RTMP_ENABLED=${RTMP_ENABLED:-false}
       - CORS_ORIGIN=${CORS_ORIGIN:-*}

@@ -61,6 +61,7 @@
 
         <script async src="../js/Stats.js"></script>
         <script defer src="../js/Brand.js"></script>
+        <script defer src="../js/ThinkingOrbs.js"></script>
 
         <script src="https://unpkg.com/animejs@3.0.1/lib/anime.min.js"></script>
         <script src="https://unpkg.com/scrollreveal@4.0.0/dist/scrollreveal.min.js"></script>
@@ -156,7 +157,15 @@
                                             ><i class="fa-solid fa-right-to-bracket"></i>&nbsp; Войти</span
                                         >
                                         <span id="loginBtnLoader" class="login-btn-loader">
-                                            <i class="fa-solid fa-circle-notch fa-spin"></i>&nbsp; Выполняется вход...
+                                            <span
+                                                class="login-btn-orb"
+                                                data-thinking-orb
+                                                data-orb-state="solving"
+                                                data-orb-size="20"
+                                                data-orb-theme="dark"
+                                                aria-hidden="true"
+                                            ></span>
+                                            &nbsp; Выполняется вход...
                                         </span>
                                     </button>
                                 </div>

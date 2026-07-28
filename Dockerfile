@@ -26,6 +26,7 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy application code
 COPY app ./app
 COPY public ./public
+COPY scripts ./scripts
 
 # Copy config template → config
 COPY app/src/config.template.js app/src/config.js

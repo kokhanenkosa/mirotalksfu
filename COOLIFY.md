@@ -47,7 +47,12 @@ ufw allow 40000:40100/tcp
 | `SFU_MIN_PORT` / `SFU_MAX_PORT` | `40000` / `40100` | Диапазон медиа-портов |
 | `SFU_NUM_WORKERS` | CPU count | Число mediasoup workers |
 | `TRUST_PROXY` | `true` | За Traefik Coolify |
-| `HOST_PROTECTED` | `false` | Защита создания комнат |
+| `HOST_PROTECTED` | `false` | Защита создания комнат (логин/пароль MiroTalk) |
+| `PHONE_AUTH_ENABLED` | `true` | OTP по телефону до join/create |
+| `PHONE_CREATORS` | — | Номера организаторов `+79…,+79…` (только они создают комнаты) |
+| `TELEGRAM_GATEWAY_TOKEN` | — | Токен Telegram Gateway |
+| `PROXY_URL` | — | **Обязателен** для Gateway (`http://user:pass@host:port`) |
+| `SMSC_LOGIN` / `SMSC_PASSWORD` | — | Fallback SMS через SMSC.ru |
 | `HOST_USERS` | — | `user:pass:Name:*\|admin:admin:Admin:*` |
 | `RECORDING_ENABLED` | `false` | Серверная запись |
 

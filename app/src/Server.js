@@ -96,6 +96,7 @@ const Host = require('./Host');
 const Room = require('./Room');
 const Peer = require('./Peer');
 const ServerApi = require('./ServerApi');
+const PhoneAuth = require('./PhoneAuth');
 const Logger = require('./Logger');
 const Validator = require('./Validator');
 const HtmlInjector = require('./HtmlInjector');
@@ -145,6 +146,24 @@ const getRequesterKey = (req) => {
 };
 
 // Create login rate limiter
+const phoneSendCodeLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: 'Слишком много запросов кода. Попробуйте позже.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: getRequesterKey,
+});
+
+const phoneVerifyLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    message: 'Слишком много попыток проверки кода. Попробуйте позже.',
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: getRequesterKey,
+});
+
 const loginLimiter = rateLimit({
     windowMs: minBlockTime * 60 * 1000,
     max: maxAttempts,
@@ -296,6 +315,24 @@ const jwtCfg = {
     JWT_KEY: config?.security?.jwt?.key || 'mirotalksfu_jwt_secret',
     JWT_EXP: config?.security?.jwt?.exp || '1h',
 };
+
+const phoneAuthCfg = config?.security?.phoneAuth || {};
+const phoneAuth = new PhoneAuth({
+    enabled: phoneAuthCfg.enabled === true,
+    jwtKey: jwtCfg.JWT_KEY,
+    jwtExp: phoneAuthCfg.jwtExp || '7d',
+    creators: phoneAuthCfg.creators || [],
+    smsc: phoneAuthCfg.smsc || {},
+    log: (...args) => log.info(...args),
+});
+
+if (phoneAuth.isEnabled()) {
+    log.info('Phone auth enabled', {
+        creators: phoneAuth.creators.size,
+        proxy: Boolean(process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY),
+        smsc: Boolean(phoneAuthCfg?.smsc?.login),
+    });
+}
 
 // Lifetime of the per-session server recording upload token (must outlive long recordings)
 const recUploadTokenExp = config?.media?.recording?.uploadTokenExp || '24h';
@@ -478,6 +515,7 @@ const views = {
     room: path.join(__dirname, '../../', 'public/views/Room.html'),
     rtmpStreamer: path.join(__dirname, '../../', 'public/views/RtmpStreamer.html'),
     whoAreYou: path.join(__dirname, '../../', 'public/views/whoAreYou.html'),
+    phoneAuth: path.join(__dirname, '../../', 'public/views/phoneAuth.html'),
 };
 
 const filesPath = [
@@ -871,6 +909,20 @@ function startServer() {
     app.get('/newroom', OIDCAuth, (req, res) => {
         //log.info('/newroom - hostCfg ----->', hostCfg);
 
+        if (phoneAuth.isEnabled()) {
+            const session = phoneAuth.getSession(req);
+            if (!session) {
+                return res.redirect(phoneAuth.buildAuthRedirect(req, '/newroom'));
+            }
+            if (!session.canCreate) {
+                return res
+                    .status(403)
+                    .send(
+                        '<!doctype html><html lang="ru"><meta charset="utf-8"><title>Нет доступа</title><body style="font-family:sans-serif;padding:2rem"><h1>Создание комнат недоступно</h1><p>Ваш номер подтверждён, но не входит в список организаторов. Вы можете только присоединяться к существующим комнатам.</p><p><a href="/">На главную</a></p></body></html>'
+                    );
+            }
+        }
+
         if (!OIDC.enabled && hostCfg.protected) {
             hostCfg.authenticated = false;
             res.redirect('/login');
@@ -887,6 +939,15 @@ function startServer() {
 
     // Get Customize room
     app.get('/customizeRoom', OIDCAuth, (req, res) => {
+        if (phoneAuth.isEnabled()) {
+            const session = phoneAuth.getSession(req);
+            if (!session) {
+                return res.redirect(phoneAuth.buildAuthRedirect(req, '/customizeRoom'));
+            }
+            if (!session.canCreate) {
+                return res.redirect('/');
+            }
+        }
         htmlInjector.injectHtml(views.customizeRoom, res);
     });
 
@@ -894,7 +955,8 @@ function startServer() {
     app.post('/isRoomActive', (req, res) => {
         const { roomId } = checkXSS(req.body);
 
-        if (roomId && (hostCfg.protected || hostCfg.user_auth || OIDC.enabled)) {
+        const phoneOk = phoneAuth.isEnabled() && phoneAuth.getSession(req);
+        if (roomId && (hostCfg.protected || hostCfg.user_auth || OIDC.enabled || phoneOk)) {
             const roomActive = roomList.has(roomId);
             if (roomActive) log.debug('isRoomActive', { roomId, roomActive });
             res.status(200).json({ message: roomActive });
@@ -1026,6 +1088,63 @@ function startServer() {
         }
     });
 
+    // Phone OTP auth (Telegram Gateway + SMS fallback)
+    app.get('/phone-auth', (req, res) => {
+        if (!phoneAuth.isEnabled()) {
+            return res.redirect('/');
+        }
+        return res.sendFile(views.phoneAuth);
+    });
+
+    app.post('/phone/send-code', phoneSendCodeLimiter, async (req, res) => {
+        if (!phoneAuth.isEnabled()) {
+            return res.status(404).json({ ok: false, error: 'Авторизация по телефону отключена' });
+        }
+        const { phone } = checkXSS(req.body) || {};
+        const result = await phoneAuth.sendCode(phone);
+        return res.status(result.ok ? 200 : 400).json(result);
+    });
+
+    app.post('/phone/verify', phoneVerifyLimiter, (req, res) => {
+        if (!phoneAuth.isEnabled()) {
+            return res.status(404).json({ ok: false, error: 'Авторизация по телефону отключена' });
+        }
+        const { phone, code } = checkXSS(req.body) || {};
+        const result = phoneAuth.verifyCode(phone, code);
+        if (!result.ok) {
+            return res.status(400).json(result);
+        }
+        phoneAuth.setAuthCookie(res, result.token);
+        return res.status(200).json({
+            ok: true,
+            token: result.token,
+            phone: result.phone,
+            canCreate: result.canCreate,
+        });
+    });
+
+    app.get('/phone/me', (req, res) => {
+        if (!phoneAuth.isEnabled()) {
+            return res.json({ ok: true, enabled: false, authenticated: false });
+        }
+        const session = phoneAuth.getSession(req);
+        if (!session) {
+            return res.json({ ok: true, enabled: true, authenticated: false });
+        }
+        return res.json({
+            ok: true,
+            enabled: true,
+            authenticated: true,
+            phone: session.phone,
+            canCreate: session.canCreate,
+        });
+    });
+
+    app.post('/phone/logout', (req, res) => {
+        phoneAuth.clearAuthCookie(res);
+        return res.json({ ok: true });
+    });
+
     // Handle Direct join room with params
     app.get('/join/', async (req, res) => {
         if (Object.keys(req.query).length > 0) {
@@ -1047,6 +1166,21 @@ function startServer() {
 
             if (!Validator.isValidRoomName(room)) {
                 return res.redirect('/');
+            }
+
+            if (phoneAuth.isEnabled()) {
+                const phoneSession =
+                    phoneAuth.getSession(req) || phoneAuth.verifyToken(token) || null;
+                if (!phoneSession) {
+                    return res.redirect(phoneAuth.buildAuthRedirect(req, req.originalUrl));
+                }
+                if (!roomList.has(room) && !phoneSession.canCreate) {
+                    return res
+                        .status(403)
+                        .send(
+                            '<!doctype html><html lang="ru"><meta charset="utf-8"><title>Нет доступа</title><body style="font-family:sans-serif;padding:2rem"><h1>Создание комнат недоступно</h1><p>Этот номер не может создавать новые комнаты.</p><p><a href="/">На главную</a></p></body></html>'
+                        );
+                }
             }
 
             let peerUsername = '';
@@ -1116,8 +1250,11 @@ function startServer() {
                 });
             }
 
-            if (room && (hostCfg.authenticated || isPeerValid)) {
+            const phoneOk = phoneAuth.isEnabled() && Boolean(phoneAuth.getSession(req) || phoneAuth.verifyToken(token));
+            if (room && (hostCfg.authenticated || isPeerValid || phoneOk)) {
                 return htmlInjector.injectHtml(views.room, res);
+            } else if (phoneAuth.isEnabled()) {
+                return res.redirect(phoneAuth.buildAuthRedirect(req, req.originalUrl));
             } else {
                 return htmlInjector.injectHtml(views.login, res);
             }
@@ -1139,6 +1276,17 @@ function startServer() {
         if (!Validator.isValidRoomName(roomId)) {
             log.warn('/join/:roomId invalid', roomId);
             return res.redirect('/');
+        }
+
+        if (phoneAuth.isEnabled()) {
+            const phoneSession = phoneAuth.getSession(req);
+            if (!phoneSession) {
+                return res.redirect(phoneAuth.buildAuthRedirect(req, `/join/${roomId}`));
+            }
+            // Гость с подтверждённым номером ждёт организатора, если комнаты ещё нет
+            if (!roomList.has(roomId) && !phoneSession.canCreate) {
+                return res.redirect('/whoAreYou/' + roomId);
+            }
         }
 
         const allowRoomAccess = isAllowedRoomAccess('/join/:roomId', req, hostCfg, roomList, roomId);
@@ -1194,6 +1342,10 @@ function startServer() {
 
     // handle who are you: Presenter or Guest
     app.get('/whoAreYou/:roomId', (req, res) => {
+        if (phoneAuth.isEnabled() && !phoneAuth.getSession(req)) {
+            const { roomId } = checkXSS(req.params);
+            return res.redirect(phoneAuth.buildAuthRedirect(req, `/whoAreYou/${roomId || ''}`));
+        }
         htmlInjector.injectHtml(views.whoAreYou, res);
     });
 
@@ -2287,11 +2439,29 @@ function startServer() {
             }
         });
 
-        socket.on('createRoom', async ({ room_id }, callback) => {
+        socket.on('createRoom', async ({ room_id, phone_token }, callback) => {
             // Security: reject invalid room ids (XSS / path traversal / empty).
             if (!Validator.isValidRoomName(room_id)) {
                 log.warn('[createRoom] - Invalid room name', { room_id });
                 return callback({ error: 'invalid room name' });
+            }
+
+            if (phoneAuth.isEnabled()) {
+                const phoneSession = phoneAuth.getSocketSession(socket, phone_token);
+                if (!phoneSession) {
+                    log.warn('[createRoom] - Phone auth required', { room_id });
+                    return callback({ error: 'phone auth required' });
+                }
+                // Создавать новую комнату можно только из PHONE_CREATORS;
+                // если комната уже есть — любой подтверждённый номер может «createRoom»→join.
+                if (!roomList.has(room_id) && !phoneSession.canCreate) {
+                    log.warn('[createRoom] - Phone not allowed to create rooms', {
+                        room_id,
+                        phone: phoneSession.phone,
+                    });
+                    return callback({ error: 'create not allowed for this phone' });
+                }
+                socket.phone_session = phoneSession;
             }
 
             // Security: per-IP rate limit to prevent roomList spam/enumeration.
@@ -2355,8 +2525,27 @@ function startServer() {
 
             let is_presenter = peer_presenter;
 
+            if (phoneAuth.isEnabled()) {
+                const phoneSession =
+                    socket.phone_session || phoneAuth.getSocketSession(socket, peer_token) || null;
+                if (!phoneSession) {
+                    log.warn('[Join] - Phone auth required');
+                    return cb('unauthorized');
+                }
+                socket.phone_session = phoneSession;
+                // Первый участник — ведущий только если номер в списке создателей
+                if (!socket.room_id.includes('_breakout_') && room?.getPeersCount() === 0) {
+                    is_presenter = phoneSession.canCreate;
+                }
+                log.debug('[Join] - Phone auth OK', {
+                    phone: phoneSession.phone,
+                    canCreate: phoneSession.canCreate,
+                    is_presenter,
+                });
+            }
+
             // User Auth required or detect token, we check if peer valid
-            if (hostCfg.user_auth || peer_token) {
+            if (!phoneAuth.isEnabled() && (hostCfg.user_auth || peer_token)) {
                 // Check JWT
                 if (peer_token) {
                     try {
@@ -5122,8 +5311,11 @@ function startServer() {
         const roomExist = roomList.has(roomId);
         const roomCount = roomList.size;
         const OIDCAllowRoomCreationForAuthUsers = OIDC.allow_rooms_creation_for_auth_users;
+        const phoneSession = phoneAuth.isEnabled() ? phoneAuth.getSession(req) : null;
+        const phoneAuthenticated = Boolean(phoneSession);
+        const phoneCanCreate = Boolean(phoneSession?.canCreate);
 
-        const allowRoomAccess =
+        let allowRoomAccess =
             (!hostCfg.protected && !OIDC.enabled) || // Default open access
             (OIDCUserAuthenticated && roomExist) || // OIDC auth & room exists
             (hostUserAuthenticated && roomExist) || // Host login auth & room exists
@@ -5131,9 +5323,17 @@ function startServer() {
             (OIDCUserAuthenticated && OIDCAllowRoomCreationForAuthUsers) || // Allow room creation if authenticated via OIDC
             roomExist; // Fallback: allow anyone if room exists
 
+        if (phoneAuth.isEnabled()) {
+            // Phone OTP обязателен для всех: join в существующую — любому подтверждённому номеру;
+            // создание новой — только PHONE_CREATORS.
+            allowRoomAccess = phoneAuthenticated && (roomExist || phoneCanCreate);
+        }
+
         log.debug(logMessage, {
             OIDCUserAuthenticated,
             hostUserAuthenticated,
+            phoneAuthenticated,
+            phoneCanCreate,
             roomExist,
             roomCount,
             extraInfo: {
@@ -5142,6 +5342,7 @@ function startServer() {
                 hostProtected: hostCfg.protected,
                 hostAuthenticated: hostCfg.authenticated,
                 OIDCAllowRoomCreationForAuthUsers,
+                phoneAuthEnabled: phoneAuth.isEnabled(),
             },
             allowRoomAccess,
         });

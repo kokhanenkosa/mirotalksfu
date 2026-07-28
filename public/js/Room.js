@@ -1033,6 +1033,7 @@ function getPeerUUID() {
 }
 
 function getPeerToken() {
+    if (window.sessionStorage.phone_auth) return window.sessionStorage.phone_auth;
     if (window.sessionStorage.peer_token) return window.sessionStorage.peer_token;
     let token = getQueryParam('token');
     let queryToken = false;

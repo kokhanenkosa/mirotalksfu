@@ -525,12 +525,31 @@ class RoomClient {
     // ####################################################
 
     async createRoom(room_id) {
+        const phone_token =
+            window.sessionStorage.phone_auth || window.sessionStorage.peer_token || this.peer_info?.peer_token || '';
         await this.socket
             .request('createRoom', {
                 room_id,
+                phone_token,
             })
             .catch((err) => {
                 console.log('Create room:', err);
+                const msg = String(err?.error || err || '');
+                if (msg.includes('phone auth')) {
+                    openURL(`/phone-auth?next=${encodeURIComponent(`/join/${room_id}`)}`);
+                    return;
+                }
+                if (msg.includes('create not allowed')) {
+                    popupHtmlMessage(
+                        null,
+                        image.forbidden,
+                        'Нет доступа',
+                        'Ваш номер не может создавать комнаты. Дождитесь организатора.',
+                        'center',
+                        '/',
+                        false
+                    );
+                }
             });
     }
 
@@ -2967,6 +2986,7 @@ class RoomClient {
         loader.id = id;
         loader.className = 'video-loader';
         loader.innerHTML = renderRoomTemplate('videoLoaderTemplate');
+        if (window.ThinkingOrbs) window.ThinkingOrbs.enhance(loader);
         return loader;
     }
 
@@ -10154,15 +10174,14 @@ class RoomClient {
             allowEscapeKey: false,
             background: swalBackground,
             imageUrl: image.forbidden,
-            title: 'Oops, Unauthorized',
-            text: 'The host has user authentication enabled',
-            confirmButtonText: `Login`,
+            title: 'Требуется авторизация',
+            text: 'Подтвердите номер телефона, чтобы войти в комнату',
+            confirmButtonText: 'Войти по телефону',
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then(() => {
-            // Login required to join room
             endRoomSession();
-            openURL(`/login/?room=${this.room_id}`);
+            openURL(`/phone-auth?next=${encodeURIComponent(`/join/${this.room_id}`)}`);
         });
     }
 

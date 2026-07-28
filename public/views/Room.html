@@ -98,6 +98,7 @@
 
         <script async src="../js/Stats.js"></script>
         <script defer src="../js/Brand.js"></script>
+        <script defer src="../js/ThinkingOrbs.js"></script>
         <script async src="../js/Translate.js"></script>
 
         <!-- Js scripts https://cdn.jsdelivr.net -->
@@ -163,19 +164,30 @@
                 <button id="disconnectBannerAction" class="disconnect-banner__action" type="button">
                     Войти в комнату
                 </button>
-                <span id="disconnectBannerSpinner" class="disconnect-banner__spinner" aria-hidden="true">
-                    <i class="fa-solid fa-circle-notch fa-spin"></i>
-                </span>
+                <span
+                    id="disconnectBannerSpinner"
+                    class="disconnect-banner__spinner"
+                    data-thinking-orb
+                    data-orb-state="working"
+                    data-orb-size="20"
+                    data-orb-theme="dark"
+                    aria-hidden="true"
+                ></span>
             </div>
         </div>
 
         <div id="disconnectOverlay" class="disconnect-overlay" aria-hidden="true"></div>
 
         <div id="loadingDiv" class="center" role="status" aria-live="polite" aria-busy="true">
-            <div class="loading-spinner" aria-hidden="true">
-                <div class="spinner-ring"></div>
-                <img class="spinner-logo" src="../images/logo-on-dark.svg" alt="" />
-            </div>
+            <div
+                class="loading-spinner loading-orb loading-orb--lg"
+                data-thinking-orb
+                data-orb-state="composing"
+                data-orb-size="64"
+                data-orb-display="128"
+                data-orb-theme="dark"
+                aria-hidden="true"
+            ></div>
             <h1 id="loadingTitle">Загрузка</h1>
             <p id="loadingMessage" class="loading-message">
                 Разрешите доступ к камере или микрофону,<br />
@@ -188,10 +200,14 @@
                 <div id="initVideoContainer" class="init-video-container">
                     <video id="initVideo" playsinline="true" autoplay="" class="mirror"></video>
                     <div id="initVideoLoader" class="init-video-loader">
-                        <div class="loading-spinner">
-                            <div class="spinner-ring"></div>
-                            <img class="spinner-logo" src="../images/logo-on-dark.svg" alt="logo" />
-                        </div>
+                        <div
+                            class="loading-spinner loading-orb"
+                            data-thinking-orb
+                            data-orb-state="working"
+                            data-orb-size="64"
+                            data-orb-theme="dark"
+                            aria-hidden="true"
+                        ></div>
                     </div>
                     <div id="imageGrid" class="image-grid fadein"></div>
                     <span id="initErrorMessage" class="show-error"></span>
@@ -1187,10 +1203,15 @@
                     <div id="tabVideoAI" class="tabcontent">
                         <div class="avatarsVideoAI">
                             <div id="avatarVideoAIPreviewContainer" class="avatar-preview-container">
-                                <div id="avatarVideoAISpinner" class="loading-spinner">
-                                    <div class="spinner-ring"></div>
-                                    <img class="spinner-logo" src="../images/logo-on-dark.svg" alt="logo" />
-                                </div>
+                                <div
+                                    id="avatarVideoAISpinner"
+                                    class="loading-spinner loading-orb"
+                                    data-thinking-orb
+                                    data-orb-state="shaping"
+                                    data-orb-size="64"
+                                    data-orb-theme="dark"
+                                    aria-hidden="true"
+                                ></div>
                                 <img id="avatarVideoAIPreview" src="" alt="Avatar Preview" class="hidden" />
                             </div>
                             <div id="avatarVideoAISelectedName" class="avatarSelectedName"></div>
@@ -2837,10 +2858,14 @@ Note</textarea>
         </template>
 
         <template id="videoLoaderTemplate">
-            <div class="loading-spinner">
-                <div class="spinner-ring"></div>
-                <img class="spinner-logo" src="../images/logo-on-dark.svg" alt="logo" />
-            </div>
+            <div
+                class="loading-spinner loading-orb"
+                data-thinking-orb
+                data-orb-state="working"
+                data-orb-size="64"
+                data-orb-theme="dark"
+                aria-hidden="true"
+            ></div>
         </template>
 
         <template id="reactionBadgeTemplate">

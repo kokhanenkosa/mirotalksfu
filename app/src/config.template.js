@@ -526,6 +526,30 @@ module.exports = {
          * -------------
          * https://docs.mirotalk.com/mirotalk-sfu/host-protection/
          */
+        /**
+         * Phone OTP (Telegram Gateway + SMSC fallback)
+         * --------------------------------------------
+         * - enabled: требовать подтверждение телефона до join/create
+         * - creators: номера (E.164 через запятую), которым разрешено создавать комнаты
+         * - PROXY_URL обязателен для Telegram Gateway
+         */
+        phoneAuth: {
+            enabled: process.env.PHONE_AUTH_ENABLED === 'true',
+            jwtExp: process.env.PHONE_AUTH_JWT_EXP || '7d',
+            creators: process.env.PHONE_CREATORS
+                ? process.env.PHONE_CREATORS.split(splitChar)
+                      .map((p) => p.trim())
+                      .filter((p) => p !== '')
+                : [],
+            smsc: {
+                login: process.env.SMSC_LOGIN || '',
+                password: process.env.SMSC_PASSWORD || '',
+                sender: process.env.SMSC_SENDER || '',
+                messageTemplate:
+                    process.env.SMSC_MESSAGE_TEMPLATE || 'Код входа в видеоконференции ОПТ РФ: %CODE%',
+            },
+        },
+
         host: {
             protected: process.env.HOST_PROTECTED === 'true',
             user_auth: process.env.HOST_USER_AUTH === 'true',
