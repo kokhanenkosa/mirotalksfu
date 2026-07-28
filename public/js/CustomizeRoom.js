@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Validate HH:MM:SS format only
         const re = /^(\d{2}):(\d{2}):(\d{2})$/;
         if (!re.test(value)) {
-            throw new Error('Duration must be HH:MM:SS (e.g. 00:30:00) or left empty for unlimited');
+            throw new Error('Продолжительность должна быть в формате ЧЧ:ММ:СС, например 00:30:00');
         }
         return value;
     };
@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const buildJoinUrl = () => {
         const room = safe(roomEl?.value);
         if (!room) {
-            throw new Error('Room name is required');
+            throw new Error('Укажите название комнаты');
         }
 
         const roomPasswordRaw = safe(roomPasswordEl?.value);
@@ -259,9 +259,9 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const joinUrl = buildJoinUrl();
                 await copyToClipboard(joinUrl.toString());
-                setStatus('Link copied to clipboard.');
+                setStatus('Ссылка скопирована.');
             } catch (err) {
-                setError(err?.message || 'Unable to copy join URL');
+                setError(err?.message || 'Не удалось скопировать ссылку');
             }
         });
     }
@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const joinUrl = buildJoinUrl();
                 await navigator.share({
-                    title: document.title || 'MiroTalk Room',
+                    title: document.title || 'Комната ОПТ РФ',
                     url: joinUrl.toString(),
                 });
             } catch (err) {
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const joinUrl = buildJoinUrl();
             window.location.href = joinUrl.toString();
         } catch (err) {
-            setError(err?.message || 'Unable to build join URL');
+            setError(err?.message || 'Не удалось сформировать ссылку для входа');
         }
     });
 });

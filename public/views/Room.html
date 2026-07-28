@@ -1,9 +1,9 @@
 ﻿<!doctype html>
-<html lang="en">
+<html lang="ru">
     <head>
         <!-- Title and Icon -->
 
-        <title id="title">MiroTalk SFU - Room Video Calls, Messaging and Screen Sharing.</title>
+        <title id="title">Видеовстреча — ОПТ РФ</title>
         <link id="icon" rel="shortcut icon" href="../images/logo-no-background.svg" />
         <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo-no-background.svg" />
 
@@ -18,7 +18,7 @@
         <meta
             id="description"
             name="description"
-            content="MiroTalk SFU powered by WebRTC and mediasoup, Real-time Simple Secure Fast video calls, messaging and screen sharing capabilities in the browser."
+            content="Видеоконференция ОПТ РФ — звонки, чат и демонстрация экрана в браузере."
         />
 
         <!-- https://ogp.me -->
@@ -139,7 +139,7 @@
         <script defer src="../js/Room.js"></script>
     </head>
     <body>
-        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <noscript>Для работы приложения необходимо включить JavaScript.</noscript>
 
         <div
             id="disconnectBanner"
@@ -154,13 +154,15 @@
                     <i id="disconnectBannerIcon" class="fa-solid fa-plug"></i>
                 </span>
                 <div class="disconnect-banner__copy">
-                    <span id="disconnectBannerTitle" class="disconnect-banner__title">Connection lost</span>
+                    <span id="disconnectBannerTitle" class="disconnect-banner__title">Соединение потеряно</span>
                     <span id="disconnectBannerMessage" class="disconnect-banner__message"
-                        >Trying to restore the room connection...</span
+                        >Восстанавливаем соединение с комнатой...</span
                     >
                 </div>
-                <span id="disconnectBannerMeta" class="disconnect-banner__meta">Retrying...</span>
-                <button id="disconnectBannerAction" class="disconnect-banner__action" type="button">Join Room</button>
+                <span id="disconnectBannerMeta" class="disconnect-banner__meta">Повторная попытка...</span>
+                <button id="disconnectBannerAction" class="disconnect-banner__action" type="button">
+                    Войти в комнату
+                </button>
                 <span id="disconnectBannerSpinner" class="disconnect-banner__spinner" aria-hidden="true">
                     <i class="fa-solid fa-circle-notch fa-spin"></i>
                 </span>
@@ -174,10 +176,10 @@
                 <div class="spinner-ring"></div>
                 <img class="spinner-logo" src="../images/logo-on-dark.svg" alt="" />
             </div>
-            <h1 id="loadingTitle">Loading</h1>
+            <h1 id="loadingTitle">Загрузка</h1>
             <p id="loadingMessage" class="loading-message">
-                Please allow the camera or microphone<br />
-                access to use this app.
+                Разрешите доступ к камере или микрофону,<br />
+                чтобы использовать приложение.
             </p>
         </div>
 
@@ -213,26 +215,26 @@
             <div id="usernameEmoji" class="usernameEmoji fadein center hidden"></div>
             <div id="initImageUrlModal" class="imageUrlModal">
                 <div class="imageUrlModal-content fadein">
-                    <h2>Paste Image URL</h2>
+                    <h2>Вставьте URL изображения</h2>
                     <input type="text" id="initImageUrlInput" placeholder="Enter the image URL here..." />
-                    <button id="initSaveImageUrlBtn">Save</button>
-                    <button id="initCancelImageUrlBtn">Cancel</button>
+                    <button id="initSaveImageUrlBtn">Сохранить</button>
+                    <button id="initCancelImageUrlBtn">Отмена</button>
                 </div>
             </div>
         </section>
 
         <div id="imageUrlModal" class="imageUrlModal">
             <div class="imageUrlModal-content fadein">
-                <h2>Paste Image URL</h2>
+                <h2>Вставьте URL изображения</h2>
                 <input type="text" id="imageUrlInput" placeholder="Enter the image URL here..." />
-                <button id="saveImageUrlBtn">Save</button>
-                <button id="cancelImageUrlBtn">Cancel</button>
+                <button id="saveImageUrlBtn">Сохранить</button>
+                <button id="cancelImageUrlBtn">Отмена</button>
             </div>
         </div>
 
         <div id="qrRoomPopupContainer" class="hidden top-center fadein">
             <canvas id="qrRoomPopup"></canvas>
-            <div id="qrText">Scan to join the room</div>
+            <div id="qrText">Отсканируйте для входа в комнату</div>
         </div>
 
         <!-- Breakout Room: Return to Main Toolbar -->
@@ -412,7 +414,7 @@
                         <button id="restartICEButton" class="hidden">
                             <i class="fas fa-satellite-dish"></i> Restart ICE
                         </button>
-                        <button id="aboutButton" class="hidden"><i class="fas fa-question"></i> About</button>
+                        <button id="aboutButton" class="hidden"><i class="fas fa-question"></i> О сервисе</button>
                     </div>
                 </div>
             </div>
@@ -1779,7 +1781,7 @@
                                 Add triangle
                             </button>
                             <button id="whiteboardCircleBtn"><i class="far fa-circle"></i> Add circle</button>
-                            <button id="whiteboardSaveBtn"><i class="fas fa-save"></i> Save</button>
+                            <button id="whiteboardSaveBtn"><i class="fas fa-save"></i> Сохранить</button>
                             <button id="whiteboardCleanBtn"><i class="fas fa-trash"></i> Clean</button>
                             <button id="whiteboardShortcutsBtn"><i class="fas fa-keyboard"></i> Shortcuts</button>
                         </div>

@@ -1,14 +1,14 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
         <!-- Title and Icon -->
 
-        <title id="title">MiroTalk RTMP Streamer</title>
-        <link id="icon" rel="shortcut icon" href="../images/logo.svg" />
-        <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo.svg" />
+        <title id="title">RTMP-трансляция — ОПТ РФ</title>
+        <link id="icon" rel="shortcut icon" href="../images/logo-no-background.svg" />
+        <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo-no-background.svg" />
 
         <!-- Meta Information -->
 
@@ -19,13 +19,14 @@
         <meta
             id="description"
             name="description"
-            content="MiroTalk SFU powered by WebRTC and mediasoup, Real-time Simple Secure Fast video calls, messaging and screen sharing capabilities in the browser."
+            content="RTMP-трансляция видеоконференций ОПТ РФ."
         />
 
         <!-- StyleSheet -->
 
         <link rel="stylesheet" href="../css/Root.css" />
         <link rel="stylesheet" href="../css/RtmpStreamer.css" />
+        <link rel="stylesheet" href="../css/optrf-room.css" />
 
         <!-- https://cdnjs.com/libraries/font-awesome -->
 
@@ -39,7 +40,6 @@
 
         <!-- JS scripts -->
         <script defer src="../js/Brand.js"></script>
-        <script async src="../js/Translate.js"></script>
         <script defer src="../js/RtmpStreamer.js"></script>
     </head>
     <body>
@@ -48,14 +48,14 @@
             <button id="closePopup"><i class="fas fa-close"></i></button>
         </div>
         <div class="container fadein">
-            <h1>RTMP Streamer</h1>
+            <h1>RTMP-трансляция</h1>
             <div class="input-group-inline">
                 <input
                     id="apiSecret"
                     type="password"
                     value="mirotalkRtmpApiSecret"
-                    placeholder="API Secret"
-                    title="Enter the API secret here"
+                    placeholder="Секрет API"
+                    title="Введите секрет API"
                 />
             </div>
             <div class="input-group-inline">
@@ -65,27 +65,27 @@
                     value=""
                     placeholder="rtmp://server:port/app/streamKey"
                     readonly
-                    title="This is your RTMP live URL. It cannot be edited."
+                    title="URL RTMP-трансляции. Поле нельзя редактировать."
                 />
-                <button id="copy" title="Click to copy the RTMP URL"><i class="fas fa-paste"></i>&nbsp;Copy</button>
+                <button id="copy" title="Копировать RTMP URL"><i class="fas fa-paste"></i>&nbsp;Копировать</button>
             </div>
 
             <video id="video" width="640" height="480"></video>
 
             <div class="button-group">
-                <button id="startCamera" title="Click to start camera streaming">
-                    <i class="fas fa-video"></i>&nbsp;Start Streaming
+                <button id="startCamera" title="Начать трансляцию камеры">
+                    <i class="fas fa-video"></i>&nbsp;Транслировать камеру
                 </button>
-                <button id="startScreen" title="Click to start screen streaming">
-                    <i class="fas fa-desktop"></i>&nbsp;Start Streaming
+                <button id="startScreen" title="Начать трансляцию экрана">
+                    <i class="fas fa-desktop"></i>&nbsp;Транслировать экран
                 </button>
-                <button id="stop" disabled title="Click to stop streaming">
-                    <i class="fas fa-stop-circle"></i>&nbsp;Stop Streaming
+                <button id="stop" disabled title="Остановить трансляцию">
+                    <i class="fas fa-stop-circle"></i>&nbsp;Остановить
                 </button>
             </div>
         </div>
         <footer id="footer">
-            <p>&copy; 2026 MiroTalk SFU, all rights reserved</p>
+            <p>&copy; 2026 ОПТ РФ. Все права защищены.</p>
         </footer>
     </body>
 </html>

@@ -1,0 +1,342 @@
+'use strict';
+
+/**
+ * Единая русская локализация интерфейса ОПТ РФ.
+ * Переводит статические и динамически добавляемые элементы, не затрагивая
+ * пользовательские сообщения, поля ввода и содержимое редакторов.
+ */
+(() => {
+    document.documentElement.lang = 'ru';
+
+    const exact = new Map(
+        Object.entries({
+            About: 'О сервисе',
+            Accept: 'Принять',
+            'Access denied.': 'Доступ запрещён.',
+            'Active rooms': 'Активные комнаты',
+            'Active Rooms': 'Активные комнаты',
+            'Add Room': 'Добавить комнату',
+            All: 'Все',
+            Allow: 'Разрешить',
+            Audio: 'Аудио',
+            'Audio input': 'Микрофон',
+            'Audio output': 'Динамики',
+            Back: 'Назад',
+            'Back to home': 'На главную',
+            Ban: 'Заблокировать',
+            'Breakout Rooms': 'Сессионные комнаты',
+            Broadcasting: 'Трансляция',
+            Cancel: 'Отмена',
+            Chat: 'Чат',
+            'Checking room status...': 'Проверка статуса комнаты...',
+            Close: 'Закрыть',
+            'Close Video or Audio': 'Закрыть видео или аудио',
+            Confirm: 'Подтвердить',
+            Copy: 'Копировать',
+            'Copy join link': 'Копировать ссылку',
+            'Create Objects': 'Создание объектов',
+            'Create Poll': 'Создать опрос',
+            'Customize Room': 'Настроить комнату',
+            'Date & Time': 'Дата и время',
+            Delete: 'Удалить',
+            Description: 'Описание',
+            Disable: 'Отключить',
+            Duration: 'Продолжительность',
+            'Duration (min)': 'Продолжительность (мин)',
+            'Duration (optional)': 'Продолжительность (необязательно)',
+            Eject: 'Удалить из комнаты',
+            Enable: 'Включить',
+            'Enter your credentials to continue.': 'Введите данные для входа.',
+            Exit: 'Выйти',
+            'File sharing': 'Обмен файлами',
+            'First User Join': 'Вход первого участника',
+            'Generate random room id': 'Сгенерировать название комнаты',
+            'Generate random room name': 'Сгенерировать название комнаты',
+            'Hide me': 'Скрыть меня',
+            Invite: 'Пригласить',
+            Join: 'Войти',
+            'Join link': 'Ссылка для входа',
+            'Join options': 'Параметры входа',
+            'Join Room': 'Войти в комнату',
+            'Join room': 'Войти в комнату',
+            'Join from your mobile device': 'Войти с мобильного устройства',
+            'Link actions': 'Действия со ссылкой',
+            'Lock Room': 'Закрыть комнату',
+            Login: 'Войти',
+            'Meeting Title': 'Название встречи',
+            Mute: 'Выключить звук',
+            Name: 'Имя',
+            No: 'Нет',
+            Notifications: 'Уведомления',
+            'Optional password': 'Необязательный пароль',
+            Participants: 'Участники',
+            Password: 'Пароль',
+            'Permission denied': 'Доступ запрещён',
+            'Play music': 'Включить музыку',
+            Polls: 'Опросы',
+            Presenter: 'Ведущий',
+            'Privacy Policy': 'Политика конфиденциальности',
+            'Public chat': 'Общий чат',
+            Random: 'Случайное',
+            Recipients: 'Получатели',
+            Refresh: 'Обновить',
+            Remove: 'Удалить',
+            Room: 'Комната',
+            'Room Name': 'Название комнаты',
+            'Room password': 'Пароль комнаты',
+            Rooms: 'Комнаты',
+            Save: 'Сохранить',
+            'Save messages': 'Сохранить сообщения',
+            'Save Notifications': 'Сохранить уведомления',
+            'Save on server': 'Сохранить на сервере',
+            'Schedule Meeting': 'Запланировать встречу',
+            Screen: 'Экран',
+            'Search rooms...': 'Поиск комнат...',
+            'Select date and time': 'Выберите дату и время',
+            Settings: 'Настройки',
+            Share: 'Поделиться',
+            'Share join link': 'Поделиться ссылкой',
+            'Share Room': 'Поделиться комнатой',
+            'Show password': 'Показать пароль',
+            'Signing in...': 'Выполняется вход...',
+            Snapshot: 'Снимок',
+            'Start in Privacy Mode': 'Запускать в приватном режиме',
+            'Start Recording': 'Начать запись',
+            'Start RTMP File Streaming': 'Запустить RTMP-трансляцию файла',
+            'Start RTMP URL Streaming': 'Запустить RTMP-трансляцию по URL',
+            'Stop Recording': 'Остановить запись',
+            'Stop RTMP File Streaming': 'Остановить RTMP-трансляцию файла',
+            'Stop RTMP URL Streaming': 'Остановить RTMP-трансляцию по URL',
+            'Stream from URL:': 'Трансляция по URL:',
+            'Stream key': 'Ключ трансляции',
+            'Total Peers': 'Всего участников',
+            'Try again': 'Попробовать снова',
+            'TRY AGAIN': 'ПОПРОБОВАТЬ СНОВА',
+            'Unlock Room': 'Открыть комнату',
+            Username: 'Имя пользователя',
+            Video: 'Видео',
+            'Video input': 'Камера',
+            'Waiting for host...': 'Ожидание ведущего...',
+            'Welcome back': 'С возвращением',
+            Whiteboard: 'Доска',
+            Abort: 'Отменить',
+            Action: 'Действие',
+            'Add circle': 'Добавить круг',
+            'Add image file': 'Добавить изображение',
+            'Add image URL': 'Добавить изображение по URL',
+            'Add line': 'Добавить линию',
+            'Add pdf file': 'Добавить PDF',
+            'Add rectangle': 'Добавить прямоугольник',
+            'Add text': 'Добавить текст',
+            Aspect: 'Соотношение сторон',
+            'Aspect ratio:': 'Соотношение сторон:',
+            Broadcast: 'Трансляция',
+            'Browse files': 'Выбрать файлы',
+            Buttons: 'Кнопки',
+            'Buttons bar:': 'Панель кнопок:',
+            'Chat pin': 'Закрепление чата',
+            Clean: 'Очистить',
+            'Custom RTMP destination:': 'Пользовательский адрес RTMP:',
+            'Custom theme:': 'Своя тема:',
+            Default: 'По умолчанию',
+            Dark: 'Тёмная',
+            Grey: 'Серая',
+            Green: 'Зелёная',
+            Blue: 'Синяя',
+            Red: 'Красная',
+            Purple: 'Фиолетовая',
+            Orange: 'Оранжевая',
+            Pink: 'Розовая',
+            Yellow: 'Жёлтая',
+            'Disable ChatGPT': 'Отключить ChatGPT',
+            'Disable DeepSeek': 'Отключить DeepSeek',
+            'Disable Media Sharing': 'Запретить показ медиа',
+            'Disable Private Chat': 'Запретить личный чат',
+            'Disable Public Chat': 'Запретить общий чат',
+            'Disable Screen Sharing': 'Запретить демонстрацию экрана',
+            'Disconnect all on Exit': 'Отключить всех при выходе',
+            Editor: 'Редактор',
+            Email: 'Электронная почта',
+            'End room for all': 'Завершить встречу для всех',
+            'Events:': 'События:',
+            'Extra info:': 'Дополнительная информация:',
+            'General Shortcuts': 'Основные сочетания клавиш',
+            Hide: 'Скрыть',
+            Horizontal: 'Горизонтально',
+            Icon: 'Значок',
+            Language: 'Язык',
+            'Language:': 'Язык:',
+            'Leave room': 'Покинуть комнату',
+            Lobby: 'Зал ожидания',
+            Media: 'Медиа',
+            'Microphone:': 'Микрофон:',
+            Moderator: 'Модератор',
+            'Moderator options for Everyone': 'Настройки модерации для всех',
+            'Notifications mode': 'Режим уведомлений',
+            'Noise Suppression': 'Шумоподавление',
+            'No file selected': 'Файл не выбран',
+            'Only host': 'Только ведущий',
+            'Outgoing transfer': 'Исходящая передача',
+            'Incoming transfer': 'Входящая передача',
+            'Pause recording': 'Приостановить запись',
+            'Paste Image URL': 'Вставьте URL изображения',
+            'Presenter:': 'Ведущий:',
+            'Presenter-only Polls': 'Опросы только для ведущего',
+            'Preparing transfer...': 'Подготовка передачи...',
+            Profile: 'Профиль',
+            'Push to talk': 'Рация',
+            'Receiving file': 'Получение файла',
+            Recording: 'Запись',
+            'REC time:': 'Время записи:',
+            'Restrict Self-Unhide': 'Запретить самостоятельно включать видео',
+            'Restrict Self-Unmute': 'Запретить самостоятельно включать микрофон',
+            'Resume recording': 'Продолжить запись',
+            'Screen FPS:': 'Частота кадров экрана:',
+            'Screen Optimization:': 'Оптимизация экрана:',
+            'Screen Quality:': 'Качество экрана:',
+            'Scan to join the room': 'Отсканируйте для входа в комнату',
+            'Select Avatar Voice': 'Выберите голос аватара',
+            'Send email invitation': 'Отправить приглашение по почте',
+            'Sending file': 'Отправка файла',
+            Shortcuts: 'Горячие клавиши',
+            Shortcut: 'Сочетание клавиш',
+            Sounds: 'Звуки',
+            'Speaker:': 'Динамики:',
+            'Speaker Focus': 'Фокус на говорящем',
+            Style: 'Стиль',
+            'Theme:': 'Тема:',
+            'Then press': 'Затем нажмите',
+            Toggle: 'Переключить',
+            Top: 'Сверху',
+            'Video Controls:': 'Элементы управления видео:',
+            'Video Object fit:': 'Режим отображения видео:',
+            'Video Quality:': 'Качество видео:',
+            'Video Source:': 'Источник видео:',
+            Vertical: 'Вертикально',
+            'Virtual background:': 'Виртуальный фон:',
+            'Volume bar': 'Индикатор громкости',
+            'Waiting for data...': 'Ожидание данных...',
+            'Username:': 'Имя пользователя:',
+            'Keep awake': 'Не выключать экран',
+            'Keep custom': 'Сохранять свою тему',
+            fill: 'заполнить',
+            contain: 'вписать',
+            cover: 'обрезать',
+            'scale-down': 'уменьшить',
+            none: 'нет',
+            off: 'выкл.',
+            default: 'по умолчанию',
+            'max frame-per-second': 'максимальная частота кадров',
+            Yes: 'Да',
+            'Your display name': 'Ваше имя',
+            or: 'или',
+            '0 rooms': '0 комнат',
+        })
+    );
+
+    const phrases = [
+        ['Pick name.', 'Придумайте название.'],
+        ['Share URL.', 'Отправьте ссылку.'],
+        ['Start conference.', 'Начните встречу.'],
+        ['The meeting hasn’t started yet.', 'Встреча ещё не началась.'],
+        ["The meeting hasn't started yet.", 'Встреча ещё не началась.'],
+        [
+            "You'll join automatically when the host opens the room.",
+            'Вы войдёте автоматически, когда ведущий откроет комнату.',
+        ],
+        ['Just started waiting', 'Ожидание только началось'],
+        ['Are you the host?', 'Вы ведущий?'],
+        ['Login here', 'Войти'],
+        [
+            'This app will not work without camera or microphone access.',
+            'Для работы нужны разрешения на доступ к камере или микрофону.',
+        ],
+        ['Please try again and allow it.', 'Разрешите доступ в браузере и повторите попытку.'],
+        ['Separate multiple emails with commas', 'Укажите несколько адресов через запятую'],
+        ['Leave empty to disable password', 'Оставьте пустым, чтобы не использовать пароль'],
+        ['Leave empty to disable avatar', 'Оставьте пустым, чтобы не использовать аватар'],
+        [
+            'Required when Host Protected or User Auth is enabled.',
+            'Требуется, если включена защита ведущего или авторизация пользователей.',
+        ],
+        ['Format HH:MM:SS. Leave empty for unlimited', 'Формат ЧЧ:ММ:СС. Оставьте пустым без ограничения времени'],
+        ['Scan with your camera to open the join link.', 'Отсканируйте камерой, чтобы открыть ссылку для входа.'],
+        ['No active rooms', 'Нет активных комнат'],
+        ['No rooms found', 'Комнаты не найдены'],
+        ['Everyone Follows Me', 'Все следуют за ведущим'],
+        ['Everyone starts muted', 'Все входят с выключенным микрофоном'],
+        ['Everyone starts hidden', 'Все входят с выключенной камерой'],
+        ['The presenter has disabled meeting recording.', 'Ведущий отключил запись встречи.'],
+        ['Share a Video or Audio', 'Показать видео или аудио'],
+        ['Keep this window open while the transfer completes.', 'Не закрывайте окно до завершения передачи.'],
+        ['You can hide this panel and let the download continue.', 'Панель можно скрыть — загрузка продолжится.'],
+        ['Page not found', 'Страница не найдена'],
+        ['Something went wrong', 'Что-то пошло не так'],
+        ['Under Maintenance', 'Технические работы'],
+    ];
+
+    const attributes = ['placeholder', 'title', 'aria-label'];
+    const ignoredParents = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'PRE']);
+
+    function translateValue(value) {
+        if (!value) return value;
+        const trimmed = value.trim();
+        if (exact.has(trimmed)) {
+            return value.replace(trimmed, exact.get(trimmed));
+        }
+        let translated = value;
+        for (const [source, target] of phrases) {
+            translated = translated.replaceAll(source, target);
+        }
+        return translated;
+    }
+
+    function translateTextNode(node) {
+        const parent = node.parentElement;
+        if (!parent || ignoredParents.has(parent.tagName) || parent.isContentEditable) return;
+        const translated = translateValue(node.nodeValue);
+        if (translated !== node.nodeValue) node.nodeValue = translated;
+    }
+
+    function translateElement(element) {
+        if (!(element instanceof Element)) return;
+        for (const attribute of attributes) {
+            if (!element.hasAttribute(attribute)) continue;
+            const value = element.getAttribute(attribute);
+            const translated = translateValue(value);
+            if (translated !== value) element.setAttribute(attribute, translated);
+        }
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) translateTextNode(node);
+    }
+
+    function initialize() {
+        translateElement(document.body);
+        new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                if (mutation.type === 'characterData') {
+                    translateTextNode(mutation.target);
+                    continue;
+                }
+                if (mutation.type === 'attributes') {
+                    translateElement(mutation.target);
+                    continue;
+                }
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === Node.TEXT_NODE) translateTextNode(node);
+                    else translateElement(node);
+                }
+            }
+        }).observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: attributes,
+        });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize);
+    else initialize();
+})();

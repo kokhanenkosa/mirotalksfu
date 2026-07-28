@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
     <head>
-        <title id="title">MiroTalk - Custom Room.</title>
-        <link id="icon" rel="shortcut icon" href="../images/logo.svg" />
-        <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo.svg" />
+        <title id="title">Настройка комнаты — ОПТ РФ</title>
+        <link id="icon" rel="shortcut icon" href="../images/logo-no-background.svg" />
+        <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo-no-background.svg" />
 
         <meta charset="utf-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -19,21 +19,22 @@
         <meta property="og:url" content="{{OG_URL}}" />
 
         <link rel="stylesheet" type="text/css" href="../css/CustomizeRoom.css" />
+        <link rel="stylesheet" type="text/css" href="../css/optrf-room.css" />
 
         <!-- xss (provides filterXSS) -->
         <script src="https://cdn.jsdelivr.net/npm/xss/dist/xss.min.js"></script>
     </head>
     <body>
-        <a class="cr-home" href="/" aria-label="Back to home" title="Back to home">
-            <img src="../images/logo.svg" alt="MiroTalk SFU" width="32" height="32" />
+        <a class="cr-home" href="/" aria-label="На главную" title="На главную">
+            <img src="../images/logo-on-dark.svg" alt="ОПТ РФ" width="120" height="32" />
         </a>
         <main class="cr-page">
-            <section class="cr-card" aria-label="Join a MiroTalk room">
-                <h1 class="cr-title">Join a MiroTalk Room</h1>
+            <section class="cr-card" aria-label="Вход в комнату">
+                <h1 class="cr-title">Настройка входа в комнату</h1>
 
                 <form id="customizeRoomForm" class="cr-form" autocomplete="off">
                     <div class="cr-field">
-                        <label class="cr-label" for="room">Room</label>
+                        <label class="cr-label" for="room">Комната</label>
                         <div class="cr-input-wrap">
                             <input
                                 id="room"
@@ -41,7 +42,7 @@
                                 class="cr-input"
                                 type="text"
                                 inputmode="text"
-                                placeholder="room123"
+                                placeholder="komnata123"
                                 maxlength="64"
                                 required
                             />
@@ -49,43 +50,43 @@
                                 id="crRandomRoom"
                                 class="cr-input-action"
                                 type="button"
-                                aria-label="Generate random room id"
-                                title="Generate random room id"
+                                aria-label="Сгенерировать название комнаты"
+                                title="Сгенерировать название комнаты"
                             >
-                                Random
+                                Случайное
                             </button>
                         </div>
                     </div>
 
                     <div class="cr-field">
-                        <label class="cr-label" for="roomPassword">Room password</label>
+                        <label class="cr-label" for="roomPassword">Пароль комнаты</label>
                         <input
                             id="roomPassword"
                             name="roomPassword"
                             class="cr-input"
                             type="password"
                             inputmode="text"
-                            placeholder="Optional password"
+                            placeholder="Необязательный пароль"
                             maxlength="128"
                         />
-                        <p class="cr-hint">Leave empty to disable password (uses roomPassword=0).</p>
+                        <p class="cr-hint">Оставьте пустым, чтобы не использовать пароль.</p>
                     </div>
 
                     <div class="cr-field">
-                        <label class="cr-label" for="name">Name</label>
+                        <label class="cr-label" for="name">Имя</label>
                         <input
                             id="name"
                             name="name"
                             class="cr-input"
                             type="text"
                             inputmode="text"
-                            placeholder="Your display name"
+                            placeholder="Ваше отображаемое имя"
                             maxlength="64"
                         />
                     </div>
 
                     <div class="cr-field">
-                        <label class="cr-label" for="avatar">Avatar URL</label>
+                        <label class="cr-label" for="avatar">URL аватара</label>
                         <input
                             id="avatar"
                             name="avatar"
@@ -95,26 +96,26 @@
                             placeholder="https://..."
                             maxlength="512"
                         />
-                        <p class="cr-hint">Leave empty to disable avatar (uses avatar=0).</p>
+                        <p class="cr-hint">Оставьте пустым, чтобы не использовать аватар.</p>
                     </div>
 
                     <div class="cr-field">
-                        <label class="cr-label" for="token">Token</label>
+                        <label class="cr-label" for="token">Токен</label>
                         <input
                             id="token"
                             name="token"
                             class="cr-input"
                             type="text"
                             inputmode="text"
-                            placeholder="JWT token"
+                            placeholder="JWT-токен"
                             maxlength="2048"
                         />
-                        <p class="cr-hint">Required when Host Protected or User Auth is enabled.</p>
+                        <p class="cr-hint">Требуется, если включена защита ведущего или авторизация пользователей.</p>
                     </div>
 
-                    <div class="cr-toggle-grid" aria-label="Join options">
+                    <div class="cr-toggle-grid" aria-label="Параметры входа">
                         <label class="cr-toggle" for="audio">
-                            <span class="cr-toggle-text">Audio</span>
+                            <span class="cr-toggle-text">Аудио</span>
                             <span class="cr-switch-wrap">
                                 <input id="audio" name="audio" type="checkbox" />
                                 <span class="cr-switch" aria-hidden="true"></span>
@@ -122,7 +123,7 @@
                         </label>
 
                         <label class="cr-toggle" for="video">
-                            <span class="cr-toggle-text">Video</span>
+                            <span class="cr-toggle-text">Видео</span>
                             <span class="cr-switch-wrap">
                                 <input id="video" name="video" type="checkbox" />
                                 <span class="cr-switch" aria-hidden="true"></span>
@@ -130,7 +131,7 @@
                         </label>
 
                         <label class="cr-toggle" for="screen">
-                            <span class="cr-toggle-text">Screen</span>
+                            <span class="cr-toggle-text">Экран</span>
                             <span class="cr-switch-wrap">
                                 <input id="screen" name="screen" type="checkbox" />
                                 <span class="cr-switch" aria-hidden="true"></span>
@@ -138,7 +139,7 @@
                         </label>
 
                         <label class="cr-toggle" for="chat">
-                            <span class="cr-toggle-text">Chat</span>
+                            <span class="cr-toggle-text">Чат</span>
                             <span class="cr-switch-wrap">
                                 <input id="chat" name="chat" type="checkbox" />
                                 <span class="cr-switch" aria-hidden="true"></span>
@@ -146,7 +147,7 @@
                         </label>
 
                         <label class="cr-toggle" for="hide">
-                            <span class="cr-toggle-text">Hide me</span>
+                            <span class="cr-toggle-text">Скрыть меня</span>
                             <span class="cr-switch-wrap">
                                 <input id="hide" name="hide" type="checkbox" />
                                 <span class="cr-switch" aria-hidden="true"></span>
@@ -154,7 +155,7 @@
                         </label>
 
                         <label class="cr-toggle" for="notify">
-                            <span class="cr-toggle-text">Share</span>
+                            <span class="cr-toggle-text">Поделиться</span>
                             <span class="cr-switch-wrap">
                                 <input id="notify" name="notify" type="checkbox" />
                                 <span class="cr-switch" aria-hidden="true"></span>
@@ -163,7 +164,7 @@
                     </div>
 
                     <div class="cr-field">
-                        <label class="cr-label" for="duration">Duration (optional)</label>
+                        <label class="cr-label" for="duration">Продолжительность (необязательно)</label>
                         <input
                             id="duration"
                             name="duration"
@@ -174,39 +175,46 @@
                             pattern="^\d{2}:\d{2}:\d{2}$"
                             maxlength="8"
                         />
-                        <p class="cr-hint">Format HH:MM:SS. Leave empty for unlimited (uses duration=unlimited).</p>
+                        <p class="cr-hint">Формат ЧЧ:ММ:СС. Оставьте пустым без ограничения времени.</p>
                     </div>
 
                     <div class="cr-field">
-                        <label class="cr-label" for="crPreviewUrl">Join link</label>
+                        <label class="cr-label" for="crPreviewUrl">Ссылка для входа</label>
                         <div class="cr-preview-row">
                             <input id="crPreviewUrl" class="cr-input cr-preview" type="text" readonly />
-                            <div class="cr-actions" aria-label="Link actions">
-                                <button id="crCopy" class="cr-copy" type="button" aria-label="Copy join link">
+                            <div class="cr-actions" aria-label="Действия со ссылкой">
+                                <button id="crCopy" class="cr-copy" type="button" aria-label="Копировать ссылку">
                                     <span class="cr-copy-icon" aria-hidden="true">⧉</span>
-                                    <span>Copy</span>
+                                    <span>Копировать</span>
                                 </button>
-                                <button id="crShare" class="cr-copy" type="button" aria-label="Share join link" hidden>
+                                <button
+                                    id="crShare"
+                                    class="cr-copy"
+                                    type="button"
+                                    aria-label="Поделиться ссылкой"
+                                    hidden
+                                >
                                     <span class="cr-copy-icon" aria-hidden="true">↗</span>
-                                    <span>Share</span>
+                                    <span>Поделиться</span>
                                 </button>
                             </div>
                         </div>
                         <div id="crQrWrap" class="cr-qr-wrap" hidden>
-                            <div id="crQr" class="cr-qr" role="img" aria-label="Join link QR code"></div>
-                            <p class="cr-hint cr-qr-hint">Scan with your camera to open the join link.</p>
+                            <div id="crQr" class="cr-qr" role="img" aria-label="QR-код ссылки для входа"></div>
+                            <p class="cr-hint cr-qr-hint">Отсканируйте камерой, чтобы открыть ссылку.</p>
                         </div>
                         <p id="crStatus" class="cr-hint" role="status" aria-live="polite"></p>
                     </div>
 
                     <p id="crError" class="cr-error" hidden></p>
 
-                    <button class="cr-submit" type="submit">Join room</button>
+                    <button class="cr-submit" type="submit">Войти в комнату</button>
                 </form>
             </section>
         </main>
 
         <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
         <script src="../js/CustomizeRoom.js"></script>
+        <script defer src="../js/RussianUI.js"></script>
     </body>
 </html>

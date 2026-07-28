@@ -32,14 +32,11 @@ if (roomId && roomId !== 'whoAreYou') {
 function updateElapsedTime() {
     const seconds = Math.floor((Date.now() - waitStartTime) / 1000);
     if (seconds < 60) {
-        waitingElapsedText.textContent = getWaitingRoomBrand('waitingRoomElapsedJust', 'Just started waiting');
+        waitingElapsedText.textContent = getWaitingRoomBrand('waitingRoomElapsedJust', 'Ожидание только началось');
     } else {
         const minutes = Math.floor(seconds / 60);
-        const template = getWaitingRoomBrand('waitingRoomElapsedMinutes', 'Waiting for {minutes}');
-        waitingElapsedText.textContent = template.replace(
-            '{minutes}',
-            minutes + (minutes === 1 ? ' minute' : ' minutes')
-        );
+        const template = getWaitingRoomBrand('waitingRoomElapsedMinutes', 'Ожидание: {minutes}');
+        waitingElapsedText.textContent = template.replace('{minutes}', minutes + ' мин.');
     }
 }
 elapsedTimerId = setInterval(updateElapsedTime, 10000);
@@ -88,7 +85,7 @@ function checkRoom() {
                     waitingAudio = null;
                 }
                 playSound('roomActive');
-                statusEl.textContent = getWaitingRoomBrand('waitingRoomReady', 'Room is ready! Joining...');
+                statusEl.textContent = getWaitingRoomBrand('waitingRoomReady', 'Комната готова. Выполняется вход...');
                 statusEl.classList.add('ready');
                 setTimeout(function () {
                     window.location.href = '/join/' + encodeURIComponent(roomId);
@@ -96,7 +93,7 @@ function checkRoom() {
             } else if (!isActive) {
                 statusEl.textContent = getWaitingRoomBrand(
                     'waitingRoomWaiting',
-                    'Waiting for host to start the meeting...'
+                    'Ожидаем, когда ведущий начнёт встречу...'
                 );
                 scheduleNextCheck();
             }
@@ -104,7 +101,7 @@ function checkRoom() {
         .catch(function () {
             statusEl.textContent = getWaitingRoomBrand(
                 'waitingRoomWaiting',
-                'Waiting for host to start the meeting...'
+                'Ожидаем, когда ведущий начнёт встречу...'
             );
             scheduleNextCheck();
         });
@@ -173,13 +170,13 @@ function initWaitingAudio() {
         if (audioPlaying) {
             waitingAudio.pause();
             audioIcon.className = 'fa-solid fa-play';
-            audioBtn.title = 'Play music';
+            audioBtn.title = 'Включить музыку';
         } else {
             waitingAudio.play().catch(function (err) {
                 console.warn('Audio play blocked:', err.message);
             });
             audioIcon.className = 'fa-solid fa-pause';
-            audioBtn.title = 'Pause music';
+            audioBtn.title = 'Приостановить музыку';
         }
         audioPlaying = !audioPlaying;
     };
@@ -187,7 +184,7 @@ function initWaitingAudio() {
     audioMuteBtn.onclick = function () {
         waitingAudio.muted = !waitingAudio.muted;
         audioMuteIcon.className = waitingAudio.muted ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
-        audioMuteBtn.title = waitingAudio.muted ? 'Unmute' : 'Mute';
+        audioMuteBtn.title = waitingAudio.muted ? 'Включить звук' : 'Выключить звук';
     };
 }
 

@@ -62,18 +62,26 @@ function getUUID() {
     );
 }
 
+function pluralizeRooms(count) {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'комната';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'комнаты';
+    return 'комнат';
+}
+
 function updateStats(rooms) {
     const totalPeers = rooms.reduce((sum, r) => sum + r.peers, 0);
     statRooms.textContent = rooms.length;
     statPeers.textContent = totalPeers;
-    roomCountBadge.textContent = rooms.length === 1 ? '1 room' : `${rooms.length} rooms`;
+    roomCountBadge.textContent = `${rooms.length} ${pluralizeRooms(rooms.length)}`;
 }
 
 async function fetchRooms() {
-    setRoomsContent('<div class="empty"><i class="fa-solid fa-spinner fa-spin"></i>Loading rooms...</div>');
+    setRoomsContent('<div class="empty"><i class="fa-solid fa-spinner fa-spin"></i>Загрузка комнат...</div>');
     try {
         const res = await axios.get('/api/v1/activeRooms');
-        if (res.status !== 200) throw new Error('Failed to fetch active rooms');
+        if (res.status !== 200) throw new Error('Не удалось получить список активных комнат');
         allRooms = getRoomsData(res);
         updateStats(allRooms);
         renderRooms(allRooms);
@@ -86,7 +94,7 @@ async function fetchRooms() {
 
 function renderRooms(rooms) {
     if (!rooms.length) {
-        setRoomsContent('<div class="empty"><i class="fa-solid fa-door-closed"></i>No active rooms found.</div>');
+        setRoomsContent('<div class="empty"><i class="fa-solid fa-door-closed"></i>Активных комнат нет.</div>');
         return;
     }
     setRoomsContent(
@@ -109,10 +117,10 @@ function renderRooms(rooms) {
                 <div class="room-card-footer">
                     <div class="peer-status">
                         <span class="dot"></span>
-                        ${peers} ${peers === 1 ? 'peer' : 'peers'} connected
+                        Подключено участников: ${peers}
                     </div>
                     <a href="${join}" class="join-btn" target="_blank" rel="noopener noreferrer">
-                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Join
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Войти
                     </a>
                 </div>
             </div>

@@ -21,7 +21,7 @@ if (togglePasswordBtn) {
         const isPassword = passwordInput.type === 'password';
         passwordInput.type = isPassword ? 'text' : 'password';
         togglePasswordBtn.querySelector('i').className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
-        const label = isPassword ? 'Hide password' : 'Show password';
+        const label = isPassword ? 'Скрыть пароль' : 'Показать пароль';
         togglePasswordBtn.title = label;
         togglePasswordBtn.setAttribute('aria-label', label);
         togglePasswordBtn.setAttribute('aria-pressed', isPassword ? 'true' : 'false');
@@ -66,7 +66,7 @@ if (generateRoomBtn) {
         if (custom && custom.offsetParent !== null) {
             custom.value = uuid;
         } else if (selectRoom && selectRoom.style.display !== 'none') {
-            popup('warning', 'Random room is available for Admin users only');
+            popup('warning', 'Случайная комната доступна только администраторам');
         }
     };
 }
@@ -89,12 +89,12 @@ if (shareRoomBtn) {
         }
         const roomUrl = window.location.origin + '/join/?room=' + roomName;
         if (navigator.share) {
-            navigator.share({ title: 'Join my room', url: roomUrl }).catch(() => {});
+            navigator.share({ title: 'Присоединиться к моей комнате', url: roomUrl }).catch(() => {});
         } else {
             navigator.clipboard
                 .writeText(roomUrl)
                 .then(() => popup('success', 'Room link copied to clipboard!'))
-                .catch(() => popup('warning', 'Failed to copy link'));
+                .catch(() => popup('warning', 'Не удалось скопировать ссылку'));
         }
     };
 }
@@ -180,7 +180,7 @@ function login() {
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.id = 'customRoomInput';
-                    input.placeholder = 'Enter room name';
+                    input.placeholder = 'Введите название комнаты';
                     input.className = 'form-input';
                     input.maxLength = 32;
                     selectRoom.parentNode.insertBefore(input, selectRoom);
@@ -218,7 +218,7 @@ function login() {
                     const msg = error.response.data?.message || 'Too many login attempts. Please try again later.';
                     showLoginError(msg);
                 } else {
-                    showLoginError('Invalid credentials. Please try again.');
+                    showLoginError('Неверное имя пользователя или пароль.');
                 }
             });
         return;

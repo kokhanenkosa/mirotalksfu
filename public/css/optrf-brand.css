@@ -195,7 +195,9 @@ body {
     padding: 24px 16px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
     height: 100%;
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    transition:
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
 }
 
 .feature-inner:hover {
@@ -210,6 +212,26 @@ body {
 
 #tryEasier h2 {
     color: var(--optrf-dark) !important;
+}
+
+/* Текстовые страницы (privacy, about) */
+.cta-inner.section-inner h1.section-title {
+    color: var(--optrf-dark) !important;
+}
+
+.cta-inner.section-inner h3 {
+    color: var(--optrf-dark);
+    margin: 1.5rem 0 0.5rem;
+    font-weight: 600;
+}
+
+.cta-inner.section-inner .hero-paragraph {
+    margin-bottom: 0.75rem;
+}
+
+.cta-inner.section-inner {
+    background: var(--optrf-surface);
+    border: 1px solid var(--optrf-border);
 }
 
 /* Footer */
@@ -228,6 +250,16 @@ body {
 .site-footer a:hover,
 .footer-links a:hover {
     color: var(--optrf-blue) !important;
+}
+
+.footer-social-links,
+.github-button {
+    display: none !important;
+}
+
+.footer-links li:has(a[href^='http']),
+.footer-links li:has(a[href^='mailto:']) {
+    display: none !important;
 }
 
 .footer-copyright {

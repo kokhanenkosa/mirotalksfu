@@ -1,23 +1,29 @@
 <!doctype html>
-<html>
+<html lang="ru">
     <head>
-        <title>Site Maintenance</title>
+        <title>Технические работы — ОПТ РФ</title>
+        <link rel="shortcut icon" href="../images/logo-no-background.svg" />
         <meta charset="utf-8" />
         <meta name="robots" content="noindex" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <style>
             body {
-                text-align: center;
+                min-height: 100vh;
+                margin: 0;
+                display: grid;
+                place-items: center;
                 padding: 20px;
+                background: #f5f5f5;
                 font:
-                    20px Helvetica,
+                    20px 'IBM Plex Sans',
+                    'Segoe UI',
                     sans-serif;
-                color: #333;
+                color: #131313;
             }
 
             @media (min-width: 768px) {
                 body {
-                    padding-top: 150px;
+                    padding-top: 20px;
                 }
             }
 
@@ -27,18 +33,23 @@
 
             article {
                 display: block;
-                text-align: left;
+                text-align: center;
                 max-width: 650px;
                 margin: 0 auto;
+                padding: 40px;
+                background: #fff;
+                border: 1px solid #e9e9e9;
+                border-radius: 8px;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
             }
 
             a {
-                color: #dc8100;
+                color: #00a8e8;
                 text-decoration: none;
             }
 
             a:hover {
-                color: #333;
+                color: #019ad5;
                 text-decoration: none;
             }
         </style>
@@ -46,16 +57,15 @@
 
     <body>
         <article>
-            <h1>We&rsquo;ll be back soon!</h1>
+            <img
+                src="../images/logo-no-background.svg"
+                alt="ОПТ РФ"
+                style="width: 240px; max-width: 80%; height: auto"
+            />
+            <h1>Скоро вернёмся!</h1>
             <div>
-                <p>
-                    Sorry for the inconvenience but we&rsquo;re performing some maintenance at the moment. If you need
-                    to you can always
-                    <a href="mailto:miroslav.pejic.85@gmail.com">contact us</a>, otherwise we&rsquo;ll be back online
-                    shortly!
-                </p>
-                <img src="https://media.giphy.com/media/dWesBcTLavkZuG35MI/giphy.gif" />
-                <p>&mdash; The MiroTalk Team</p>
+                <p>Сервис временно недоступен из-за технических работ. Пожалуйста, повторите попытку немного позже.</p>
+                <p>&mdash; Команда ОПТ РФ</p>
             </div>
         </article>
     </body>

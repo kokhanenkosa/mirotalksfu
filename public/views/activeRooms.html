@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
     <head>
-        <title id="title">MiroTalk SFU - Active Rooms.</title>
-        <link id="icon" rel="shortcut icon" href="../images/logo.svg" />
-        <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo.svg" />
+        <title id="title">Активные комнаты — ОПТ РФ</title>
+        <link id="icon" rel="shortcut icon" href="../images/logo-no-background.svg" />
+        <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo-no-background.svg" />
 
         <meta charset="utf-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -21,35 +21,37 @@
         <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
         <link rel="stylesheet" type="text/css" href="../css/ActiveRooms.css" />
+        <link rel="stylesheet" type="text/css" href="../css/optrf-room.css" />
     </head>
     <body>
         <div class="container">
             <div class="header">
                 <div class="header-left">
                     <i class="fa-solid fa-tower-broadcast"></i>
-                    <h1>Active Rooms</h1>
-                    <span class="room-count-badge" id="roomCountBadge">0 rooms</span>
+                    <h1>Активные комнаты</h1>
+                    <span class="room-count-badge" id="roomCountBadge">0 комнат</span>
                 </div>
-                <button id="refresh-btn" class="refresh-btn" title="Refresh">
+                <button id="refresh-btn" class="refresh-btn" title="Обновить">
                     <i class="fa-solid fa-arrows-rotate"></i>
                 </button>
             </div>
             <div class="search-bar">
                 <i class="fa-solid fa-magnifying-glass"></i>
-                <input class="search-input" id="searchInput" type="text" placeholder="Search rooms..." />
+                <input class="search-input" id="searchInput" type="text" placeholder="Поиск комнат..." />
             </div>
             <div class="stats-bar" id="statsBar">
                 <div class="stat-item">
                     <div class="stat-value accent" id="statRooms">0</div>
-                    <div class="stat-label">Rooms</div>
+                    <div class="stat-label">Комнаты</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-value gold" id="statPeers">0</div>
-                    <div class="stat-label">Total Peers</div>
+                    <div class="stat-label">Всего участников</div>
                 </div>
             </div>
             <div class="rooms" id="rooms"></div>
         </div>
         <script defer src="../js/ActiveRooms.js"></script>
+        <script defer src="../js/RussianUI.js"></script>
     </body>
 </html>

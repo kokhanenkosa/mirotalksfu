@@ -1,5 +1,13 @@
 'use strict';
 
+// Единая русская локализация для всех страниц, использующих Brand.js.
+if (!document.querySelector('script[src$="/js/RussianUI.js"], script[src$="../js/RussianUI.js"]')) {
+    const localeScript = document.createElement('script');
+    localeScript.src = '../js/RussianUI.js';
+    localeScript.defer = true;
+    document.head.appendChild(localeScript);
+}
+
 // v3 — сброс старого английского кэша MiroTalk
 const brandDataKey = 'brandData_optrf_v3';
 try {
@@ -86,7 +94,8 @@ let BRAND = {
     whoAreYou: {
         title: 'Ожидание ведущего',
         waitingRoomHeading: 'Ожидание ведущего...',
-        waitingRoomDescription: 'Встреча ещё не началась.<br />Вы войдёте автоматически, когда ведущий откроет комнату.',
+        waitingRoomDescription:
+            'Встреча ещё не началась.<br />Вы войдёте автоматически, когда ведущий откроет комнату.',
         waitingRoomStatus: 'Проверка статуса комнаты...',
         waitingRoomReady: 'Комната готова! Входим...',
         waitingRoomWaiting: 'Ожидание, пока ведущий начнёт встречу...',
