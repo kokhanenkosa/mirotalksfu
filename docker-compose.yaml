@@ -42,19 +42,19 @@ services:
       - SFU_SERVER=${SFU_SERVER:-true}
 
       - UI_LANGUAGE=${UI_LANGUAGE:-ru}
-      - APP_NAME=${APP_NAME:-Видеоконференции}
-      - APP_TITLE=${APP_TITLE:-Видеоконференции<br />Онлайн-встречи прямо в браузере.<br />Просто. Надёжно. Быстро.}
-      - APP_DESCRIPTION=${APP_DESCRIPTION:-Начните видеозвонок в один клик. Без установки программ, плагинов и регистрации — сразу к разговору, чату и демонстрации экрана.}
+      - APP_NAME=${APP_NAME:-ОПТ РФ}
+      - APP_TITLE=${APP_TITLE:-ОПТ РФ<br />Видеоконференции для команды.<br />Просто. Надёжно. Быстро.}
+      - APP_DESCRIPTION=${APP_DESCRIPTION:-Онлайн-встречи в один клик — без установки программ и регистрации. Звонки, чат и демонстрация экрана в браузере.}
       - JOIN_DESCRIPTION=${JOIN_DESCRIPTION:-Введите название комнаты.<br />Например, вот такое:}
       - JOIN_BUTTON_LABEL=${JOIN_BUTTON_LABEL:-Войти в комнату}
       - CUSTOMIZE_BUTTON_LABEL=${CUSTOMIZE_BUTTON_LABEL:-Настроить комнату}
       - JOIN_LAST_LABEL=${JOIN_LAST_LABEL:-Недавняя комната:}
-      - SITE_TITLE=${SITE_TITLE:-Видеоконференции — онлайн-встречи в браузере}
-      - META_DESCRIPTION=${META_DESCRIPTION:-Видеоконференции в браузере: звонки, чат и демонстрация экрана без установки программ.}
-      - OG_SITE_NAME=${OG_SITE_NAME:-Видеоконференции}
-      - OG_TITLE=${OG_TITLE:-Присоединяйтесь к видеовстрече}
+      - SITE_TITLE=${SITE_TITLE:-ОПТ РФ — видеоконференции}
+      - META_DESCRIPTION=${META_DESCRIPTION:-Видеоконференции ОПТ РФ: звонки, чат и демонстрация экрана без установки программ.}
+      - OG_SITE_NAME=${OG_SITE_NAME:-ОПТ РФ}
+      - OG_TITLE=${OG_TITLE:-Присоединяйтесь к видеовстрече ОПТ РФ}
       - OG_DESCRIPTION=${OG_DESCRIPTION:-Онлайн-звонки, чат и демонстрация экрана в браузере.}
-      - COPYRIGHT_TEXT=${COPYRIGHT_TEXT:-Видеоконференции. Все права защищены.}
+      - COPYRIGHT_TEXT=${COPYRIGHT_TEXT:-ОПТ РФ. Все права защищены.}
 
       # Убрать спонсоров / git / внешний маркетинг с лендинга
       - SHOW_TOP_SPONSORS=false

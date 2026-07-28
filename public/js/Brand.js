@@ -45,17 +45,17 @@ const loginButton = document.getElementById('loginButton');
 let BRAND = {
     app: {
         language: 'ru',
-        name: 'Видеоконференции',
-        title: 'Видеоконференции<br />Онлайн-встречи прямо в браузере.<br />Просто. Надёжно. Быстро.',
+        name: 'ОПТ РФ',
+        title: 'ОПТ РФ<br />Видеоконференции для команды.<br />Просто. Надёжно. Быстро.',
         description:
-            'Начните видеозвонок в один клик. Без установки программ, плагинов и регистрации — сразу к разговору, чату и демонстрации экрана.',
+            'Онлайн-встречи в один клик — без установки программ и регистрации. Звонки, чат и демонстрация экрана в браузере.',
         joinDescription: 'Введите название комнаты.<br />Например, вот такое:',
         joinButtonLabel: 'Войти в комнату',
         customizeButtonLabel: 'Настроить комнату',
         joinLastLabel: 'Недавняя комната:',
     },
     site: {
-        title: 'Видеоконференции — онлайн-встречи в браузере',
+        title: 'ОПТ РФ — видеоконференции',
         icon: '../images/logo.svg',
         appleTouchIcon: '../images/logo.svg',
         newRoomTitle: 'Название.<br />Ссылка.<br />Встреча.',
@@ -97,10 +97,10 @@ let BRAND = {
     },
     about: {
         imageUrl: '../images/mirotalk-logo.gif',
-        title: '<strong>Видеоконференции</strong>',
+        title: '<strong>ОПТ РФ</strong>',
         html: `
             <hr />
-            <span>&copy; ${new Date().getFullYear()} Видеоконференции. Все права защищены.</span>
+            <span>&copy; ${new Date().getFullYear()} ОПТ РФ. Все права защищены.</span>
             <hr />
         `,
     },

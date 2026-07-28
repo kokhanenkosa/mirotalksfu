@@ -1,0 +1,27 @@
+/* ОПТ РФ — акценты комнаты в цветах optrf.store */
+:root {
+    --optrf-blue: #00a8e8;
+    --optrf-blue-hover: #019ad5;
+    --color-accent: #00a8e8;
+    --color-accent-strong: #019ad5;
+    --color-accent-soft: rgba(0, 168, 232, 0.14);
+    --color-focus: rgba(0, 168, 232, 0.65);
+    --select-focus-color: rgba(0, 168, 232, 0.5);
+    --videoBar-active: 1px solid rgba(0, 168, 232, 0.4);
+}
+
+.spinner-logo {
+    width: 140px !important;
+    height: 40px !important;
+    object-fit: contain !important;
+}
+
+.swal2-confirm,
+button.swal2-confirm {
+    background: var(--optrf-blue) !important;
+}
+
+.swal2-confirm:hover,
+button.swal2-confirm:hover {
+    background: var(--optrf-blue-hover) !important;
+}

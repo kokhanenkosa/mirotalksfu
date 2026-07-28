@@ -1140,13 +1140,13 @@ module.exports = {
 
             app: {
                 language: process.env.UI_LANGUAGE || 'ru',
-                name: process.env.APP_NAME || 'Видеоконференции',
+                name: process.env.APP_NAME || 'ОПТ РФ',
                 title:
                     process.env.APP_TITLE ||
-                    'Видеоконференции<br />Онлайн-встречи прямо в браузере.<br />Просто. Надёжно. Быстро.',
+                    'ОПТ РФ<br />Видеоконференции для команды.<br />Просто. Надёжно. Быстро.',
                 description:
                     process.env.APP_DESCRIPTION ||
-                    'Начните видеозвонок в один клик. Без установки программ, плагинов и регистрации — сразу к разговору, чату и демонстрации экрана.',
+                    'Онлайн-встречи в один клик — без установки программ и регистрации. Звонки, чат и демонстрация экрана в браузере.',
                 joinDescription:
                     process.env.JOIN_DESCRIPTION || 'Введите название комнаты.<br />Например, вот такое:',
                 joinButtonLabel: process.env.JOIN_BUTTON_LABEL || 'Войти в комнату',
@@ -1160,7 +1160,7 @@ module.exports = {
              * Site-wide settings including icons and page-specific content.
              */
             site: {
-                title: process.env.SITE_TITLE || 'Видеоконференции — онлайн-встречи в браузере',
+                title: process.env.SITE_TITLE || 'ОПТ РФ — видеоконференции',
                 icon: process.env.SITE_ICON_PATH || '../images/logo.svg',
                 appleTouchIcon: process.env.APPLE_TOUCH_ICON_PATH || '../images/logo.svg',
                 newRoomTitle: process.env.NEW_ROOM_TITLE || 'Название.<br />Ссылка.<br />Встреча.',
@@ -1190,8 +1190,8 @@ module.exports = {
              */
             og: {
                 type: process.env.OG_TYPE || 'app-webrtc',
-                siteName: process.env.OG_SITE_NAME || 'Видеоконференции',
-                title: process.env.OG_TITLE || 'Присоединяйтесь к видеовстрече',
+                siteName: process.env.OG_SITE_NAME || 'ОПТ РФ',
+                title: process.env.OG_TITLE || 'Присоединяйтесь к видеовстрече ОПТ РФ',
                 description:
                     process.env.OG_DESCRIPTION || 'Онлайн-звонки, чат и демонстрация экрана в браузере.',
                 image: process.env.OG_IMAGE_URL || '',
@@ -1261,11 +1261,11 @@ module.exports = {
              */
             about: {
                 imageUrl: process.env.ABOUT_IMAGE_URL || '../images/mirotalk-logo.gif',
-                title: process.env.ABOUT_TITLE || 'Видеоконференции',
+                title: process.env.ABOUT_TITLE || 'ОПТ РФ',
                 html: `
                     <hr />
                     <span>
-                        &copy; ${new Date().getFullYear()} ${process.env.COPYRIGHT_TEXT || 'Видеоконференции. Все права защищены.'}
+                        &copy; ${new Date().getFullYear()} ${process.env.COPYRIGHT_TEXT || 'ОПТ РФ. Все права защищены.'}
                     </span>
                     <hr />
                     `,
