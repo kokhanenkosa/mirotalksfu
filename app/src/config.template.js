@@ -1161,8 +1161,8 @@ module.exports = {
              */
             site: {
                 title: process.env.SITE_TITLE || 'ОПТ РФ — видеоконференции',
-                icon: process.env.SITE_ICON_PATH || '../images/logo.svg',
-                appleTouchIcon: process.env.APPLE_TOUCH_ICON_PATH || '../images/logo.svg',
+                icon: process.env.SITE_ICON_PATH || '../images/logo-no-background.svg',
+                appleTouchIcon: process.env.APPLE_TOUCH_ICON_PATH || '../images/logo-no-background.svg',
                 newRoomTitle: process.env.NEW_ROOM_TITLE || 'Название.<br />Ссылка.<br />Встреча.',
                 newRoomDescription:
                     process.env.NEW_ROOM_DESC ||

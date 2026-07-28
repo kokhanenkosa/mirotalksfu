@@ -1140,6 +1140,14 @@ label {
         box-shadow 0.3s;
 }
 
+/* Пока нет optrf-brand.css — показываем светлый лого на тёмном фоне */
+.logo-for-light {
+    display: none;
+}
+.logo-for-dark {
+    display: inline-block;
+}
+
 .header-logo-image:hover {
     filter: brightness(1.5) saturate(1.2);
     box-shadow: 0 4px 15px rgba(0, 0, 255, 0.6);

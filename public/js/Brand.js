@@ -1,6 +1,12 @@
 'use strict';
 
-const brandDataKey = 'brandData';
+// v3 — сброс старого английского кэша MiroTalk
+const brandDataKey = 'brandData_optrf_v3';
+try {
+    window.sessionStorage.removeItem('brandData');
+} catch (e) {
+    /* ignore */
+}
 const brandData = window.sessionStorage.getItem(brandDataKey);
 
 const title = document.getElementById('title');
@@ -56,8 +62,8 @@ let BRAND = {
     },
     site: {
         title: 'ОПТ РФ — видеоконференции',
-        icon: '../images/logo.svg',
-        appleTouchIcon: '../images/logo.svg',
+        icon: '../images/logo-no-background.svg',
+        appleTouchIcon: '../images/logo-no-background.svg',
         newRoomTitle: 'Название.<br />Ссылка.<br />Встреча.',
         newRoomDescription: 'У каждой комнаты свой URL. Придумайте название и отправьте ссылку участникам.',
     },
@@ -160,28 +166,32 @@ async function initialize() {
 }
 
 async function getBrand() {
-    if (brandData) {
-        setBrand(JSON.parse(brandData));
-    } else {
-        try {
-            const response = await fetch('/brand', { timeout: 5000 });
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+    // Всегда тянем бренд с сервера — иначе sessionStorage залипает на английском
+    try {
+        const response = await fetch('/brand', { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        const serverBrand = data.message;
+        if (serverBrand) {
+            setBrand(serverBrand);
+            console.log('FETCH BRAND SETTINGS', {
+                serverBrand: serverBrand,
+                clientBrand: BRAND,
+            });
+            window.sessionStorage.setItem(brandDataKey, JSON.stringify(serverBrand));
+            return;
+        }
+        console.warn('FETCH BRAND SETTINGS - DISABLED');
+    } catch (error) {
+        console.error('FETCH GET BRAND ERROR', error.message);
+        if (brandData) {
+            try {
+                setBrand(JSON.parse(brandData));
+            } catch (e) {
+                /* keep defaults */
             }
-            const data = await response.json();
-            const serverBrand = data.message;
-            if (serverBrand) {
-                setBrand(serverBrand);
-                console.log('FETCH BRAND SETTINGS', {
-                    serverBrand: serverBrand,
-                    clientBrand: BRAND,
-                });
-                window.sessionStorage.setItem(brandDataKey, JSON.stringify(serverBrand));
-            } else {
-                console.warn('FETCH BRAND SETTINGS - DISABLED');
-            }
-        } catch (error) {
-            console.error('FETCH GET BRAND ERROR', error.message);
         }
     }
 }

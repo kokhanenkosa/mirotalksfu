@@ -49,7 +49,11 @@ services:
       - JOIN_BUTTON_LABEL=${JOIN_BUTTON_LABEL:-Войти в комнату}
       - CUSTOMIZE_BUTTON_LABEL=${CUSTOMIZE_BUTTON_LABEL:-Настроить комнату}
       - JOIN_LAST_LABEL=${JOIN_LAST_LABEL:-Недавняя комната:}
+      - NEW_ROOM_TITLE=${NEW_ROOM_TITLE:-Название.<br />Ссылка.<br />Встреча.}
+      - NEW_ROOM_DESC=${NEW_ROOM_DESC:-У каждой комнаты свой URL. Придумайте название и отправьте ссылку участникам.}
       - SITE_TITLE=${SITE_TITLE:-ОПТ РФ — видеоконференции}
+      - SITE_ICON_PATH=${SITE_ICON_PATH:-../images/logo-no-background.svg}
+      - APPLE_TOUCH_ICON_PATH=${APPLE_TOUCH_ICON_PATH:-../images/logo-no-background.svg}
       - META_DESCRIPTION=${META_DESCRIPTION:-Видеоконференции ОПТ РФ: звонки, чат и демонстрация экрана без установки программ.}
       - OG_SITE_NAME=${OG_SITE_NAME:-ОПТ РФ}
       - OG_TITLE=${OG_TITLE:-Присоединяйтесь к видеовстрече ОПТ РФ}

@@ -49,6 +49,14 @@ body {
     transform: none;
 }
 
+/* Светлая тема ОПТ РФ: тёмный лого; тёмный фолбэк MiroTalk: светлый лого */
+.logo-for-light {
+    display: inline-block !important;
+}
+.logo-for-dark {
+    display: none !important;
+}
+
 /* Hero */
 .hero {
     background: linear-gradient(180deg, #ffffff 0%, #f0f7fb 55%, #f5f5f5 100%);
@@ -226,9 +234,9 @@ body {
     color: var(--optrf-muted) !important;
 }
 
+/* Футер тёмный — подменяем на светлый логотип */
 .footer-brand .header-logo-image {
-    /* на тёмном футере белые элементы лого читаются лучше */
-    filter: brightness(1.05) !important;
+    content: url('../images/logo-on-dark.svg');
 }
 
 hr {
@@ -264,6 +272,14 @@ a:hover {
 
 .button-primary.pulse {
     animation: pulse-optrf 2s infinite;
+}
+
+/* Кнопки: без UPPERCASE — иначе русский выглядит криво */
+.button,
+.button-primary,
+.button-secondary {
+    text-transform: none !important;
+    letter-spacing: 0.01em;
 }
 
 /* Scrollbar как в магазине */
