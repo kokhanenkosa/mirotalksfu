@@ -44,91 +44,63 @@ const loginButton = document.getElementById('loginButton');
 // app/src/config.js - ui.brand
 let BRAND = {
     app: {
-        language: 'en',
-        name: 'MiroTalk SFU',
-        title: 'MiroTalk SFU<br />Free browser based Real-time video calls.<br />Simple, Secure, Fast.',
+        language: 'ru',
+        name: 'Видеоконференции',
+        title: 'Видеоконференции<br />Онлайн-встречи прямо в браузере.<br />Просто. Надёжно. Быстро.',
         description:
-            'Start your next video call with a single click. No download, plug-in, or login is required. Just get straight to talking, messaging, and sharing your screen.',
-        joinDescription: 'Pick a room name.<br />How about this one?',
-        joinButtonLabel: 'JOIN ROOM',
-        customizeButtonLabel: 'CUSTOMIZE ROOM',
-        joinLastLabel: 'Your recent room:',
+            'Начните видеозвонок в один клик. Без установки программ, плагинов и регистрации — сразу к разговору, чату и демонстрации экрана.',
+        joinDescription: 'Введите название комнаты.<br />Например, вот такое:',
+        joinButtonLabel: 'Войти в комнату',
+        customizeButtonLabel: 'Настроить комнату',
+        joinLastLabel: 'Недавняя комната:',
     },
     site: {
-        title: 'MiroTalk SFU, Free Video Calls, Messaging and Screen Sharing',
+        title: 'Видеоконференции — онлайн-встречи в браузере',
         icon: '../images/logo.svg',
         appleTouchIcon: '../images/logo.svg',
-        newRoomTitle: 'Pick name. <br />Share URL. <br />Start conference.',
-        newRoomDescription:
-            "Each room has its disposable URL. Just pick a room name and share your custom URL. It's that easy.",
+        newRoomTitle: 'Название.<br />Ссылка.<br />Встреча.',
+        newRoomDescription: 'У каждой комнаты свой URL. Придумайте название и отправьте ссылку участникам.',
     },
     meta: {
-        description:
-            'MiroTalk SFU powered by WebRTC and mediasoup, Real-time Simple Secure Fast video calls, messaging and screen sharing capabilities in the browser.',
-        keywords:
-            'webrtc, miro, mediasoup, mediasoup-client, self hosted, voip, sip, real-time communications, chat, messaging, meet, webrtc stun, webrtc turn, webrtc p2p, webrtc sfu, video meeting, video chat, video conference, multi video chat, multi video conference, peer to peer, p2p, sfu, rtc, alternative to, zoom, microsoft teams, google meet, jitsi, meeting',
+        description: 'Видеоконференции в браузере: звонки, чат и демонстрация экрана без установки программ.',
+        keywords: 'видеоконференции, видеозвонок, вебинар, чат, демонстрация экрана, webrtc, sfu',
     },
     html: {
-        topSponsors: true,
+        topSponsors: false,
         features: true,
-        teams: true,
+        teams: false,
         tryEasier: true,
-        poweredBy: true,
-        sponsors: true,
-        pastSponsors: true,
-        advertisers: true,
-        supportUs: true,
+        poweredBy: false,
+        sponsors: false,
+        pastSponsors: false,
+        advertisers: false,
+        supportUs: false,
         footer: true,
     },
     whoAreYou: {
-        title: 'MiroTalk SFU - Waiting for host to start the meeting',
-        waitingRoomHeading: 'Waiting for host...',
-        waitingRoomDescription:
-            "The meeting hasn't started yet.<br />You'll join automatically when the host opens the room.",
-        waitingRoomStatus: 'Checking room status...',
-        waitingRoomReady: 'Room is ready! Joining...',
-        waitingRoomWaiting: 'Waiting for host to start the meeting...',
-        waitingRoomHostLink: 'Are you the host?',
-        waitingRoomLoginLink: 'Login here',
-        waitingRoomElapsedJust: 'Just started waiting',
-        waitingRoomElapsedMinutes: 'Waiting for {minutes}',
+        title: 'Ожидание ведущего',
+        waitingRoomHeading: 'Ожидание ведущего...',
+        waitingRoomDescription: 'Встреча ещё не началась.<br />Вы войдёте автоматически, когда ведущий откроет комнату.',
+        waitingRoomStatus: 'Проверка статуса комнаты...',
+        waitingRoomReady: 'Комната готова! Входим...',
+        waitingRoomWaiting: 'Ожидание, пока ведущий начнёт встречу...',
+        waitingRoomHostLink: 'Вы ведущий?',
+        waitingRoomLoginLink: 'Войти',
+        waitingRoomElapsedJust: 'Ожидание только началось',
+        waitingRoomElapsedMinutes: 'Ожидание: {minutes}',
         waitingRoomSongUrl: '',
     },
     login: {
-        heading: 'Welcome back',
-        description: 'Enter your credentials to continue.',
-        buttonLabel: 'Login',
+        heading: 'С возвращением',
+        description: 'Введите данные для входа.',
+        buttonLabel: 'Войти',
     },
     about: {
         imageUrl: '../images/mirotalk-logo.gif',
-        title: '<strong>WebRTC SFU v2.3.20</strong>',
+        title: '<strong>Видеоконференции</strong>',
         html: `
-            <button 
-                id="support-button" 
-                data-umami-event="Support button" 
-                onclick="window.open('https://codecanyon.net/user/miroslavpejic85', '_blank')">
-                <i class="fas fa-heart"></i> Support
-            </button>
-            <br /><br /><br />
-            Author: 
-            <a 
-                id="linkedin-button" 
-                data-umami-event="Linkedin button" 
-                href="https://www.linkedin.com/in/miroslav-pejic-976a07101/" 
-                target="_blank"> 
-                Miroslav Pejic
-            </a>
-            <br /><br />
-            Email: 
-            <a 
-                id="email-button" 
-                data-umami-event="Email button" 
-                href="mailto:miroslav.pejic.85@gmail.com?subject=MiroTalk SFU info"> 
-                miroslav.pejic.85@gmail.com
-            </a>
-            <br /><br />
             <hr />
-            <span>&copy; 2026 MiroTalk SFU, all rights reserved</span>
+            <span>&copy; ${new Date().getFullYear()} Видеоконференции. Все права защищены.</span>
             <hr />
         `,
     },

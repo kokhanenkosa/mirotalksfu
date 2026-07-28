@@ -1139,18 +1139,19 @@ module.exports = {
             htmlInjection: process.env.BRAND_HTML_INJECTION !== 'false',
 
             app: {
-                language: process.env.UI_LANGUAGE || 'en',
-                name: process.env.APP_NAME || 'MiroTalk SFU',
+                language: process.env.UI_LANGUAGE || 'ru',
+                name: process.env.APP_NAME || 'Видеоконференции',
                 title:
                     process.env.APP_TITLE ||
-                    '<h1>MiroTalk SFU</h1> Free browser based Real-time video calls.<br />Simple, Secure, Fast.',
+                    'Видеоконференции<br />Онлайн-встречи прямо в браузере.<br />Просто. Надёжно. Быстро.',
                 description:
                     process.env.APP_DESCRIPTION ||
-                    'Start your next video call with a single click. No download, plug-in, or login is required.',
-                joinDescription: process.env.JOIN_DESCRIPTION || 'Pick a room name.<br />How about this one?',
-                joinButtonLabel: process.env.JOIN_BUTTON_LABEL || 'JOIN ROOM',
-                customizeButtonLabel: process.env.CUSTOMIZE_BUTTON_LABEL || 'CUSTOMIZE ROOM',
-                joinLastLabel: process.env.JOIN_LAST_LABEL || 'Your recent room:',
+                    'Начните видеозвонок в один клик. Без установки программ, плагинов и регистрации — сразу к разговору, чату и демонстрации экрана.',
+                joinDescription:
+                    process.env.JOIN_DESCRIPTION || 'Введите название комнаты.<br />Например, вот такое:',
+                joinButtonLabel: process.env.JOIN_BUTTON_LABEL || 'Войти в комнату',
+                customizeButtonLabel: process.env.CUSTOMIZE_BUTTON_LABEL || 'Настроить комнату',
+                joinLastLabel: process.env.JOIN_LAST_LABEL || 'Недавняя комната:',
             },
 
             /**
@@ -1159,12 +1160,13 @@ module.exports = {
              * Site-wide settings including icons and page-specific content.
              */
             site: {
-                title: process.env.SITE_TITLE || 'MiroTalk SFU, Free Video Calls, Messaging and Screen Sharing',
+                title: process.env.SITE_TITLE || 'Видеоконференции — онлайн-встречи в браузере',
                 icon: process.env.SITE_ICON_PATH || '../images/logo.svg',
                 appleTouchIcon: process.env.APPLE_TOUCH_ICON_PATH || '../images/logo.svg',
-                newRoomTitle: process.env.NEW_ROOM_TITLE || 'Pick name. <br />Share URL. <br />Start conference.',
+                newRoomTitle: process.env.NEW_ROOM_TITLE || 'Название.<br />Ссылка.<br />Встреча.',
                 newRoomDescription:
-                    process.env.NEW_ROOM_DESC || 'Each room has its disposable URL. Just pick a name and share.',
+                    process.env.NEW_ROOM_DESC ||
+                    'У каждой комнаты свой URL. Придумайте название и отправьте ссылку участникам.',
             },
 
             /**
@@ -1175,8 +1177,10 @@ module.exports = {
             meta: {
                 description:
                     process.env.META_DESCRIPTION ||
-                    'MiroTalk SFU powered by WebRTC and mediasoup for real-time video communications.',
-                keywords: process.env.META_KEYWORDS || 'webrtc, video calls, conference, screen sharing, mirotalk, sfu',
+                    'Видеоконференции в браузере: звонки, чат и демонстрация экрана без установки программ.',
+                keywords:
+                    process.env.META_KEYWORDS ||
+                    'видеоконференции, видеозвонок, вебинар, чат, демонстрация экрана, webrtc, sfu',
             },
 
             /**
@@ -1186,12 +1190,12 @@ module.exports = {
              */
             og: {
                 type: process.env.OG_TYPE || 'app-webrtc',
-                siteName: process.env.OG_SITE_NAME || 'MiroTalk SFU',
-                title: process.env.OG_TITLE || 'Click the link to make a call.',
+                siteName: process.env.OG_SITE_NAME || 'Видеоконференции',
+                title: process.env.OG_TITLE || 'Присоединяйтесь к видеовстрече',
                 description:
-                    process.env.OG_DESCRIPTION || 'MiroTalk SFU provides real-time video calls and screen sharing.',
-                image: process.env.OG_IMAGE_URL || 'https://sfu.mirotalk.com/images/mirotalksfu.png',
-                url: process.env.OG_URL || 'https://sfu.mirotalk.com',
+                    process.env.OG_DESCRIPTION || 'Онлайн-звонки, чат и демонстрация экрана в браузере.',
+                image: process.env.OG_IMAGE_URL || '',
+                url: process.env.OG_URL || '',
             },
 
             /**
@@ -1201,15 +1205,15 @@ module.exports = {
              * Set to 'false' via environment variables to hide.
              */
             html: {
-                topSponsors: process.env.SHOW_TOP_SPONSORS !== 'false',
+                topSponsors: process.env.SHOW_TOP_SPONSORS === 'true',
                 features: process.env.SHOW_FEATURES !== 'false',
-                teams: process.env.SHOW_TEAMS !== 'false',
+                teams: process.env.SHOW_TEAMS === 'true',
                 tryEasier: process.env.SHOW_TRY_EASIER !== 'false',
-                poweredBy: process.env.SHOW_POWERED_BY !== 'false',
-                sponsors: process.env.SHOW_SPONSORS !== 'false',
-                pastSponsors: process.env.SHOW_PAST_SPONSORS !== 'false',
-                advertisers: process.env.SHOW_ADVERTISERS !== 'false',
-                supportUs: process.env.SHOW_SUPPORT_US !== 'false',
+                poweredBy: process.env.SHOW_POWERED_BY === 'true',
+                sponsors: process.env.SHOW_SPONSORS === 'true',
+                pastSponsors: process.env.SHOW_PAST_SPONSORS === 'true',
+                advertisers: process.env.SHOW_ADVERTISERS === 'true',
+                supportUs: process.env.SHOW_SUPPORT_US === 'true',
                 footer: process.env.SHOW_FOOTER !== 'false',
             },
 
@@ -1220,20 +1224,21 @@ module.exports = {
              * Customizable text and button labels.
              */
             whoAreYou: {
-                title: process.env.WHO_ARE_YOU_TITLE || 'MiroTalk SFU - Waiting for host to start the meeting',
-                waitingRoomHeading: process.env.WHO_ARE_YOU_WAITING_ROOM_HEADING || 'Waiting for host...',
+                title: process.env.WHO_ARE_YOU_TITLE || 'Ожидание ведущего',
+                waitingRoomHeading: process.env.WHO_ARE_YOU_WAITING_ROOM_HEADING || 'Ожидание ведущего...',
                 waitingRoomDescription:
                     process.env.WHO_ARE_YOU_WAITING_ROOM_DESCRIPTION ||
-                    "The meeting hasn't started yet.<br />You'll join automatically when the host opens the room.",
-                waitingRoomStatus: process.env.WHO_ARE_YOU_WAITING_ROOM_STATUS || 'Checking room status...',
-                waitingRoomReady: process.env.WHO_ARE_YOU_WAITING_ROOM_READY || 'Room is ready! Joining...',
+                    'Встреча ещё не началась.<br />Вы войдёте автоматически, когда ведущий откроет комнату.',
+                waitingRoomStatus: process.env.WHO_ARE_YOU_WAITING_ROOM_STATUS || 'Проверка статуса комнаты...',
+                waitingRoomReady: process.env.WHO_ARE_YOU_WAITING_ROOM_READY || 'Комната готова! Входим...',
                 waitingRoomWaiting:
-                    process.env.WHO_ARE_YOU_WAITING_ROOM_WAITING || 'Waiting for host to start the meeting...',
-                waitingRoomHostLink: process.env.WHO_ARE_YOU_WAITING_ROOM_HOST_LINK || 'Are you the host?',
-                waitingRoomLoginLink: process.env.WHO_ARE_YOU_WAITING_ROOM_LOGIN_LINK || 'Login here',
-                waitingRoomElapsedJust: process.env.WHO_ARE_YOU_WAITING_ROOM_ELAPSED_JUST || 'Just started waiting',
+                    process.env.WHO_ARE_YOU_WAITING_ROOM_WAITING || 'Ожидание, пока ведущий начнёт встречу...',
+                waitingRoomHostLink: process.env.WHO_ARE_YOU_WAITING_ROOM_HOST_LINK || 'Вы ведущий?',
+                waitingRoomLoginLink: process.env.WHO_ARE_YOU_WAITING_ROOM_LOGIN_LINK || 'Войти',
+                waitingRoomElapsedJust:
+                    process.env.WHO_ARE_YOU_WAITING_ROOM_ELAPSED_JUST || 'Ожидание только началось',
                 waitingRoomElapsedMinutes:
-                    process.env.WHO_ARE_YOU_WAITING_ROOM_ELAPSED_MINUTES || 'Waiting for {minutes}',
+                    process.env.WHO_ARE_YOU_WAITING_ROOM_ELAPSED_MINUTES || 'Ожидание: {minutes}',
                 waitingRoomSongUrl: process.env.WHO_ARE_YOU_WAITING_ROOM_SONG_URL || '../sounds/waiting-music.mp3',
             },
 
@@ -1243,9 +1248,9 @@ module.exports = {
              * Customizable heading, description, and button label for the login page.
              */
             login: {
-                heading: process.env.LOGIN_HEADING || 'Welcome back',
-                description: process.env.LOGIN_DESCRIPTION || 'Enter your credentials to continue.',
-                buttonLabel: process.env.LOGIN_BUTTON_LABEL || 'Login',
+                heading: process.env.LOGIN_HEADING || 'С возвращением',
+                description: process.env.LOGIN_DESCRIPTION || 'Введите данные для входа.',
+                buttonLabel: process.env.LOGIN_BUTTON_LABEL || 'Войти',
             },
 
             /**
@@ -1256,29 +1261,11 @@ module.exports = {
              */
             about: {
                 imageUrl: process.env.ABOUT_IMAGE_URL || '../images/mirotalk-logo.gif',
-                title: `WebRTC SFU v${packageJson.version}`,
+                title: process.env.ABOUT_TITLE || 'Видеоконференции',
                 html: `
-                    <button id="support-button" data-umami-event="Support button"
-                        onclick="window.open('${process.env.SUPPORT_URL || 'https://codecanyon.net/user/miroslavpejic85'}', '_blank')">
-                        <i class="fas fa-heart"></i> ${process.env.SUPPORT_TEXT || 'Support'}
-                    </button>
-                    <br />
-                    <br />
-                    ${process.env.AUTHOR_LABEL || 'Author'}: 
-                    <a id="linkedin-button" data-umami-event="Linkedin button"
-                        href="${process.env.LINKEDIN_URL || 'https://www.linkedin.com/in/miroslav-pejic-976a07101/'}" 
-                        target="_blank">
-                        ${process.env.AUTHOR_NAME || 'Miroslav Pejic'}
-                    </a>
-                    <br />
-                    ${process.env.EMAIL_LABEL || 'Email'}: 
-                    <a id="email-button" data-umami-event="Email button"
-                        href="mailto:${process.env.CONTACT_EMAIL || 'miroslav.pejic.85@gmail.com'}?subject=${process.env.EMAIL_SUBJECT || 'MiroTalk SFU info'}">
-                        ${process.env.CONTACT_EMAIL || 'miroslav.pejic.85@gmail.com'}
-                    </a>
                     <hr />
                     <span>
-                        &copy; ${new Date().getFullYear()} ${process.env.COPYRIGHT_TEXT || 'MiroTalk SFU, all rights reserved'}
+                        &copy; ${new Date().getFullYear()} ${process.env.COPYRIGHT_TEXT || 'Видеоконференции. Все права защищены.'}
                     </span>
                     <hr />
                     `,

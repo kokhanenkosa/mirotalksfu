@@ -12,7 +12,11 @@
 
 services:
   mirotalksfu:
-    image: mirotalk/sfu:latest
+    # Сборка из репо (кастомный русский лендинг). Не используй чистый mirotalk/sfu:latest.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: optrf-mirotalksfu:local
     restart: unless-stopped
     # НЕ network_mode: host — ломает Traefik Coolify
     # НЕ объявлять networks: — Coolify создаёт сеть сам
@@ -38,7 +42,31 @@ services:
       - SFU_SERVER=${SFU_SERVER:-true}
 
       - UI_LANGUAGE=${UI_LANGUAGE:-ru}
-      - APP_NAME=${APP_NAME:-MiroTalk SFU}
+      - APP_NAME=${APP_NAME:-Видеоконференции}
+      - APP_TITLE=${APP_TITLE:-Видеоконференции<br />Онлайн-встречи прямо в браузере.<br />Просто. Надёжно. Быстро.}
+      - APP_DESCRIPTION=${APP_DESCRIPTION:-Начните видеозвонок в один клик. Без установки программ, плагинов и регистрации — сразу к разговору, чату и демонстрации экрана.}
+      - JOIN_DESCRIPTION=${JOIN_DESCRIPTION:-Введите название комнаты.<br />Например, вот такое:}
+      - JOIN_BUTTON_LABEL=${JOIN_BUTTON_LABEL:-Войти в комнату}
+      - CUSTOMIZE_BUTTON_LABEL=${CUSTOMIZE_BUTTON_LABEL:-Настроить комнату}
+      - JOIN_LAST_LABEL=${JOIN_LAST_LABEL:-Недавняя комната:}
+      - SITE_TITLE=${SITE_TITLE:-Видеоконференции — онлайн-встречи в браузере}
+      - META_DESCRIPTION=${META_DESCRIPTION:-Видеоконференции в браузере: звонки, чат и демонстрация экрана без установки программ.}
+      - OG_SITE_NAME=${OG_SITE_NAME:-Видеоконференции}
+      - OG_TITLE=${OG_TITLE:-Присоединяйтесь к видеовстрече}
+      - OG_DESCRIPTION=${OG_DESCRIPTION:-Онлайн-звонки, чат и демонстрация экрана в браузере.}
+      - COPYRIGHT_TEXT=${COPYRIGHT_TEXT:-Видеоконференции. Все права защищены.}
+
+      # Убрать спонсоров / git / внешний маркетинг с лендинга
+      - SHOW_TOP_SPONSORS=false
+      - SHOW_TEAMS=false
+      - SHOW_POWERED_BY=false
+      - SHOW_SPONSORS=false
+      - SHOW_PAST_SPONSORS=false
+      - SHOW_ADVERTISERS=false
+      - SHOW_SUPPORT_US=false
+      - SHOW_FEATURES=true
+      - SHOW_TRY_EASIER=true
+      - SHOW_FOOTER=true
 
       - JWT_SECRET=${SERVICE_PASSWORD_64_JWT}
       - API_KEY_SECRET=${SERVICE_PASSWORD_64_API}
