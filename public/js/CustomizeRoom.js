@@ -33,6 +33,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const hideEl = document.getElementById('hide');
     const notifyEl = document.getElementById('notify');
 
+    const stripCyrillic = (value) =>
+        String(value || '').replace(/[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]/g, '');
+
+    if (roomEl) {
+        roomEl.setAttribute('lang', 'en');
+        roomEl.setAttribute('spellcheck', 'false');
+        roomEl.setAttribute('title', 'Только латиница. Русские буквы запрещены');
+        roomEl.addEventListener('input', () => {
+            const cleaned = stripCyrillic(roomEl.value);
+            if (cleaned !== roomEl.value) roomEl.value = cleaned;
+        });
+        roomEl.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const text = stripCyrillic(e.clipboardData?.getData('text') || '');
+            const start = roomEl.selectionStart || 0;
+            const end = roomEl.selectionEnd || 0;
+            roomEl.value = roomEl.value.slice(0, start) + text + roomEl.value.slice(end);
+            roomEl.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+    }
+
     // Reasonable defaults (matches the screenshot: audio/video on, others off)
     if (audioEl) audioEl.checked = true;
     if (videoEl) videoEl.checked = true;
@@ -90,9 +111,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const buildJoinUrl = () => {
-        const room = safe(roomEl?.value);
+        const room = stripCyrillic(safe(roomEl?.value));
+        if (roomEl && roomEl.value !== room) roomEl.value = room;
         if (!room) {
             throw new Error('Укажите название комнаты');
+        }
+        if (!/^[A-Za-z0-9._:-]+$/.test(room)) {
+            throw new Error('Название комнаты: только латиница, цифры и символы - _ : .');
         }
 
         const roomPasswordRaw = safe(roomPasswordEl?.value);
@@ -235,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         randomRoomBtn.addEventListener('click', () => {
             setError('');
             setStatus('');
-            roomEl.value = uuidv4();
+            roomEl.value = window.RoomNameGen?.generate?.() || uuidv4();
             updatePreview();
             roomEl.focus();
         });

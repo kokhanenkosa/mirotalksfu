@@ -61,7 +61,7 @@ services:
       - SHOW_ADVERTISERS=false
       - SHOW_SUPPORT_US=false
       - SHOW_FEATURES=false
-      - SHOW_TRY_EASIER=true
+      - SHOW_TRY_EASIER=false
       - SHOW_FOOTER=true
 
       - JWT_SECRET=${SERVICE_PASSWORD_64_JWT}

@@ -17,146 +17,18 @@ if (typeof filterXSS === 'undefined') {
 // NEW ROOM
 // ####################################################################
 
-const adjectives = [
-    'small',
-    'big',
-    'large',
-    'smelly',
-    'new',
-    'happy',
-    'shiny',
-    'old',
-    'clean',
-    'nice',
-    'bad',
-    'cool',
-    'hot',
-    'cold',
-    'warm',
-    'hungry',
-    'slow',
-    'fast',
-    'red',
-    'white',
-    'black',
-    'blue',
-    'green',
-    'basic',
-    'strong',
-    'cute',
-    'poor',
-    'nice',
-    'huge',
-    'rare',
-    'lucky',
-    'weak',
-    'tall',
-    'short',
-    'tiny',
-    'great',
-    'long',
-    'single',
-    'rich',
-    'young',
-    'dirty',
-    'fresh',
-    'brown',
-    'dark',
-    'crazy',
-    'sad',
-    'loud',
-    'brave',
-    'calm',
-    'silly',
-    'smart',
-];
-
-const nouns = [
-    'dog',
-    'bat',
-    'wrench',
-    'apple',
-    'pear',
-    'ghost',
-    'cat',
-    'wolf',
-    'squid',
-    'goat',
-    'snail',
-    'hat',
-    'sock',
-    'plum',
-    'bear',
-    'snake',
-    'turtle',
-    'horse',
-    'spoon',
-    'fork',
-    'spider',
-    'tree',
-    'chair',
-    'table',
-    'couch',
-    'towel',
-    'panda',
-    'bread',
-    'grape',
-    'cake',
-    'brick',
-    'rat',
-    'mouse',
-    'bird',
-    'oven',
-    'phone',
-    'photo',
-    'frog',
-    'bear',
-    'camel',
-    'sheep',
-    'shark',
-    'tiger',
-    'zebra',
-    'duck',
-    'eagle',
-    'fish',
-    'kitten',
-    'lobster',
-    'monkey',
-    'owl',
-    'puppy',
-    'pig',
-    'rabbit',
-    'fox',
-    'whale',
-    'beaver',
-    'gorilla',
-    'lizard',
-    'parrot',
-    'sloth',
-    'swan',
-];
-
-function getRandomNumber(length) {
-    let result = '';
-    let characters = '0123456789';
-    let charactersLength = characters.length;
-    for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-    return result;
+function makeRoomName() {
+    if (window.RoomNameGen?.generate) return window.RoomNameGen.generate();
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return `hookah-${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}-${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-let adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-let noun = nouns[Math.floor(Math.random() * nouns.length)];
-let num = getRandomNumber(5);
-noun = noun.charAt(0).toUpperCase() + noun.substring(1);
-adjective = adjective.charAt(0).toUpperCase() + adjective.substring(1);
+let txt = makeRoomName();
 
 // ####################################################################
 // Shuffle Text Effect
 // ####################################################################
-
-let txt = num + adjective + noun;
 
 /**
  * Shuffle text effect for input fields
@@ -193,18 +65,59 @@ function shuffleText(input, finalValue, duration = 600) {
     }, interval);
 }
 
+const CYRILLIC_CHARS = /[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]/g;
+
+function stripCyrillic(value) {
+    return String(value || '').replace(CYRILLIC_CHARS, '');
+}
+
+function hasCyrillic(value) {
+    return /[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]/.test(String(value || ''));
+}
+
 const roomName = document.getElementById('roomName');
 
 if (roomName) {
     roomName.value = '';
+    roomName.setAttribute('lang', 'en');
+    roomName.setAttribute('inputmode', 'latin');
+    roomName.setAttribute('spellcheck', 'false');
+    roomName.setAttribute('autocomplete', 'off');
+    roomName.setAttribute(
+        'title',
+        'Только латиница, цифры и символы - _ : . Русские буквы запрещены'
+    );
 
     if (window.sessionStorage.roomID) {
-        roomName.value = window.sessionStorage.roomID;
+        roomName.value = stripCyrillic(window.sessionStorage.roomID);
         window.sessionStorage.roomID = false;
         joinRoom();
     } else {
         shuffleText(roomName, txt);
     }
+
+    roomName.addEventListener('input', () => {
+        const cleaned = stripCyrillic(roomName.value);
+        if (cleaned !== roomName.value) {
+            const pos = roomName.selectionStart;
+            const removed = roomName.value.length - cleaned.length;
+            roomName.value = cleaned;
+            const next = Math.max(0, (pos || 0) - removed);
+            roomName.setSelectionRange(next, next);
+        }
+    });
+
+    roomName.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = stripCyrillic(e.clipboardData?.getData('text') || '');
+        const start = roomName.selectionStart || 0;
+        const end = roomName.selectionEnd || 0;
+        const value = roomName.value;
+        roomName.value = value.slice(0, start) + text + value.slice(end);
+        const caret = start + text.length;
+        roomName.setSelectionRange(caret, caret);
+        roomName.dispatchEvent(new Event('input', { bubbles: true }));
+    });
 
     roomName.onkeyup = (e) => {
         if (e.keyCode === 13) {
@@ -224,7 +137,7 @@ const lastRoomName = window.localStorage.lastRoom ? window.localStorage.lastRoom
 
 if (lastRoomContainer && lastRoom && lastRoomName) {
     lastRoomContainer.style.display = 'inline-flex';
-    lastRoom.setAttribute('href', '/join/?room=' + lastRoomName);
+    lastRoom.setAttribute('href', '/join/?room=' + encodeURIComponent(lastRoomName));
     lastRoom.innerText = lastRoomName;
 }
 
@@ -239,6 +152,20 @@ if (genRoomButton) {
     };
 }
 
+async function ensureCanCreateOrGo(targetUrl) {
+    try {
+        const res = await fetch('/phone/me', { credentials: 'same-origin' });
+        const data = await res.json().catch(() => ({}));
+        if (data?.ok && data.authenticated && data.canCreate === false) {
+            window.location.href = '/no-create-access';
+            return;
+        }
+    } catch {
+        // сеть упала — пусть сервер сам разрулит
+    }
+    window.location.href = targetUrl;
+}
+
 if (joinRoomButton) {
     joinRoomButton.onclick = () => {
         joinRoom();
@@ -247,7 +174,7 @@ if (joinRoomButton) {
 
 if (customizeRoomButton) {
     customizeRoomButton.onclick = () => {
-        window.location.href = '/customizeRoom';
+        ensureCanCreateOrGo('/customizeRoom');
     };
 }
 
@@ -259,27 +186,24 @@ if (adultCnt) {
 
 function genRoom() {
     const input = document.getElementById('roomName');
-    shuffleText(input, getUUID4());
-}
-
-function getUUID4() {
-    return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, (c) =>
-        (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16)
-    );
+    txt = makeRoomName();
+    shuffleText(input, txt);
 }
 
 function joinRoom() {
-    const roomName = filterXSS(document.getElementById('roomName').value).trim().replace(/\s+/g, '-');
-    const roomValid = isValidRoomName(roomName);
+    const inputEl = document.getElementById('roomName');
+    const cleaned = stripCyrillic(filterXSS(inputEl.value).trim().replace(/\s+/g, '-'));
+    if (inputEl.value !== cleaned) inputEl.value = cleaned;
+    const roomValid = isValidRoomName(cleaned);
 
     if (!roomValid) {
-        shuffleText(document.getElementById('roomName'), txt);
+        txt = makeRoomName();
+        shuffleText(inputEl, txt);
         return;
     }
 
-    //window.location.href = '/join/' + roomName;
-    window.location.href = '/join/?room=' + roomName;
-    window.localStorage.lastRoom = roomName;
+    window.location.href = '/join/?room=' + encodeURIComponent(cleaned);
+    window.localStorage.lastRoom = cleaned;
 }
 
 function isValidRoomName(input) {
@@ -287,7 +211,16 @@ function isValidRoomName(input) {
         return false;
     }
 
-    if (!input || ['false', 'undefined', ''].includes(input.trim().toLowerCase())) {
+    if (['false', 'undefined', ''].includes(input.trim().toLowerCase())) {
+        return false;
+    }
+
+    if (hasCyrillic(input)) {
+        return false;
+    }
+
+    // Только латиница / цифры / безопасные символы для URL
+    if (!/^[A-Za-z0-9._:-]+$/.test(input)) {
         return false;
     }
 

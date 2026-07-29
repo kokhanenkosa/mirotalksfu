@@ -508,16 +508,20 @@ class RoomClient {
         // CREATE ROOM AND JOIN
         // ####################################################
 
-        this.createRoom(this.room_id).then(async () => {
-            const data = {
-                room_id: this.room_id,
-                peer_info: this.peer_info,
-            };
-            await this.join(data);
-            this.initSockets();
-            this._isConnected = true;
-            successCallback();
-        });
+        this.createRoom(this.room_id)
+            .then(async () => {
+                const data = {
+                    room_id: this.room_id,
+                    peer_info: this.peer_info,
+                };
+                await this.join(data);
+                this.initSockets();
+                this._isConnected = true;
+                successCallback();
+            })
+            .catch((err) => {
+                console.warn('Create/join aborted:', err);
+            });
     }
 
     // ####################################################
@@ -527,30 +531,28 @@ class RoomClient {
     async createRoom(room_id) {
         const phone_token =
             window.sessionStorage.phone_auth || window.sessionStorage.peer_token || this.peer_info?.peer_token || '';
-        await this.socket
-            .request('createRoom', {
+        try {
+            await this.socket.request('createRoom', {
                 room_id,
                 phone_token,
-            })
-            .catch((err) => {
-                console.log('Create room:', err);
-                const msg = String(err?.error || err || '');
-                if (msg.includes('phone auth')) {
-                    openURL(`/phone-auth?next=${encodeURIComponent(`/join/${room_id}`)}`);
-                    return;
-                }
-                if (msg.includes('create not allowed')) {
-                    popupHtmlMessage(
-                        null,
-                        image.forbidden,
-                        'Нет доступа',
-                        'Ваш номер не может создавать комнаты. Дождитесь организатора.',
-                        'center',
-                        '/',
-                        false
-                    );
-                }
             });
+        } catch (err) {
+            console.log('Create room:', err);
+            const msg = String(err?.error || err || '');
+            if (msg.includes('phone auth')) {
+                openURL(`/phone-auth?next=${encodeURIComponent(`/join/${room_id}`)}`);
+                throw err;
+            }
+            if (msg.includes('create not allowed')) {
+                openURL('/no-create-access');
+                throw err;
+            }
+            if (/does not exist/i.test(msg)) {
+                openURL('/no-create-access');
+                throw err;
+            }
+            throw err;
+        }
     }
 
     async join(data) {
@@ -629,7 +631,11 @@ class RoomClient {
             })
             .catch((error) => {
                 console.error('Join error:', error);
-                //
+                const msg = String(error?.error || error || '');
+                if (/does not exist/i.test(msg) || msg.includes('create not allowed')) {
+                    openURL('/no-create-access');
+                    return;
+                }
                 popupHtmlMessage(null, image.network, 'Join Room', error, 'center', false, true);
             });
     }

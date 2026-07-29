@@ -273,7 +273,78 @@ class PhoneAuth {
 
     buildAuthRedirect(req, nextPath) {
         const next = nextPath || req.originalUrl || '/';
-        return `/phone-auth?next=${encodeURIComponent(next)}`;
+        // Убираем phone_token из next, чтобы не светить JWT в query после логина
+        try {
+            const url = new URL(next, 'http://local');
+            url.searchParams.delete('phone_token');
+            const clean = url.pathname + url.search + url.hash;
+            return `/phone-auth?next=${encodeURIComponent(clean || '/')}`;
+        } catch {
+            return `/phone-auth?next=${encodeURIComponent(next)}`;
+        }
+    }
+
+    /** HTML-страница: номер подтверждён, но создавать комнаты нельзя */
+    forbiddenCreateHtml() {
+        return `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Нет доступа — ОПТ РФ</title>
+<link rel="shortcut icon" href="/images/logo-no-background.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{--blue:#00A8E8;--ink:#131313;--muted:#6b7280}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--ink);background:linear-gradient(160deg,#eef6fa 0%,#f7fbfd 55%,#ffffff 100%);display:grid;place-items:center;padding:1.5rem}
+.card{width:min(28rem,100%);background:rgba(255,255,255,.9);border:1px solid rgba(19,19,19,.08);border-radius:20px;padding:2rem 1.75rem;box-shadow:0 18px 50px rgba(0,80,120,.08)}
+.logo{display:block;width:140px;height:auto;margin:0 auto 1.25rem}
+h1{margin:0 0 .75rem;font-size:1.35rem;line-height:1.25;text-align:center}
+p{margin:0 0 .85rem;color:var(--muted);line-height:1.5;text-align:center;font-size:.98rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;width:100%;margin-top:1rem;padding:.9rem 1rem;border-radius:12px;background:var(--blue);color:#fff;text-decoration:none;font-weight:600}
+.btn:hover{filter:brightness(.97)}
+</style>
+</head>
+<body>
+<main class="card">
+<img class="logo" src="/images/logo-no-background.svg" alt="ОПТ РФ" />
+<h1>Нет доступа к созданию комнат</h1>
+<p>Ваш номер подтверждён, но создавать встречи могут только организаторы.</p>
+<p>Вы можете присоединяться к уже созданным комнатам по ссылке или названию.</p>
+<p>Если вам нужно создавать комнаты — попросите администратора добавить ваш номер в список организаторов.</p>
+<a class="btn" href="/">На главную</a>
+</main>
+</body>
+</html>`;
+    }
+
+    /**
+     * Достаёт сессию из cookie / query.phone_token.
+     * Если токен пришёл в query — ставит cookie и делает redirect на чистый URL.
+     * @returns {{ session: object|null, redirected: boolean }}
+     */
+    resolveSessionOrRedirect(req, res) {
+        let session = this.getSession(req);
+        if (session) return { session, redirected: false };
+
+        const qToken = req.query?.phone_token ? String(req.query.phone_token) : '';
+        if (!qToken) return { session: null, redirected: false };
+
+        session = this.verifyToken(qToken);
+        if (!session) return { session: null, redirected: false };
+
+        this.setAuthCookie(res, qToken);
+        try {
+            const url = new URL(req.originalUrl || req.url || '/', 'http://local');
+            url.searchParams.delete('phone_token');
+            res.redirect(url.pathname + url.search + url.hash);
+            return { session, redirected: true };
+        } catch {
+            return { session, redirected: false };
+        }
     }
 }
 

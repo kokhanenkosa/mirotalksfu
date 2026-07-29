@@ -61,10 +61,10 @@ joinSelectRoomBtn.onclick = (e) => {
 if (generateRoomBtn) {
     generateRoomBtn.onclick = (e) => {
         e.preventDefault();
-        const uuid = getUUID4();
+        const name = window.RoomNameGen?.generate?.() || getUUID4();
         const custom = document.getElementById('customRoomInput');
         if (custom && custom.offsetParent !== null) {
-            custom.value = uuid;
+            custom.value = name;
         } else if (selectRoom && selectRoom.style.display !== 'none') {
             popup('warning', 'Случайная комната доступна только администраторам');
         }

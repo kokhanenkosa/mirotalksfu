@@ -910,16 +910,13 @@ function startServer() {
         //log.info('/newroom - hostCfg ----->', hostCfg);
 
         if (phoneAuth.isEnabled()) {
-            const session = phoneAuth.getSession(req);
+            const { session, redirected } = phoneAuth.resolveSessionOrRedirect(req, res);
+            if (redirected) return;
             if (!session) {
                 return res.redirect(phoneAuth.buildAuthRedirect(req, '/newroom'));
             }
             if (!session.canCreate) {
-                return res
-                    .status(403)
-                    .send(
-                        '<!doctype html><html lang="ru"><meta charset="utf-8"><title>Нет доступа</title><body style="font-family:sans-serif;padding:2rem"><h1>Создание комнат недоступно</h1><p>Ваш номер подтверждён, но не входит в список организаторов. Вы можете только присоединяться к существующим комнатам.</p><p><a href="/">На главную</a></p></body></html>'
-                    );
+                return res.status(403).send(phoneAuth.forbiddenCreateHtml());
             }
         }
 
@@ -940,12 +937,13 @@ function startServer() {
     // Get Customize room
     app.get('/customizeRoom', OIDCAuth, (req, res) => {
         if (phoneAuth.isEnabled()) {
-            const session = phoneAuth.getSession(req);
+            const { session, redirected } = phoneAuth.resolveSessionOrRedirect(req, res);
+            if (redirected) return;
             if (!session) {
                 return res.redirect(phoneAuth.buildAuthRedirect(req, '/customizeRoom'));
             }
             if (!session.canCreate) {
-                return res.redirect('/');
+                return res.status(403).send(phoneAuth.forbiddenCreateHtml());
             }
         }
         htmlInjector.injectHtml(views.customizeRoom, res);
@@ -1096,6 +1094,13 @@ function startServer() {
         return res.sendFile(views.phoneAuth);
     });
 
+    app.get('/no-create-access', (req, res) => {
+        if (!phoneAuth.isEnabled()) {
+            return res.redirect('/');
+        }
+        return res.status(403).send(phoneAuth.forbiddenCreateHtml());
+    });
+
     app.post('/phone/send-code', phoneSendCodeLimiter, async (req, res) => {
         if (!phoneAuth.isEnabled()) {
             return res.status(404).json({ ok: false, error: 'Авторизация по телефону отключена' });
@@ -1175,11 +1180,7 @@ function startServer() {
                     return res.redirect(phoneAuth.buildAuthRedirect(req, req.originalUrl));
                 }
                 if (!roomList.has(room) && !phoneSession.canCreate) {
-                    return res
-                        .status(403)
-                        .send(
-                            '<!doctype html><html lang="ru"><meta charset="utf-8"><title>Нет доступа</title><body style="font-family:sans-serif;padding:2rem"><h1>Создание комнат недоступно</h1><p>Этот номер не может создавать новые комнаты.</p><p><a href="/">На главную</a></p></body></html>'
-                        );
+                    return res.status(403).send(phoneAuth.forbiddenCreateHtml());
                 }
             }
 

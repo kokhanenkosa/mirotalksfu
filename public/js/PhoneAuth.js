@@ -206,9 +206,25 @@
                 window.sessionStorage.phone_can_create = data.canCreate ? '1' : '0';
             }
 
+            const safeNext = nextUrl.startsWith('/') ? nextUrl : '/';
+            const wantsCreate = ['/customizeRoom', '/newroom'].some(
+                (p) => safeNext === p || safeNext.startsWith(p + '?')
+            );
+
+            if (!data.canCreate && wantsCreate) {
+                paStep2?.classList.add('is-done');
+                switchStep(stepCode, stepSuccess, 'success');
+                paTitle.textContent = 'Нет доступа к созданию комнат';
+                paSub.textContent =
+                    'Номер подтверждён, но создавать встречи могут только организаторы. Попросите администратора добавить ваш номер.';
+                window.setTimeout(() => {
+                    window.location.href = '/no-create-access';
+                }, reduceMotion ? 400 : 1600);
+                return;
+            }
+
             paStep2?.classList.add('is-done');
             switchStep(stepCode, stepSuccess, 'success');
-            const safeNext = nextUrl.startsWith('/') ? nextUrl : '/';
             window.setTimeout(
                 () => {
                     window.location.href = safeNext;
@@ -261,6 +277,13 @@
         .then((data) => {
             if (data?.ok && data.authenticated) {
                 const safeNext = nextUrl.startsWith('/') ? nextUrl : '/';
+                const wantsCreate = ['/customizeRoom', '/newroom'].some(
+                    (p) => safeNext === p || safeNext.startsWith(p + '?')
+                );
+                if (!data.canCreate && wantsCreate) {
+                    window.location.href = '/no-create-access';
+                    return;
+                }
                 window.location.href = safeNext;
             }
         })

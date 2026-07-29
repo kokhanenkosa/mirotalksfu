@@ -1170,10 +1170,10 @@ module.exports = {
                     'ОПТ РФ<br />Видеоконференции для команды.<br />Просто. Надёжно. Быстро.',
                 description:
                     process.env.APP_DESCRIPTION ||
-                    'Онлайн-встречи в один клик — без установки программ и регистрации. Звонки, чат и демонстрация экрана в браузере.',
+                    'Онлайн-встречи в один клик — без установки программ. Звонки, чат и демонстрация экрана в браузере.',
                 joinDescription:
                     process.env.JOIN_DESCRIPTION || 'Введите название комнаты.<br />Например, вот такое:',
-                joinButtonLabel: process.env.JOIN_BUTTON_LABEL || 'Войти в комнату',
+                joinButtonLabel: process.env.JOIN_BUTTON_LABEL || 'Создать комнату',
                 customizeButtonLabel: process.env.CUSTOMIZE_BUTTON_LABEL || 'Настроить комнату',
                 joinLastLabel: process.env.JOIN_LAST_LABEL || 'Недавняя комната:',
             },
@@ -1232,7 +1232,7 @@ module.exports = {
                 topSponsors: process.env.SHOW_TOP_SPONSORS === 'true',
                 features: process.env.SHOW_FEATURES === 'true',
                 teams: process.env.SHOW_TEAMS === 'true',
-                tryEasier: process.env.SHOW_TRY_EASIER !== 'false',
+                tryEasier: process.env.SHOW_TRY_EASIER === 'true',
                 poweredBy: process.env.SHOW_POWERED_BY === 'true',
                 sponsors: process.env.SHOW_SPONSORS === 'true',
                 pastSponsors: process.env.SHOW_PAST_SPONSORS === 'true',
