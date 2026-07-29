@@ -1,14 +1,14 @@
 :root {
-    --pa-blue: #00a8e8;
-    --pa-blue-deep: #019ad5;
-    --pa-blue-soft: rgba(0, 168, 232, 0.14);
-    --pa-ink: #131313;
-    --pa-muted: #6b7280;
-    --pa-line: rgba(19, 19, 19, 0.08);
-    --pa-surface: rgba(255, 255, 255, 0.82);
-    --pa-danger: #d92d20;
+    --pa-blue: var(--optrf-accent);
+    --pa-blue-deep: var(--optrf-accent-hover);
+    --pa-blue-soft: var(--optrf-accent-soft);
+    --pa-ink: var(--optrf-text);
+    --pa-muted: var(--optrf-muted);
+    --pa-line: var(--optrf-border);
+    --pa-surface: var(--optrf-surface);
+    --pa-danger: var(--optrf-danger);
     --pa-radius: 20px;
-    --pa-font: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --pa-font: var(--optrf-font);
     --pa-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -28,7 +28,7 @@ body {
     min-height: 100vh;
     font-family: var(--pa-font);
     color: var(--pa-ink);
-    background: #eef6fa;
+    background: var(--optrf-bg);
     overflow-x: hidden;
     display: grid;
     grid-template-rows: auto 1fr auto;
@@ -40,9 +40,8 @@ body {
     inset: 0;
     z-index: 0;
     background:
-        radial-gradient(1200px 600px at 10% -10%, rgba(0, 168, 232, 0.22), transparent 55%),
-        radial-gradient(900px 500px at 100% 0%, rgba(15, 142, 207, 0.16), transparent 50%),
-        linear-gradient(180deg, #f7fbfd 0%, #eef5f9 45%, #f5f5f5 100%);
+        radial-gradient(1200px 600px at 10% -10%, var(--optrf-accent-soft), transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, var(--optrf-accent-soft), transparent 50%), var(--optrf-bg);
     pointer-events: none;
 }
 
@@ -50,8 +49,8 @@ body {
     position: absolute;
     inset: 0;
     background-image:
-        linear-gradient(rgba(19, 19, 19, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(19, 19, 19, 0.035) 1px, transparent 1px);
+        linear-gradient(var(--optrf-border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--optrf-border) 1px, transparent 1px);
     background-size: 48px 48px;
     mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 75%);
     opacity: 0.7;
@@ -70,7 +69,7 @@ body {
     height: 340px;
     left: -80px;
     top: 18%;
-    background: rgba(0, 168, 232, 0.35);
+    background: var(--optrf-accent-soft);
 }
 
 .pa-orb-b {
@@ -78,7 +77,7 @@ body {
     height: 280px;
     right: -60px;
     top: 8%;
-    background: rgba(15, 142, 207, 0.28);
+    background: var(--optrf-accent-soft);
     animation-delay: -4s;
     animation-duration: 15s;
 }
@@ -88,7 +87,7 @@ body {
     height: 220px;
     left: 40%;
     bottom: 8%;
-    background: rgba(0, 168, 232, 0.18);
+    background: var(--optrf-accent-soft);
     animation-delay: -7s;
     animation-duration: 18s;
 }
@@ -134,11 +133,8 @@ body {
     padding: 36px 28px 28px;
     border-radius: var(--pa-radius);
     background: var(--pa-surface);
-    border: 1px solid rgba(255, 255, 255, 0.7);
-    box-shadow:
-        0 1px 0 rgba(255, 255, 255, 0.8) inset,
-        0 20px 50px rgba(19, 19, 19, 0.08),
-        0 4px 16px rgba(0, 168, 232, 0.06);
+    border: 1px solid var(--optrf-border);
+    box-shadow: var(--optrf-shadow);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
     animation: pa-panel-in 0.75s var(--pa-ease) both;
@@ -179,7 +175,7 @@ body {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #d7e2e8;
+    background: var(--optrf-surface-3);
     transition:
         background 0.35s var(--pa-ease),
         transform 0.35s var(--pa-ease),
@@ -201,7 +197,7 @@ body {
     height: 2px;
     margin: 0 8px;
     border-radius: 2px;
-    background: #d7e2e8;
+    background: var(--optrf-surface-3);
     position: relative;
     overflow: hidden;
 }
@@ -338,14 +334,14 @@ body {
     margin-bottom: 16px;
     border: 1px solid var(--pa-line);
     border-radius: 14px;
-    background: #fff;
+    background: var(--optrf-input);
     transition:
         border-color 0.2s ease,
         box-shadow 0.2s ease;
 }
 
 .pa-field:focus-within {
-    border-color: rgba(0, 168, 232, 0.65);
+    border-color: var(--optrf-accent);
     box-shadow: 0 0 0 4px var(--pa-blue-soft);
 }
 
@@ -370,7 +366,7 @@ body {
 }
 
 .pa-input::placeholder {
-    color: #b0b8c0;
+    color: var(--optrf-muted);
 }
 
 .pa-code-wrap {
@@ -404,7 +400,7 @@ body {
     height: 48px;
     border-radius: 12px;
     border: 1px solid var(--pa-line);
-    background: #fff;
+    background: var(--optrf-input);
     display: grid;
     place-items: center;
     font-weight: 700;
@@ -419,8 +415,8 @@ body {
 }
 
 .pa-otp span.is-filled {
-    border-color: rgba(0, 168, 232, 0.55);
-    background: #f3faff;
+    border-color: var(--optrf-accent);
+    background: var(--optrf-accent-soft);
     box-shadow: 0 0 0 3px var(--pa-blue-soft);
     transform: translateY(-1px);
 }
@@ -433,8 +429,8 @@ body {
     margin: 0 0 14px;
     padding: 12px 14px;
     border-radius: 12px;
-    background: linear-gradient(90deg, rgba(0, 168, 232, 0.1), rgba(0, 168, 232, 0.04));
-    color: #0f5f80;
+    background: var(--optrf-accent-soft);
+    color: var(--optrf-text-2);
     font-size: 0.9rem;
     line-height: 1.4;
     animation: pa-fade-up 0.4s var(--pa-ease) both;
@@ -451,8 +447,8 @@ body {
     font-size: 1rem;
     color: #fff;
     cursor: pointer;
-    background: linear-gradient(180deg, #12b4ef 0%, var(--pa-blue) 45%, var(--pa-blue-deep) 100%);
-    box-shadow: 0 10px 22px rgba(0, 168, 232, 0.28);
+    background: var(--optrf-accent);
+    box-shadow: var(--optrf-shadow);
     transition:
         transform 0.18s var(--pa-ease),
         box-shadow 0.18s ease,
@@ -471,7 +467,7 @@ body {
 
 .pa-btn:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 14px 28px rgba(0, 168, 232, 0.34);
+    box-shadow: var(--optrf-shadow-lg);
     filter: saturate(1.05);
 }
 
@@ -536,8 +532,8 @@ body {
     margin-top: 14px;
     padding: 12px 14px;
     border-radius: 12px;
-    background: #fff1f0;
-    border: 1px solid rgba(217, 45, 32, 0.18);
+    background: var(--optrf-surface-2);
+    border: 1px solid var(--optrf-danger);
     color: var(--pa-danger);
     font-size: 0.9rem;
     line-height: 1.35;

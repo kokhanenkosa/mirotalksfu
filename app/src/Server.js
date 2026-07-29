@@ -323,6 +323,7 @@ const phoneAuth = new PhoneAuth({
     jwtKey: jwtCfg.JWT_KEY,
     jwtExp: phoneAuthCfg.jwtExp || '7d',
     creators: phoneAuthCfg.creators || [],
+    superAdmins: phoneAuthCfg.superAdmins || [],
     smsc: phoneAuthCfg.smsc || {},
     log: (...args) => log.info(...args),
 });
@@ -334,6 +335,7 @@ const phoneStore = new PhoneStore({
 if (phoneAuth.isEnabled()) {
     log.info('Phone auth enabled', {
         creators: phoneAuth.creators.size,
+        superAdmins: phoneAuth.superAdmins.size,
         proxy: Boolean(process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY),
         smsc: Boolean(phoneAuthCfg?.smsc?.login),
         store: phoneStore.filePath,
@@ -535,6 +537,7 @@ const views = {
     rtmpStreamer: path.join(__dirname, '../../', 'public/views/RtmpStreamer.html'),
     whoAreYou: path.join(__dirname, '../../', 'public/views/whoAreYou.html'),
     phoneAuth: path.join(__dirname, '../../', 'public/views/phoneAuth.html'),
+    superAdmin: path.join(__dirname, '../../', 'public/views/superAdmin.html'),
 };
 
 const filesPath = [
@@ -552,6 +555,90 @@ const htmlInjector = new HtmlInjector(filesPath, config.ui.brand);
 const authHost = new Host(); // Authenticated IP by Login
 
 const roomList = new Map(); // All Rooms
+
+function requirePhoneSuperAdmin(req, res, next) {
+    if (!phoneAuth.isEnabled()) {
+        return res.status(404).json({ ok: false, error: 'Авторизация по телефону отключена' });
+    }
+    const session = phoneAuth.getSession(req);
+    if (!session) {
+        return res.status(401).json({ ok: false, error: 'Требуется авторизация' });
+    }
+    if (!session.isSuperAdmin) {
+        return res.status(403).json({ ok: false, error: 'Недостаточно прав' });
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    req.phoneSession = session;
+    return next();
+}
+
+function getSuperAdminOverview() {
+    const users = phoneStore.getAllUsers().map((user) => ({
+        ...user,
+        canCreate: phoneAuth.canCreate(user.phone),
+        isSuperAdmin: phoneAuth.isSuperAdmin(user.phone),
+    }));
+    const profiles = new Map(users.map((user) => [user.phone, user]));
+    const activeRooms = [];
+    let activeParticipants = 0;
+
+    for (const [id, room] of roomList.entries()) {
+        const peers = [];
+        room?.getPeers?.().forEach((peer) => {
+            if (peer?.peer_info?.peer_observer === true) return;
+            peers.push({
+                id: peer.id,
+                name: peer.peer_name || peer.peer_info?.peer_name || '',
+                phone: peer.adminPhone || '',
+                audio: Boolean(peer.peer_info?.peer_audio),
+                video: Boolean(peer.peer_info?.peer_video),
+                screen: Boolean(peer.peer_info?.peer_screen),
+                recording: Boolean(peer.peer_info?.peer_recording),
+                presenter: Boolean(peer.peer_info?.peer_presenter),
+                joinedAt: peer.peer_info?.join_data_time || null,
+            });
+        });
+        activeParticipants += peers.length;
+        activeRooms.push({
+            id,
+            sessionId: room?.sessionId || null,
+            createdAt: room?.createdAt || null,
+            createdByPhone: room?.createdByPhone || '',
+            createdByName: profiles.get(room?.createdByPhone)?.displayName || '',
+            peers,
+            peersCount: peers.length,
+            observersCount: Math.max(0, (room?.getPeersCount?.() || 0) - peers.length),
+            locked: Boolean(room?.isLocked?.()),
+            lobby: Boolean(room?.isLobbyEnabled?.()),
+            recording: peers.some((peer) => peer.recording),
+            broadcasting: Boolean(room?.isBroadcasting?.()),
+        });
+    }
+
+    activeRooms.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+    const history = phoneStore.getAllRooms().map((room) => ({
+        ...room,
+        createdByName: profiles.get(room.createdByPhone)?.displayName || '',
+        isActive:
+            roomList.has(room.roomId) &&
+            (!room.sessionId || roomList.get(room.roomId)?.sessionId === room.sessionId),
+    }));
+
+    return {
+        ok: true,
+        generatedAt: new Date().toISOString(),
+        stats: {
+            users: users.length,
+            logins: users.reduce((sum, user) => sum + (Number(user.loginCount) || 0), 0),
+            activeRooms: activeRooms.length,
+            activeParticipants,
+            roomsTotal: history.length,
+        },
+        users,
+        activeRooms,
+        history,
+    };
+}
 
 const presenters = {}; // Collect presenters grp by roomId
 
@@ -1138,12 +1225,17 @@ function startServer() {
         if (!result.ok) {
             return res.status(400).json(result);
         }
+        phoneStore.recordLogin(result.phone, {
+            ip: req.ip || req.socket?.remoteAddress || '',
+            userAgent: req.headers['user-agent'] || '',
+        });
         phoneAuth.setAuthCookie(res, result.token);
         return res.status(200).json({
             ok: true,
             token: result.token,
             phone: result.phone,
             canCreate: result.canCreate,
+            isSuperAdmin: result.isSuperAdmin,
         });
     });
 
@@ -1155,12 +1247,19 @@ function startServer() {
         if (!session) {
             return res.json({ ok: true, enabled: true, authenticated: false });
         }
+        if (!phoneStore.getProfile(session.phone)?.firstSeenAt) {
+            phoneStore.recordLogin(session.phone, {
+                ip: req.ip || req.socket?.remoteAddress || '',
+                userAgent: req.headers['user-agent'] || '',
+            });
+        }
         return res.json({
             ok: true,
             enabled: true,
             authenticated: true,
             phone: session.phone,
             canCreate: session.canCreate,
+            isSuperAdmin: session.isSuperAdmin,
             displayName: phoneStore.getDisplayName(session.phone) || '',
         });
     });
@@ -1195,7 +1294,10 @@ function startServer() {
             if (room?.createdByPhone === session.phone) {
                 active.push({
                     id,
-                    peers: typeof room.getPeersCount === 'function' ? room.getPeersCount() : room.peers?.size || 0,
+                    peers:
+                        typeof room.getVisiblePeersCount === 'function'
+                            ? room.getVisiblePeersCount()
+                            : room.peers?.size || 0,
                     createdAt: room.createdAt || null,
                 });
             }
@@ -1213,6 +1315,34 @@ function startServer() {
             active,
             history,
         });
+    });
+
+    app.get('/super-admin', (req, res) => {
+        if (!phoneAuth.isEnabled()) return res.redirect('/');
+        const session = phoneAuth.getSession(req);
+        if (!session) return res.redirect(phoneAuth.buildAuthRedirect(req, '/super-admin'));
+        if (!session.isSuperAdmin) return res.status(403).send('Доступ разрешён только супер-администратору');
+        return res.sendFile(views.superAdmin);
+    });
+
+    app.get('/phone/admin/overview', requirePhoneSuperAdmin, (req, res) => {
+        return res.json(getSuperAdminOverview());
+    });
+
+    app.get('/phone/admin/observe/:roomId', requirePhoneSuperAdmin, (req, res) => {
+        const { roomId } = checkXSS(req.params) || {};
+        if (!Validator.isValidRoomName(roomId) || !roomList.has(roomId)) {
+            return res.status(404).json({ ok: false, error: 'Комната не найдена' });
+        }
+        const query = new URLSearchParams({
+            room: roomId,
+            name: `Системный наблюдатель ${String(req.phoneSession.phone).slice(-4)}`,
+            audio: '0',
+            video: '0',
+            notify: '0',
+            observer: '1',
+        });
+        return res.redirect(`/join/?${query.toString()}`);
     });
 
     app.post('/phone/logout', (req, res) => {
@@ -2134,7 +2264,11 @@ function startServer() {
             // End the meeting
             const { room } = req.params;
             const { redirect } = req.body || {};
+            const creatorPhone = roomList.get(room)?.createdByPhone || '';
             const result = api.endMeeting(roomList, room, redirect);
+            if (result.success && creatorPhone) {
+                phoneStore.recordRoomEnded(creatorPhone, room);
+            }
             const status = result.success ? 200 : 404;
             res.status(status).json(result);
             // log.debug the output if all done
@@ -2492,6 +2626,24 @@ function startServer() {
     // ####################################################
 
     io.on('connection', (socket) => {
+        const observerAllowedEvents = new Set([
+            'getRouterRtpCapabilities',
+            'createWebRtcTransport',
+            'connectTransport',
+            'restartIce',
+            'consume',
+            'resumeConsumer',
+            'getProducers',
+            'getPeerCounts',
+            'getRoomInfo',
+            'exitRoom',
+        ]);
+        socket.use((packet, next) => {
+            if (!socket.isSuperAdminObserver || observerAllowedEvents.has(packet[0])) return next();
+            const callback = packet.findLast?.((item) => typeof item === 'function');
+            if (callback) callback({ error: 'observer is read only' });
+        });
+
         socket.on('clientError', (error) => {
             try {
                 log.error('Client error', error.message);
@@ -2605,6 +2757,8 @@ function startServer() {
             } = data.peer_info;
 
             let is_presenter = peer_presenter;
+            const requestedObserver = data.peer_info?.peer_observer === true;
+            let isObserver = false;
 
             if (phoneAuth.isEnabled()) {
                 const phoneSession =
@@ -2614,9 +2768,28 @@ function startServer() {
                     return cb('unauthorized');
                 }
                 socket.phone_session = phoneSession;
+                if (requestedObserver && !phoneSession.isSuperAdmin) {
+                    log.warn('[Join] - Observer access denied', { phone: phoneSession.phone });
+                    return cb('unauthorized');
+                }
+                isObserver = requestedObserver && phoneSession.isSuperAdmin;
+                socket.isSuperAdminObserver = isObserver;
                 // Первый участник — ведущий только если номер в списке создателей
-                if (!socket.room_id.includes('_breakout_') && room?.getPeersCount() === 0) {
+                if (!isObserver && !socket.room_id.includes('_breakout_') && room?.getVisiblePeersCount() === 0) {
                     is_presenter = phoneSession.canCreate;
+                }
+                if (isObserver) {
+                    is_presenter = false;
+                    Object.assign(data.peer_info, {
+                        peer_observer: true,
+                        peer_presenter: false,
+                        peer_audio: false,
+                        peer_video: false,
+                        peer_screen: false,
+                        peer_recording: false,
+                        peer_hand: false,
+                        peer_lobby: false,
+                    });
                 }
                 log.debug('[Join] - Phone auth OK', {
                     phone: phoneSession.phone,
@@ -2688,7 +2861,7 @@ function startServer() {
             }
 
             // check if banned...
-            if (room.isBanned(peer_uuid)) {
+            if (!isObserver && room.isBanned(peer_uuid)) {
                 log.debug('[Join] - peer is banned!', {
                     room_id: data.room_id,
                     peer: {
@@ -2709,7 +2882,13 @@ function startServer() {
                 room.removePeer(socket.id);
             }
 
-            room.addPeer(new Peer(socket.id, data));
+            const joinedPeer = new Peer(socket.id, data);
+            Object.defineProperty(joinedPeer, 'adminPhone', {
+                value: socket.phone_session?.phone || '',
+                writable: true,
+                enumerable: false,
+            });
+            room.addPeer(joinedPeer);
 
             const activeRooms = getActiveRooms();
 
@@ -2767,12 +2946,12 @@ function startServer() {
 
             peer.updatePeerInfo({ type: 'presenter', status: isPresenter });
 
-            if (room.isLocked() && !isPresenter) {
+            if (!isObserver && room.isLocked() && !isPresenter) {
                 log.debug('The user was rejected because the room is locked, and they are not a presenter');
                 return cb('isLocked');
             }
 
-            if ((room.isLobbyEnabled() || room.isGlobalLobbyEnabled()) && !isPresenter) {
+            if (!isObserver && (room.isLobbyEnabled() || room.isGlobalLobbyEnabled()) && !isPresenter) {
                 log.debug(
                     'The user is currently waiting to join the room because the lobby is enabled, and they are not a presenter'
                 );
@@ -2802,8 +2981,8 @@ function startServer() {
                 browser: browser_name ? `${browser_name} ${browser_version}` : '',
             };
 
-            const firstJoin = room.getPeersCount() === 1;
-            const guestJoin = room.getPeersCount() === 2;
+            const firstJoin = !isObserver && room.getVisiblePeersCount() === 1;
+            const guestJoin = !isObserver && room.getVisiblePeersCount() === 2;
 
             // SCENARIO: Notify when the first user join room and is awaiting assistance (global email alert)
             if (firstJoin && !widget.alert.enabled) {
@@ -2831,14 +3010,14 @@ function startServer() {
                 }
             }
 
-            handleJoinWebHook(room.id, room.getSessionId(), data.peer_info);
+            if (!isObserver) handleJoinWebHook(room.id, room.getSessionId(), data.peer_info);
 
             // Notify main room when a peer joins a breakout room
             if (socket.room_id.includes('_breakout_')) {
                 notifyMainRoomBreakoutCountChanged(socket.room_id);
             }
 
-            const roomJson = room.toJson();
+            const roomJson = room.toJson(isObserver);
 
             // Issue a per-session, room-bound token authorizing this peer to upload
             // its own server recording chunks via the /recSync* endpoints.
@@ -3334,7 +3513,7 @@ function startServer() {
 
             const room = getRoom(socket);
 
-            const peerCounts = room.getPeersCount();
+            const peerCounts = room.getVisiblePeersCount();
 
             log.debug('Peer counts', { peerCounts: peerCounts });
 
@@ -3524,11 +3703,12 @@ function startServer() {
                 if (roomId.startsWith(mainRoom + '_breakout_')) {
                     const peerNames = [];
                     room.getPeers().forEach((peer) => {
+                        if (peer?.peer_info?.peer_observer === true) return;
                         if (peer.peer_name) peerNames.push(peer.peer_name);
                     });
                     breakoutRooms.push({
                         room: roomId,
-                        peers: room.getPeersCount(),
+                        peers: room.getVisiblePeersCount(),
                         peerNames: peerNames,
                     });
                 }
@@ -3851,7 +4031,7 @@ function startServer() {
 
             log.debug('Send Room Info to', peer_name);
 
-            cb(room.toJson());
+            cb(room.toJson(socket.isSuperAdminObserver === true));
         });
 
         socket.on('fileInfo', (dataObject) => {
@@ -4118,7 +4298,7 @@ function startServer() {
 
             const room = getRoom(socket);
 
-            const peerCounts = room.getPeersCount();
+            const peerCounts = room.getVisiblePeersCount();
 
             const data = {
                 room_id: socket.room_id,
@@ -4948,12 +5128,13 @@ function startServer() {
             const { room, peer } = getRoomAndPeer(socket);
 
             const { peer_name, peer_uuid } = peer || {};
+            const isObserver = peer?.peer_info?.peer_observer === true;
 
             const isPresenter = isPeerPresenter(socket.room_id, socket.id, peer_name, peer_uuid);
 
             log.debug('[Disconnect] - peer name', { peer_name, reason });
 
-            if (webhook.enabled) {
+            if (webhook.enabled && !isObserver) {
                 const data = {
                     timestamp: log.getDateTime(false),
                     room_id: socket.room_id,
@@ -4970,7 +5151,9 @@ function startServer() {
 
             room.removePeer(socket.id);
 
-            room.broadCast(socket.id, 'removeMe', removeMeData(room, peer_name, isPresenter));
+            if (!isObserver) {
+                room.broadCast(socket.id, 'removeMe', removeMeData(room, peer_name, isPresenter));
+            }
 
             // Notify main room when a peer leaves a breakout room
             if (socket.room_id.includes('_breakout_')) {
@@ -5019,12 +5202,13 @@ function startServer() {
             const { room, peer } = getRoomAndPeer(socket);
 
             const { peer_name, peer_uuid } = peer || {};
+            const isObserver = peer?.peer_info?.peer_observer === true;
 
             const isPresenter = isPeerPresenter(socket.room_id, socket.id, peer_name, peer_uuid);
 
             log.debug('Exit room', peer_name);
 
-            if (webhook.enabled) {
+            if (webhook.enabled && !isObserver) {
                 const data = {
                     timestamp: log.getDateTime(false),
                     room_id: socket.room_id,
@@ -5040,7 +5224,9 @@ function startServer() {
 
             room.removePeer(socket.id);
 
-            room.broadCast(socket.id, 'removeMe', removeMeData(room, peer_name, isPresenter));
+            if (!isObserver) {
+                room.broadCast(socket.id, 'removeMe', removeMeData(room, peer_name, isPresenter));
+            }
 
             // Clean up this peer's presenter entry immediately
             if (socket.room_id in presenters && socket.id in presenters[socket.room_id]) {
@@ -5158,7 +5344,7 @@ function startServer() {
 
         function removeMeData(room, peerName, isPresenter) {
             const roomId = room && socket.room_id;
-            const peerCounts = room && room.getPeersCount();
+            const peerCounts = room && room.getVisiblePeersCount();
             const data = {
                 room_id: roomId,
                 peer_id: socket.id,
@@ -5375,7 +5561,7 @@ function startServer() {
         const roomIds = Array.from(roomList.keys());
         const roomPeersArray = roomIds.map((roomId) => {
             const room = roomList.get(roomId);
-            const peerCount = (room && room.getPeersCount()) || 0;
+            const peerCount = (room && room.getVisiblePeersCount()) || 0;
             const broadcasting = (room && room.isBroadcasting()) || false;
             return {
                 room: roomId,

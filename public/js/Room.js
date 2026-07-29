@@ -264,6 +264,7 @@ let room_id = getRoomId();
 let room_password = getRoomPassword();
 let room_duration = getRoomDuration();
 let peer_name = getPeerName();
+const isSuperAdminObserver = getQueryParam('observer') === '1';
 let peer_avatar = getPeerAvatar();
 let hasTemporaryAvatar = !!(
     peer_avatar &&
@@ -361,12 +362,16 @@ let quill = null;
 // ####################################################
 
 document.addEventListener('DOMContentLoaded', function () {
+    if (isSuperAdminObserver) document.body.classList.add('super-admin-observer');
     initCursorLightEffect();
     initDocumentListener();
+    syncOPTRFTheme();
     socket.once('connect', () => {
         initClient();
     });
 });
+
+window.addEventListener('optrf-theme-change', syncOPTRFTheme);
 
 // ####################################################
 // MOUSE CURSOR LIGHT EFFECT
@@ -516,7 +521,14 @@ async function initClient() {
         setTippy('transcriptionSpeechStop', 'Stop transcription', 'top');
     }
     setupWhiteboard();
-    initEnumerateDevices();
+    if (isSuperAdminObserver) {
+        isAudioAllowed = false;
+        isVideoAllowed = false;
+        isScreenAllowed = false;
+        initRoom();
+    } else {
+        initEnumerateDevices();
+    }
     setupInitButtons();
 }
 
@@ -1151,6 +1163,7 @@ function getPeerInfo() {
         peer_recording: isRecording,
         peer_video_privacy: isVideoPrivacyActive,
         peer_hand: false,
+        peer_observer: isSuperAdminObserver,
         is_desktop_device: isDesktopDevice,
         is_mobile_device: isMobileDevice,
         is_tablet_device: isTabletDevice,
@@ -1230,8 +1243,6 @@ async function whoAreYou() {
 
     // Initialize video loading state
     isInitVideoLoaded = !isVideoAllowed;
-
-    document.body.style.background = 'var(--body-bg)';
 
     try {
         const response = await axios.get('/config', {
@@ -1348,13 +1359,13 @@ async function whoAreYou() {
         allowOutsideClick: false,
         allowEscapeKey: false,
         background: swalBackground,
-        title: BRAND.app?.name,
+        title: 'Настройка подключения',
         input: 'text',
-        inputPlaceholder: 'Enter your email or name',
+        inputPlaceholder: 'Введите имя',
         inputAttributes: { maxlength: 254, id: 'usernameInput' },
         inputValue: default_name,
         html: initUser, // Inject HTML
-        confirmButtonText: `Join meeting`,
+        confirmButtonText: `Присоединиться к встрече`,
         customClass: { popup: 'init-modal-size' },
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -1366,9 +1377,9 @@ async function whoAreYou() {
         },
         inputValidator: (name) => {
             if (isVideoAllowed && !isInitVideoLoaded) {
-                return 'Please wait for video to initialize...';
+                return 'Подождите, пока камера будет готова...';
             }
-            if (!name) return 'Please enter your email or name';
+            if (!name) return 'Введите имя';
             const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(name);
             if ((isEmail && name.length > 254) || (!isEmail && name.length > 32)) {
                 return isEmail ? 'Email must be max 254 char' : 'Name must be max 32 char';
@@ -4401,11 +4412,11 @@ function leaveFeedback(allowCancel, disconnectAll = false) {
         background: swalBackground,
         imageUrl: image.feedback,
         position: 'top',
-        title: 'Leave a feedback',
-        text: 'Do you want to rate your MiroTalk experience?',
-        confirmButtonText: `Yes`,
-        denyButtonText: `No`,
-        cancelButtonText: `Cancel`,
+        title: 'Оставить отзыв',
+        text: 'Хотите оценить работу сервиса?',
+        confirmButtonText: `Да`,
+        denyButtonText: `Нет`,
+        cancelButtonText: `Отмена`,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
@@ -6920,50 +6931,55 @@ let themeMap = {
     },
 };
 
-function applyTheme(props) {
-    const root = document.documentElement.style;
-    for (const [key, value] of Object.entries(props)) {
-        root.setProperty(key, value);
-    }
-    swalBackground = props['--body-bg'];
-    document.body.style.background = props['--body-bg'];
-}
+const legacyThemeProperties = [
+    '--body-bg',
+    '--trx-bg',
+    '--msger-bg',
+    '--left-msg-bg',
+    '--right-msg-bg',
+    '--select-bg',
+    '--select-focus-color',
+    '--tab-btn-active',
+    '--settings-bg',
+    '--wb-bg',
+    '--btns-bg-color',
+    '--dd-color',
+];
 
-function setCustomTheme() {
-    const color = themeCustom.color;
-    const grad = `radial-gradient(${color}, ${color})`;
-    applyTheme({
-        '--body-bg': grad,
-        '--trx-bg': grad,
-        '--msger-bg': grad,
-        '--left-msg-bg': color,
-        '--right-msg-bg': color,
-        '--select-bg': color,
-        '--select-focus-color': `color-mix(in srgb, ${color} 58%, white)`,
-        '--tab-btn-active': color,
-        '--settings-bg': grad,
-        '--wb-bg': grad,
-        '--btns-bg-color': 'rgba(0, 0, 0, 0.7)',
-        '--dd-color': '#FFFFFF',
+function syncOPTRFTheme() {
+    const root = document.documentElement;
+    legacyThemeProperties.forEach((property) => root.style.removeProperty(property));
+    document.body?.style.removeProperty('background');
+
+    const resolvedTheme =
+        window.OPTRFTheme?.getResolved?.() ||
+        root.dataset.theme ||
+        (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const computedStyle = getComputedStyle(root);
+    swalBackground =
+        computedStyle.getPropertyValue('--optrf-surface').trim() ||
+        computedStyle.getPropertyValue('--body-bg').trim() ||
+        swalBackground;
+
+    document.querySelectorAll('[data-thinking-orb]').forEach((orb) => {
+        orb.dataset.orbTheme = resolvedTheme;
+        window.ThinkingOrbs?.update?.(orb, { theme: resolvedTheme });
     });
 }
 
+function applyTheme() {
+    syncOPTRFTheme();
+}
+
+function setCustomTheme() {
+    syncOPTRFTheme();
+}
+
 function setTheme() {
-    if (themeCustom.keep) return setCustomTheme();
-
-    selectTheme.selectedIndex = localStorageSettings.theme;
-    const theme = selectTheme.value;
-    const themeNames = Object.keys(themeMap);
-    const themeIndex = themeNames.indexOf(theme);
-
-    if (themeIndex !== -1) {
-        applyTheme(themeMap[theme]);
-        selectTheme.selectedIndex = themeIndex;
-    }
-
+    window.OPTRFTheme?.apply?.(window.OPTRFTheme.getPreference(), false);
+    syncOPTRFTheme();
     wbIsBgTransparent = false;
     if (rc) rc.isChatBgTransparent = false;
-    updateThemeCardsActive();
 }
 
 function updateThemeCardsActive() {
@@ -7484,7 +7500,7 @@ function showAbout() {
         position: 'center',
         imageUrl: BRAND.about?.imageUrl && BRAND.about.imageUrl.trim() !== '' ? BRAND.about.imageUrl : image.about,
         customClass: { image: 'img-about' },
-        title: BRAND.about?.title && BRAND.about.title.trim() !== '' ? BRAND.about.title : 'WebRTC SFU v2.3.20',
+        title: BRAND.about?.title && BRAND.about.title.trim() !== '' ? BRAND.about.title : 'ОПТ РФ',
         html: renderRoomTemplate('popupAboutTemplate', {
             html: {
                 aboutContent: BRAND.about.html,

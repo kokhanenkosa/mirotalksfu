@@ -36,6 +36,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const stripCyrillic = (value) =>
         String(value || '').replace(/[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]/g, '');
 
+    /**
+     * Имя профиля хранится на сервере по номеру телефона.
+     * localStorage/sessionStorage — быстрый fallback до ответа /phone/me.
+     */
+    const applySavedDisplayName = (name) => {
+        const displayName = String(name || '').trim();
+        if (!nameEl || !displayName || nameEl.value.trim()) return;
+        nameEl.value = displayName;
+        nameEl.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    applySavedDisplayName(
+        window.sessionStorage.phone_display_name || window.localStorage.peer_name || ''
+    );
+
+    fetch('/phone/me', { credentials: 'same-origin' })
+        .then((res) => res.json())
+        .then((data) => {
+            if (!data?.authenticated || !data.displayName) return;
+            // Серверный профиль — источник истины.
+            if (nameEl) nameEl.value = '';
+            applySavedDisplayName(data.displayName);
+            window.localStorage.peer_name = data.displayName;
+            window.sessionStorage.phone_display_name = data.displayName;
+        })
+        .catch(() => {
+            // Локальный fallback уже применён выше.
+        });
+
     if (roomEl) {
         roomEl.setAttribute('lang', 'en');
         roomEl.setAttribute('spellcheck', 'false');
@@ -315,6 +344,11 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus('');
         try {
             const joinUrl = buildJoinUrl();
+            const displayName = safe(nameEl?.value);
+            if (displayName) {
+                window.localStorage.peer_name = displayName;
+                window.sessionStorage.phone_display_name = displayName;
+            }
             window.location.href = joinUrl.toString();
         } catch (err) {
             setError(err?.message || 'Не удалось сформировать ссылку для входа');

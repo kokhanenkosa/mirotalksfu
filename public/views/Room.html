@@ -20,6 +20,7 @@
             name="description"
             content="Видеоконференция ОПТ РФ — звонки, чат и демонстрация экрана в браузере."
         />
+        <script src="../js/ThemeInit.js"></script>
 
         <!-- https://ogp.me -->
 
@@ -37,7 +38,6 @@
         <link rel="stylesheet" href="../css/GroupChat.css" />
         <link rel="stylesheet" href="../css/Polls.css" />
         <link rel="stylesheet" href="../css/Editor.css" />
-        <link rel="stylesheet" href="../css/optrf-room.css" />
 
         <!-- https://cdnjs.com/libraries/font-awesome -->
 
@@ -81,6 +81,8 @@
             integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC"
             crossorigin="anonymous"
         />
+        <link rel="stylesheet" href="../css/optrf-theme.css" />
+        <link rel="stylesheet" href="../css/optrf-room.css" />
         <script
             defer
             src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
@@ -99,6 +101,7 @@
         <script async src="../js/Stats.js"></script>
         <script defer src="../js/Brand.js"></script>
         <script defer src="../js/ThinkingOrbs.js"></script>
+        <script defer src="../js/Theme.js"></script>
         <script async src="../js/Translate.js"></script>
 
         <!-- Js scripts https://cdn.jsdelivr.net -->
@@ -170,7 +173,6 @@
                     data-thinking-orb
                     data-orb-state="working"
                     data-orb-size="20"
-                    data-orb-theme="dark"
                     aria-hidden="true"
                 ></span>
             </div>
@@ -178,14 +180,20 @@
 
         <div id="disconnectOverlay" class="disconnect-overlay" aria-hidden="true"></div>
 
-        <div id="loadingDiv" class="center" role="status" aria-live="polite" aria-busy="true">
+        <div
+            id="loadingDiv"
+            class="center notranslate"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+            translate="no"
+        >
             <div
                 class="loading-spinner loading-orb loading-orb--lg"
                 data-thinking-orb
                 data-orb-state="composing"
                 data-orb-size="64"
                 data-orb-display="128"
-                data-orb-theme="dark"
                 aria-hidden="true"
             ></div>
             <h1 id="loadingTitle">Загрузка</h1>
@@ -205,7 +213,6 @@
                             data-thinking-orb
                             data-orb-state="working"
                             data-orb-size="64"
-                            data-orb-theme="dark"
                             aria-hidden="true"
                         ></div>
                     </div>
@@ -1209,7 +1216,6 @@
                                     data-thinking-orb
                                     data-orb-state="shaping"
                                     data-orb-size="64"
-                                    data-orb-theme="dark"
                                     aria-hidden="true"
                                 ></div>
                                 <img id="avatarVideoAIPreview" src="" alt="Avatar Preview" class="hidden" />
@@ -1549,12 +1555,16 @@
 
                     <div id="tabStyling" class="tabcontent">
                         <br />
-                        <div class="title">
-                            <i class="fa-solid fa-palette"></i>
-                            <p>Theme:</p>
+                        <div data-optrf-theme-host>
+                            <span>Тема интерфейса</span>
                         </div>
-                        <br />
-                        <select id="selectTheme" class="form-select text-light bg-dark">
+                        <div class="optrf-legacy-theme-controls" aria-hidden="true">
+                            <div class="title">
+                                <i class="fa-solid fa-palette"></i>
+                                <p>Тема:</p>
+                            </div>
+                            <br />
+                            <select id="selectTheme" class="form-select text-light bg-dark">
                             <option value="default">Default</option>
                             <option value="dark">Dark</option>
                             <option value="grey">Grey</option>
@@ -1565,8 +1575,8 @@
                             <option value="orange">Orange</option>
                             <option value="pink">Pink</option>
                             <option value="yellow">Yellow</option>
-                        </select>
-                        <div id="themeCardsGrid" class="theme-cards-grid">
+                            </select>
+                            <div id="themeCardsGrid" class="theme-cards-grid">
                             <div class="theme-card" data-theme="default" data-index="0">
                                 <i class="fa-solid fa-circle-dot"></i>
                                 <span>Default</span>
@@ -1607,22 +1617,23 @@
                                 <i class="fa-solid fa-star"></i>
                                 <span>Yellow</span>
                             </div>
-                        </div>
-                        <br />
-                        <div class="title">
-                            <i class="fas fa-fill-drip"></i>
-                            <p>Custom theme:</p>
-                        </div>
-                        <br />
-                        <input id="themeColorPicker" class="theme-color-picker" type="text" />
-                        <br />
-                        <div class="inline-check-box">
-                            <div>
-                                <i class="fas fa-save"></i>
-                                <p>Keep custom</p>
                             </div>
-                            <div class="form-check form-switch form-switch-md title">
-                                <input id="keepCustomTheme" class="form-check-input" type="checkbox" />
+                            <br />
+                            <div class="title">
+                                <i class="fas fa-fill-drip"></i>
+                                <p>Свой цвет:</p>
+                            </div>
+                            <br />
+                            <input id="themeColorPicker" class="theme-color-picker" type="text" />
+                            <br />
+                            <div class="inline-check-box">
+                                <div>
+                                    <i class="fas fa-save"></i>
+                                    <p>Сохранять свой цвет</p>
+                                </div>
+                                <div class="form-check form-switch form-switch-md title">
+                                    <input id="keepCustomTheme" class="form-check-input" type="checkbox" />
+                                </div>
                             </div>
                         </div>
                         <br />
@@ -2863,7 +2874,6 @@ Note</textarea>
                 data-thinking-orb
                 data-orb-state="working"
                 data-orb-size="64"
-                data-orb-theme="dark"
                 aria-hidden="true"
             ></div>
         </template>

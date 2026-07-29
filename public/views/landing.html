@@ -22,12 +22,15 @@
         <meta property="og:image" content="{{OG_IMAGE}}" />
         <meta property="og:url" content="{{OG_URL}}" />
 
+        <script src="../js/ThemeInit.js"></script>
+        <script defer src="../js/Theme.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,600&subset=cyrillic" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
         <link rel="stylesheet" type="text/css" href="../css/landing.css" />
         <link rel="stylesheet" type="text/css" href="../css/phoneAuth.css" />
         <link rel="stylesheet" type="text/css" href="../css/optrf-brand.css" />
+        <link rel="stylesheet" href="../css/optrf-theme.css" />
 
         <script defer src="../js/Widget.js"></script>
         <script defer src="../js/Brand.js"></script>
@@ -38,7 +41,7 @@
         <script src="https://unpkg.com/scrollreveal@4.0.0/dist/scrollreveal.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/xss/dist/xss.min.js"></script>
     </head>
-    <body class="is-boxed has-animations">
+    <body class="is-boxed has-animations phone-session-pending">
         <div class="body-wrap">
             <header class="site-header">
                 <div class="container">
@@ -116,7 +119,6 @@
                                             data-orb-state="composing"
                                             data-orb-size="64"
                                             data-orb-display="128"
-                                            data-orb-theme="light"
                                         ></div>
                                     </div>
 
@@ -148,7 +150,6 @@
                                                     data-thinking-orb
                                                     data-orb-state="composing"
                                                     data-orb-size="20"
-                                                    data-orb-theme="dark"
                                                     aria-hidden="true"
                                                 ></span>
                                             </button>
@@ -180,7 +181,6 @@
                                                     data-thinking-orb
                                                     data-orb-state="solving"
                                                     data-orb-size="20"
-                                                    data-orb-theme="dark"
                                                     aria-hidden="true"
                                                 ></span>
                                             </button>
@@ -218,9 +218,18 @@
                                         <span class="phone-cabinet-label">Вы вошли как</span>
                                         <strong id="phoneCabinetNumber" class="phone-cabinet-number"></strong>
                                     </div>
-                                    <button id="phoneLogoutBtn" class="button button-secondary br-6" type="button">
-                                        Выйти
-                                    </button>
+                                    <div class="phone-cabinet-actions">
+                                        <a
+                                            id="superAdminBtn"
+                                            class="button button-primary br-6"
+                                            href="/super-admin"
+                                            hidden
+                                            >Супер-админ</a
+                                        >
+                                        <button id="phoneLogoutBtn" class="button button-secondary br-6" type="button">
+                                            Выйти
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="phone-cabinet-name">
                                     <label class="phone-cabinet-label" for="phoneDisplayName"
@@ -331,7 +340,7 @@
                                 Неограниченное число комнат и участников — без лимита по времени звонка
                             </h2>
                             <p class="section-paragraph mb-0">
-                                Платформа на базе SFU: высокое качество видео, низкая задержка. Работает во всех
+                                Высокое качество видео и низкая задержка. Работает во всех
                                 современных браузерах и на любых устройствах.
                             </p>
                         </div>

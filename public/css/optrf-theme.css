@@ -1,0 +1,432 @@
+/* ОПТ РФ — единая дизайн-система и три режима (system разрешается ThemeInit.js). */
+:root {
+    --optrf-accent: #00a8e8;
+    --optrf-accent-hover: #0196cf;
+    --optrf-accent-soft: rgba(0, 168, 232, 0.14);
+    --optrf-success: #16a36a;
+    --optrf-danger: #dc3545;
+    --optrf-font: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --optrf-radius-sm: 8px;
+    --optrf-radius: 12px;
+    --optrf-radius-lg: 18px;
+    --optrf-shadow: 0 8px 30px rgba(15, 24, 34, 0.09);
+    --optrf-shadow-lg: 0 18px 55px rgba(15, 24, 34, 0.14);
+    --optrf-bg: #f4f5f6;
+    --optrf-bg-elevated: #ffffff;
+    --optrf-surface: #ffffff;
+    --optrf-surface-2: #f8f9fa;
+    --optrf-surface-3: #eef1f3;
+    --optrf-text: #17191b;
+    --optrf-text-2: #3b4146;
+    --optrf-muted: #7a8289;
+    --optrf-border: #e2e5e8;
+    --optrf-input: #ffffff;
+    --optrf-video-tile: #17191d;
+}
+
+html[data-theme='light'] {
+    --optrf-bg: #f4f5f6;
+    --optrf-bg-elevated: #ffffff;
+    --optrf-surface: #ffffff;
+    --optrf-surface-2: #f8f9fa;
+    --optrf-surface-3: #eef1f3;
+    --optrf-text: #17191b;
+    --optrf-text-2: #3b4146;
+    --optrf-muted: #7a8289;
+    --optrf-border: #e2e5e8;
+    --optrf-overlay: rgba(255, 255, 255, 0.93);
+    --optrf-header: rgba(255, 255, 255, 0.9);
+    --optrf-footer: #151719;
+    --optrf-footer-text: #c9cdd1;
+    --optrf-input: #ffffff;
+    --optrf-video-tile: #17191d;
+    /* Совместимость со старым optrf-brand.css. */
+    --optrf-blue: var(--optrf-accent);
+    --optrf-blue-hover: var(--optrf-accent-hover);
+    --optrf-dark: var(--optrf-text);
+    --optrf-dark-2: var(--optrf-text-2);
+    --optrf-gray: var(--optrf-text-2);
+}
+
+html[data-theme='dark'] {
+    --optrf-bg: #0f1113;
+    --optrf-bg-elevated: #15181b;
+    --optrf-surface: #181b1e;
+    --optrf-surface-2: #202428;
+    --optrf-surface-3: #292e33;
+    --optrf-text: #f3f5f6;
+    --optrf-text-2: #c9cfd4;
+    --optrf-muted: #929ba3;
+    --optrf-border: #30363b;
+    --optrf-overlay: rgba(20, 23, 26, 0.94);
+    --optrf-header: rgba(15, 17, 19, 0.9);
+    --optrf-footer: #090a0b;
+    --optrf-footer-text: #c9cdd1;
+    --optrf-input: #202428;
+    --optrf-video-tile: #090a0c;
+    --optrf-shadow: 0 8px 30px rgba(0, 0, 0, 0.28);
+    --optrf-shadow-lg: 0 18px 55px rgba(0, 0, 0, 0.38);
+    /* Совместимость со старым optrf-brand.css. */
+    --optrf-blue: var(--optrf-accent);
+    --optrf-blue-hover: var(--optrf-accent-hover);
+    --optrf-dark: var(--optrf-text);
+    --optrf-dark-2: var(--optrf-text-2);
+    --optrf-gray: var(--optrf-text-2);
+}
+
+html {
+    background: var(--optrf-bg);
+}
+
+body {
+    color: var(--optrf-text);
+    background: var(--optrf-bg);
+    font-family: var(--optrf-font);
+}
+
+.body-wrap,
+.pa-body,
+.cr-body,
+.active-rooms-page {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-bg) !important;
+    font-family: var(--optrf-font) !important;
+}
+
+html[data-theme='light'] .hero {
+    background: linear-gradient(180deg, #ffffff 0%, #f0f7fb 55%, var(--optrf-bg) 100%) !important;
+}
+
+html[data-theme='dark'] .hero {
+    background:
+        radial-gradient(circle at 75% 20%, rgba(0, 168, 232, 0.12), transparent 38%),
+        linear-gradient(180deg, #15191c 0%, var(--optrf-bg) 100%) !important;
+}
+
+.site-header,
+.pa-top,
+.cr-header {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-header) !important;
+    border-color: var(--optrf-border) !important;
+    backdrop-filter: blur(16px);
+}
+
+.pa-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.cta-inner,
+.content-card,
+.legal-card,
+.pa-panel,
+.login-card,
+.waiting-card,
+.cr-card,
+.active-rooms-card,
+.phone-cabinet {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-surface) !important;
+    border: 1px solid var(--optrf-border) !important;
+    box-shadow: var(--optrf-shadow) !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.section-title,
+.pa-title,
+.cr-title {
+    color: var(--optrf-text) !important;
+    font-family: var(--optrf-font) !important;
+}
+
+html[data-theme] .hero-paragraph,
+html[data-theme] #appDescription,
+html[data-theme] #newRoomDescription,
+html[data-theme] .features .section-paragraph,
+html[data-theme] .feature .text-sm {
+    color: var(--optrf-text-2) !important;
+}
+
+p,
+label,
+.hero-paragraph,
+.section-paragraph,
+.pa-sub,
+.pa-label,
+.cr-label,
+.phone-cabinet-label {
+    color: var(--optrf-text-2);
+}
+
+input,
+textarea,
+select,
+.form-input,
+.pa-field,
+.pa-input,
+.cr-input,
+.cr-select {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-input) !important;
+    border-color: var(--optrf-border) !important;
+    font-family: var(--optrf-font) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--optrf-muted) !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+.form-input:focus,
+.pa-field:focus-within {
+    border-color: var(--optrf-accent) !important;
+    box-shadow: 0 0 0 3px var(--optrf-accent-soft) !important;
+}
+
+.button-primary,
+.button.button-primary,
+.pa-btn,
+.cr-submit,
+.btn-primary {
+    color: #fff !important;
+    background: var(--optrf-accent) !important;
+    border-color: var(--optrf-accent) !important;
+    box-shadow: none !important;
+}
+
+.button-primary:hover,
+.button.button-primary:hover,
+.pa-btn:hover,
+.cr-submit:hover,
+.btn-primary:hover {
+    background: var(--optrf-accent-hover) !important;
+}
+
+.button-secondary,
+.button.button-secondary,
+.cr-button-secondary {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-surface-2) !important;
+    border-color: var(--optrf-border) !important;
+}
+
+html[data-theme] .button-secondary:hover,
+html[data-theme] .button.button-secondary:hover {
+    color: var(--optrf-accent) !important;
+    background: var(--optrf-surface-3) !important;
+    border-color: var(--optrf-accent) !important;
+}
+
+.site-footer,
+#footer {
+    color: var(--optrf-footer-text) !important;
+    background: var(--optrf-footer) !important;
+}
+
+/* Служебные standalone-страницы. */
+body > article:not([class]) {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-surface) !important;
+    border-color: var(--optrf-border) !important;
+    box-shadow: var(--optrf-shadow) !important;
+}
+
+html[data-theme='dark'] img[src*='logo-no-background.svg'] {
+    filter: brightness(0) invert(1);
+}
+
+body:has(#startCamera) .container {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-surface) !important;
+    border: 1px solid var(--optrf-border) !important;
+    box-shadow: var(--optrf-shadow) !important;
+    font-family: var(--optrf-font) !important;
+}
+
+body:has(#startCamera) button {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-surface-2) !important;
+    border: 1px solid var(--optrf-border) !important;
+}
+
+body:has(#startCamera) button:not(:disabled):hover {
+    color: #fff !important;
+    background: var(--optrf-accent) !important;
+}
+
+/* Логотип зависит от разрешённой темы. */
+html[data-theme='light'] .logo-for-light {
+    display: inline-block !important;
+}
+
+html[data-theme='light'] .logo-for-dark {
+    display: none !important;
+}
+
+html[data-theme='dark'] .logo-for-light {
+    display: inline-block !important;
+    filter: brightness(0) invert(1) !important;
+}
+
+html[data-theme='dark'] .logo-for-light:has(~ .logo-for-dark) {
+    display: none !important;
+}
+
+html[data-theme='dark'] .logo-for-dark {
+    display: inline-block !important;
+}
+
+/* Универсальный переключатель. */
+.optrf-theme-switcher {
+    z-index: 1050;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
+    color: var(--optrf-text);
+    background: var(--optrf-surface-2);
+    border: 1px solid var(--optrf-border);
+    border-radius: 11px;
+    box-shadow: var(--optrf-shadow);
+    font-family: var(--optrf-font);
+}
+
+.optrf-theme-switcher--header {
+    margin-left: auto;
+}
+
+.optrf-theme-switcher--floating {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+}
+
+[data-optrf-theme-host] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    margin: 8px 0 18px;
+}
+
+[data-optrf-theme-host] .optrf-theme-switcher {
+    margin-left: auto;
+}
+
+.optrf-theme-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 6px 9px;
+    color: var(--optrf-muted);
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    font: 500 12px/1 var(--optrf-font);
+    cursor: pointer;
+}
+
+.optrf-theme-option:hover {
+    color: var(--optrf-text);
+    background: var(--optrf-surface-3);
+}
+
+.optrf-theme-option.is-active {
+    color: #fff;
+    background: var(--optrf-accent);
+}
+
+.optrf-theme-icon {
+    min-width: 1em;
+    font-size: 13px;
+    line-height: 1;
+    text-align: center;
+}
+
+/* SweetAlert и всплывающие панели. */
+.swal2-popup,
+.swal2-modal,
+.swal2-html-container,
+.swal2-input,
+.swal2-select {
+    color: var(--optrf-text) !important;
+    background-color: var(--optrf-surface) !important;
+    border-color: var(--optrf-border) !important;
+    font-family: var(--optrf-font) !important;
+}
+
+/* Видеокомната: интерфейс следует общей теме, видео остаётся на графитовом фоне. */
+html[data-theme] {
+    --body-bg: var(--optrf-bg);
+    --msger-bg: var(--optrf-surface);
+    --msger-private-bg: var(--optrf-surface-2);
+    --select-bg: var(--optrf-input);
+    --select-color: var(--optrf-text);
+    --select-border: 1px solid var(--optrf-border);
+    --color-accent: var(--optrf-accent);
+    --fg-1: var(--optrf-text);
+    --fg-2: var(--optrf-text-2);
+    --fg-3: var(--optrf-muted);
+    --surface-1: var(--optrf-surface);
+    --surface-2: var(--optrf-surface-2);
+    --surface-3: var(--optrf-surface-3);
+}
+
+html[data-theme] #videoMediaContainer,
+html[data-theme] .Camera,
+html[data-theme] .video-container,
+html[data-theme] video {
+    background-color: var(--optrf-video-tile);
+}
+
+html[data-theme] #settings,
+html[data-theme] #chatRoom,
+html[data-theme] #pollRoom,
+html[data-theme] #editorRoom,
+html[data-theme] .participants-panel,
+html[data-theme] .init-user,
+html[data-theme] .initComands {
+    color: var(--optrf-text);
+    background-color: var(--optrf-surface);
+    border-color: var(--optrf-border);
+}
+
+html[data-theme] .bg-dark,
+html[data-theme] .btn-dark {
+    color: var(--optrf-text) !important;
+    background-color: var(--optrf-surface-2) !important;
+    border-color: var(--optrf-border) !important;
+}
+
+html[data-theme] .text-light {
+    color: var(--optrf-text) !important;
+}
+
+.optrf-legacy-theme-controls {
+    display: none !important;
+}
+
+@media (max-width: 760px) {
+    .optrf-theme-option span {
+        display: none;
+    }
+
+    .optrf-theme-option {
+        width: 32px;
+        justify-content: center;
+        padding: 6px;
+    }
+}

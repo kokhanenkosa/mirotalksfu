@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ru">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="noindex,nofollow" />
+        <title>Супер-админ — ОПТ РФ</title>
+        <link rel="shortcut icon" href="../images/logo-no-background.svg" />
+        <script src="../js/ThemeInit.js"></script>
+        <link rel="stylesheet" href="../css/optrf-theme.css" />
+        <link rel="stylesheet" href="../css/superAdmin.css" />
+        <script defer src="../js/Theme.js"></script>
+        <script defer src="../js/SuperAdmin.js"></script>
+    </head>
+    <body class="admin-page">
+        <header class="admin-header">
+            <div class="admin-header-inner site-header-inner">
+                <a href="/" aria-label="В кабинет">
+                    <img class="admin-logo logo-for-light" src="../images/logo-no-background.svg" alt="ОПТ РФ" />
+                    <img class="admin-logo logo-for-dark" src="../images/logo-on-dark.svg" alt="ОПТ РФ" />
+                </a>
+                <h1 class="admin-title">Панель супер-администратора</h1>
+                <div class="admin-header-actions">
+                    <a class="admin-button" href="/">Кабинет</a>
+                    <button class="admin-button admin-button--accent" id="adminRefresh" type="button">Обновить</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="admin-main">
+            <p id="adminStatus" class="admin-status">Загрузка данных…</p>
+
+            <section class="admin-stats" aria-label="Общая статистика">
+                <article class="admin-stat">
+                    <strong id="statUsers" class="admin-stat-value">—</strong>
+                    <span class="admin-stat-label">Пользователей</span>
+                </article>
+                <article class="admin-stat">
+                    <strong id="statLogins" class="admin-stat-value">—</strong>
+                    <span class="admin-stat-label">Авторизаций</span>
+                </article>
+                <article class="admin-stat">
+                    <strong id="statActiveRooms" class="admin-stat-value">—</strong>
+                    <span class="admin-stat-label">Активных комнат</span>
+                </article>
+                <article class="admin-stat">
+                    <strong id="statParticipants" class="admin-stat-value">—</strong>
+                    <span class="admin-stat-label">Участников сейчас</span>
+                </article>
+                <article class="admin-stat">
+                    <strong id="statRoomsTotal" class="admin-stat-value">—</strong>
+                    <span class="admin-stat-label">Комнат за всё время</span>
+                </article>
+            </section>
+
+            <section class="admin-panel">
+                <div class="admin-panel-head">
+                    <h2 class="admin-panel-title">Активные комнаты</h2>
+                    <span id="activeRoomsCount" class="admin-count">0</span>
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Комната</th>
+                                <th>Создатель</th>
+                                <th>Создана</th>
+                                <th>Участники</th>
+                                <th>Состояние</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="activeRoomsBody"></tbody>
+                    </table>
+                    <p id="activeRoomsEmpty" class="admin-empty" hidden>Активных комнат нет</p>
+                </div>
+            </section>
+
+            <section class="admin-panel">
+                <div class="admin-panel-head">
+                    <h2 class="admin-panel-title">Все пользователи</h2>
+                    <span id="usersCount" class="admin-count">0</span>
+                    <input id="usersSearch" class="admin-search" type="search" placeholder="Телефон или имя" />
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Телефон</th>
+                                <th>Имя</th>
+                                <th>Роль</th>
+                                <th>Первый вход</th>
+                                <th>Последний вход</th>
+                                <th>Входов</th>
+                                <th>Комнат</th>
+                                <th>Последний IP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersBody"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="admin-panel">
+                <div class="admin-panel-head">
+                    <h2 class="admin-panel-title">История комнат</h2>
+                    <span id="historyCount" class="admin-count">0</span>
+                    <input
+                        id="historySearch"
+                        class="admin-search"
+                        type="search"
+                        placeholder="Комната, телефон или имя"
+                    />
+                </div>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Комната</th>
+                                <th>Создатель</th>
+                                <th>Создана</th>
+                                <th>Завершена</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </body>
+</html>

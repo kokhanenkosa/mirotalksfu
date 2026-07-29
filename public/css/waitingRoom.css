@@ -1,4 +1,9 @@
 /* Center card section */
+.center-card-section,
+.waiting-card {
+    font-family: var(--optrf-font);
+}
+
 .center-card-section {
     display: flex;
     align-items: center;
@@ -24,10 +29,10 @@
     width: 100%;
     margin: 0 auto;
     padding: 56px 48px 48px;
-    background: linear-gradient(160deg, rgba(15, 15, 25, 0.95) 40%, rgba(70, 120, 249, 0.12) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--optrf-surface);
+    border: 1px solid var(--optrf-border);
     border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--optrf-shadow);
     text-align: center;
 }
 
@@ -37,8 +42,8 @@
     height: 72px;
     margin: 0 auto 24px;
     border-radius: 50%;
-    background: rgba(70, 120, 249, 0.1);
-    border: 1px solid rgba(70, 120, 249, 0.2);
+    background: var(--optrf-accent-soft);
+    border: 1px solid var(--optrf-accent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -46,16 +51,16 @@
 }
 .waiting-icon i {
     font-size: 30px;
-    color: #4678f9;
+    color: var(--optrf-accent);
 }
 
 @keyframes iconPulse {
     0%,
     100% {
-        box-shadow: 0 0 0 0 rgba(70, 120, 249, 0.25);
+        box-shadow: 0 0 0 0 var(--optrf-accent-soft);
     }
     50% {
-        box-shadow: 0 0 0 16px rgba(70, 120, 249, 0);
+        box-shadow: 0 0 0 16px transparent;
     }
 }
 
@@ -63,7 +68,7 @@
 .waiting-title {
     font-size: 26px;
     font-weight: 700;
-    color: #fff;
+    color: var(--optrf-text);
     margin-bottom: 10px;
     letter-spacing: -0.4px;
 }
@@ -71,7 +76,7 @@
 /* Description */
 .waiting-description {
     font-size: 15px;
-    color: rgba(255, 255, 255, 0.65);
+    color: var(--optrf-text-2);
     line-height: 1.7;
     margin-bottom: 32px;
     max-width: 400px;
@@ -82,13 +87,13 @@
 /* Room name badge */
 .waiting-room-name {
     display: inline-block;
-    background: rgba(70, 120, 249, 0.12);
-    border: 1px solid rgba(70, 120, 249, 0.2);
+    background: var(--optrf-accent-soft);
+    border: 1px solid var(--optrf-accent);
     border-radius: 12px;
     padding: 6px 16px;
     font-size: 13px;
     font-weight: 600;
-    color: #7ba4fc;
+    color: var(--optrf-accent);
     letter-spacing: 0.3px;
     margin-bottom: 24px;
     word-break: break-all;
@@ -102,7 +107,7 @@
 /* Elapsed time */
 .waiting-elapsed {
     font-size: 13px;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--optrf-muted);
     margin-bottom: 20px;
 }
 .waiting-elapsed i {
@@ -130,27 +135,27 @@
 /* Status */
 .waiting-status {
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.55);
+    color: var(--optrf-text-2);
     margin-bottom: 24px;
     transition:
         color 0.3s ease,
         font-weight 0.3s ease;
 }
 .waiting-status.ready {
-    color: #2ece89;
+    color: var(--optrf-success);
     font-weight: 600;
     font-size: 15px;
 }
 
 /* Pulse on check */
 .waiting-spinner-dot.checking {
-    background: #6d9bff;
+    background: var(--optrf-accent);
 }
 
 /* Divider */
 .waiting-divider {
     border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--optrf-border);
     margin: 0 0 20px;
 }
 
@@ -159,8 +164,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--optrf-surface-2);
+    border: 1px solid var(--optrf-border);
     border-radius: 16px;
     padding: 10px 14px;
     margin-bottom: 20px;
@@ -171,8 +176,8 @@
     min-width: 34px;
     border: none;
     border-radius: 50%;
-    background: rgba(70, 120, 249, 0.12);
-    color: #4678f9;
+    background: var(--optrf-accent-soft);
+    color: var(--optrf-accent);
     font-size: 13px;
     cursor: pointer;
     display: flex;
@@ -181,24 +186,24 @@
     transition: all 0.2s ease;
 }
 .waiting-audio-btn:hover {
-    background: rgba(70, 120, 249, 0.22);
-    color: #6d9bff;
+    background: var(--optrf-accent-soft);
+    color: var(--optrf-accent-hover);
 }
 .waiting-audio-btn:focus-visible {
-    outline: 2px solid #4678f9;
+    outline: 2px solid var(--optrf-accent);
     outline-offset: 2px;
 }
 .waiting-audio-bar {
     flex: 1;
     height: 4px;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--optrf-surface-3);
     border-radius: 2px;
     overflow: hidden;
 }
 .waiting-audio-progress {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #4678f9, #6d9bff);
+    background: var(--optrf-accent);
     border-radius: 2px;
     transition: width 0.3s linear;
 }
@@ -206,18 +211,18 @@
 /* Host login link */
 .host-login-link {
     font-size: 14px;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--optrf-muted);
     margin: 0;
 }
 .host-login-link a {
-    color: #4678f9;
+    color: var(--optrf-accent);
     text-decoration: none;
     font-weight: 600;
     margin-left: 6px;
     transition: color 0.2s;
 }
 .host-login-link a:hover {
-    color: #6d9bff;
+    color: var(--optrf-accent-hover);
     text-decoration: underline;
 }
 

@@ -22,13 +22,13 @@ class HtmlInjector {
     getInjectData() {
         return {
             OG_TYPE: this.config?.og?.type || 'app-webrtc',
-            OG_SITE_NAME: this.config?.og?.siteName || 'MiroTalk SFU',
-            OG_TITLE: this.config?.og?.title || 'Click the link to make a call.',
+            OG_SITE_NAME: this.config?.og?.siteName || 'ОПТ РФ',
+            OG_TITLE: this.config?.og?.title || 'Онлайн-встреча ОПТ РФ',
             OG_DESCRIPTION:
                 this.config?.og?.description ||
-                'MiroTalk SFU calling provides real-time video calls, messaging and screen sharing.',
-            OG_IMAGE: this.config?.og?.image || 'https://sfu.mirotalk.com/images/mirotalksfu.png',
-            OG_URL: this.config?.og?.url || 'https://sfu.mirotalk.com',
+                'Онлайн-занятия, видеозвонки, чат и демонстрация экрана.',
+            OG_IMAGE: this.config?.og?.image || '/images/logo-no-background.svg',
+            OG_URL: this.config?.og?.url || '/',
             // Add more data here as needed with fallbacks
         };
     }

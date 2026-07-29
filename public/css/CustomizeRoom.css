@@ -1,29 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
 :root {
-    /* Base colors (keep simple for Dark Reader compatibility) */
-    --cr-bg-color: #06070a;
+    --cr-bg-color: var(--optrf-bg);
     --cr-bg-overlay:
-        radial-gradient(900px circle at 50% 10%, rgba(255, 255, 255, 0.06), transparent 55%),
-        radial-gradient(700px circle at 20% 70%, rgba(255, 255, 255, 0.035), transparent 60%);
+        radial-gradient(900px circle at 50% 10%, var(--optrf-accent-soft), transparent 55%),
+        radial-gradient(700px circle at 20% 70%, var(--optrf-surface-2), transparent 60%);
     --cr-bg-overlay-opacity: 1;
 
-    --cr-card-bg: rgba(255, 255, 255, 0.05);
-    --cr-card-border: rgba(255, 255, 255, 0.12);
-    --cr-card-border-strong: rgba(255, 255, 255, 0.18);
+    --cr-card-bg: var(--optrf-surface);
+    --cr-card-border: var(--optrf-border);
+    --cr-card-border-strong: var(--optrf-accent);
 
-    --cr-text: rgba(255, 255, 255, 0.92);
-    --cr-text-muted: rgba(255, 255, 255, 0.7);
+    --cr-text: var(--optrf-text);
+    --cr-text-muted: var(--optrf-muted);
 
-    --cr-input-bg: rgba(255, 255, 255, 0.04);
-    --cr-input-border: rgba(255, 255, 255, 0.14);
-    --cr-input-border-focus: rgba(255, 255, 255, 0.28);
+    --cr-input-bg: var(--optrf-input);
+    --cr-input-border: var(--optrf-border);
+    --cr-input-border-focus: var(--optrf-accent);
 
-    --cr-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+    --cr-shadow: var(--optrf-shadow-lg);
 
-    /* Accent */
-    --cr-accent-green: #22c55e;
-    --cr-accent-green-2: #16a34a;
+    --cr-accent-green: var(--optrf-accent);
+    --cr-accent-green-2: var(--optrf-accent-hover);
 }
 
 * {
@@ -32,22 +28,13 @@
 
 html {
     height: 100%;
-    color-scheme: dark;
     background-color: var(--cr-bg-color);
 }
 
 body {
     min-height: 100%;
     margin: 0;
-    font-family:
-        Inter,
-        system-ui,
-        -apple-system,
-        Segoe UI,
-        Roboto,
-        Helvetica,
-        Arial,
-        sans-serif;
+    font-family: var(--optrf-font);
     background-color: var(--cr-bg-color);
     color: var(--cr-text);
     position: relative;
@@ -62,8 +49,8 @@ body {
     justify-content: center;
     padding: 8px;
     border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--optrf-border);
+    background: var(--optrf-surface-2);
     backdrop-filter: blur(10px);
     z-index: 10;
     text-decoration: none;
@@ -74,8 +61,8 @@ body {
 }
 
 .cr-home:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.18);
+    background: var(--optrf-surface-3);
+    border-color: var(--optrf-accent);
 }
 
 .cr-home:active {
@@ -83,7 +70,7 @@ body {
 }
 
 .cr-home:focus-visible {
-    outline: 3px solid rgba(255, 255, 255, 0.25);
+    outline: 3px solid var(--optrf-accent-soft);
     outline-offset: 2px;
 }
 
@@ -169,12 +156,12 @@ body::before {
 }
 
 .cr-input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--optrf-muted);
 }
 
 .cr-input:focus {
     border-color: var(--cr-input-border-focus);
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 0 4px var(--optrf-accent-soft);
 }
 
 .cr-input-wrap {
@@ -194,8 +181,8 @@ body::before {
     height: 36px;
     padding: 0 12px;
     border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--optrf-border);
+    background: var(--optrf-surface-2);
     color: var(--cr-text);
     font-weight: 700;
     cursor: pointer;
@@ -206,8 +193,8 @@ body::before {
 }
 
 .cr-input-action:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.22);
+    background: var(--optrf-surface-3);
+    border-color: var(--optrf-accent);
 }
 
 .cr-input-action:active {
@@ -215,7 +202,7 @@ body::before {
 }
 
 .cr-input-action:focus-visible {
-    outline: 3px solid rgba(255, 255, 255, 0.25);
+    outline: 3px solid var(--optrf-accent-soft);
     outline-offset: 2px;
 }
 
@@ -234,7 +221,7 @@ body::before {
     padding: 14px 14px;
     border-radius: 14px;
     border: 1px solid var(--cr-card-border);
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--optrf-surface-2);
     cursor: pointer;
     user-select: none;
     transition:
@@ -246,7 +233,7 @@ body::before {
 .cr-toggle:focus-within,
 .cr-toggle:hover {
     border-color: var(--cr-card-border-strong);
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--optrf-surface-3);
 }
 
 .cr-toggle:active {
@@ -281,8 +268,8 @@ body::before {
     width: 54px;
     height: 32px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--optrf-surface-3);
+    border: 1px solid var(--optrf-border);
     position: relative;
     transition:
         background 160ms ease,
@@ -306,8 +293,8 @@ body::before {
 
 .cr-switch-wrap input:checked + .cr-switch {
     background: linear-gradient(180deg, var(--cr-accent-green), var(--cr-accent-green-2));
-    border-color: rgba(34, 197, 94, 0.65);
-    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.14);
+    border-color: var(--optrf-accent);
+    box-shadow: 0 0 0 4px var(--optrf-accent-soft);
 }
 
 .cr-switch-wrap input:checked + .cr-switch::after {
@@ -315,9 +302,7 @@ body::before {
 }
 
 .cr-switch-wrap input:focus-visible + .cr-switch {
-    box-shadow:
-        0 0 0 4px rgba(255, 255, 255, 0.1),
-        0 0 0 7px rgba(34, 197, 94, 0.14);
+    box-shadow: 0 0 0 4px var(--optrf-accent-soft);
 }
 
 .cr-hint {
@@ -330,9 +315,9 @@ body::before {
     margin-top: 6px;
     height: 52px;
     border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    background: rgba(255, 255, 255, 0.9);
-    color: rgba(0, 0, 0, 0.92);
+    border: 1px solid var(--optrf-accent);
+    background: var(--optrf-accent);
+    color: #fff;
     font-size: 18px;
     font-weight: 700;
     cursor: pointer;
@@ -344,7 +329,7 @@ body::before {
 
 .cr-submit:hover {
     filter: brightness(1.02);
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--optrf-shadow);
 }
 
 .cr-submit:active {
@@ -354,7 +339,7 @@ body::before {
 .cr-error {
     margin: 0;
     font-size: 13px;
-    color: rgba(255, 138, 138, 0.95);
+    color: var(--optrf-danger);
 }
 
 .cr-preview-row {
@@ -381,8 +366,8 @@ body::before {
     height: 48px;
     padding: 0 14px;
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--optrf-border);
+    background: var(--optrf-surface-2);
     color: var(--cr-text);
     font-weight: 700;
     cursor: pointer;
@@ -396,8 +381,8 @@ body::before {
 }
 
 .cr-copy:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.22);
+    background: var(--optrf-surface-3);
+    border-color: var(--optrf-accent);
 }
 
 .cr-copy:active {
@@ -414,7 +399,7 @@ body::before {
     padding: 12px;
     border-radius: 14px;
     border: 1px solid var(--cr-card-border);
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--optrf-surface-2);
     display: grid;
     gap: 10px;
     place-items: center;

@@ -531,6 +531,7 @@ module.exports = {
          * --------------------------------------------
          * - enabled: требовать подтверждение телефона до join/create
          * - creators: номера (E.164 через запятую), которым разрешено создавать комнаты
+         * - superAdmins: полный доступ к статистике, пользователям и скрытому наблюдению
          * - PROXY_URL обязателен для Telegram Gateway
          */
         phoneAuth: {
@@ -538,6 +539,11 @@ module.exports = {
             jwtExp: process.env.PHONE_AUTH_JWT_EXP || '7d',
             creators: process.env.PHONE_CREATORS
                 ? process.env.PHONE_CREATORS.split(splitChar)
+                      .map((p) => p.trim())
+                      .filter((p) => p !== '')
+                : [],
+            superAdmins: process.env.PHONE_SUPERADMINS
+                ? process.env.PHONE_SUPERADMINS.split(splitChar)
                       .map((p) => p.trim())
                       .filter((p) => p !== '')
                 : [],
@@ -773,7 +779,6 @@ module.exports = {
          * AI Behavior:
          * -----------
          * - systemLimit: Personality/behavior instructions for the AI avatar
-         *                (default: Streaming avatar instructions for MiroTalk SFU)
          */
         videoAI: {
             enabled: process.env.VIDEOAI_ENABLED === 'true',
@@ -781,7 +786,7 @@ module.exports = {
             apiKey: process.env.VIDEOAI_API_KEY || '',
             mode: process.env.VIDEOAI_MODE || 'FULL',
             contextId: process.env.VIDEOAI_CONTEXT_ID || '',
-            systemLimit: process.env.VIDEOAI_SYSTEM_LIMIT || 'You are a streaming avatar from MiroTalk SFU...',
+            systemLimit: process.env.VIDEOAI_SYSTEM_LIMIT || 'Вы — виртуальный помощник платформы ОПТ РФ.',
             sessionTimeLimit: process.env.VIDEOAI_SESSION_TIME_LIMIT
                 ? parseInt(process.env.VIDEOAI_SESSION_TIME_LIMIT, 10)
                 : 0, // Session time limit in seconds (0 = unlimited)
@@ -944,7 +949,7 @@ module.exports = {
             commands: [
                 {
                     name: process.env.DISCORD_COMMAND_NAME || '/sfu',
-                    message: process.env.DISCORD_DEFAULT_MESSAGE || 'Here is your SFU meeting room:',
+                    message: process.env.DISCORD_DEFAULT_MESSAGE || 'Ссылка на комнату встречи:',
                     baseUrl: process.env.DISCORD_BASE_URL || 'https://sfu.mirotalk.com/join/',
                 },
             ],
@@ -1164,7 +1169,7 @@ module.exports = {
 
             app: {
                 language: process.env.UI_LANGUAGE || 'ru',
-                name: process.env.APP_NAME || 'ОПТ РФ',
+                name: 'ОПТ РФ',
                 // Не берём APP_TITLE/APP_DESCRIPTION из env — в Coolify часто залипают старые MiroTalk-строки
                 title: 'ОПТ РФ<br />Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
                 description:
@@ -1282,7 +1287,7 @@ module.exports = {
              * Supports HTML content for flexible formatting.
              */
             about: {
-                imageUrl: process.env.ABOUT_IMAGE_URL || '../images/mirotalk-logo.gif',
+                imageUrl: '../images/logo-no-background.svg',
                 title: process.env.ABOUT_TITLE || 'ОПТ РФ',
                 html: `
                     <hr />
@@ -1330,7 +1335,7 @@ module.exports = {
                         connectText: process.env.WIDGET_SUPPORT_CONNECT_TEXT || 'connect in < 5 seconds',
                         onlineText: process.env.WIDGET_SUPPORT_ONLINE_TEXT || 'We are online',
                         offlineText: process.env.WIDGET_SUPPORT_OFFLINE_TEXT || 'We are offline',
-                        poweredBy: process.env.WIDGET_SUPPORT_POWERED_BY || 'Powered by MiroTalk SFU',
+                        poweredBy: 'ОПТ РФ',
                     },
                 },
                 alert: {

@@ -9,6 +9,10 @@ const { v4: uuidV4 } = require('uuid');
 const JWT_KEY = config.security?.jwt?.key || 'mirotalksfu_jwt_secret';
 const JWT_EXP = config.security?.jwt?.exp || '1h';
 
+function getVisiblePeers(room) {
+    return Array.from(room?.peers?.values?.() || []).filter((peer) => peer?.peer_info?.peer_observer !== true);
+}
+
 module.exports = class ServerApi {
     constructor(host = null, authorization = null) {
         this._host = host;
@@ -24,7 +28,7 @@ module.exports = class ServerApi {
     }
 
     getStats(roomList, timestamp = new Date().toISOString()) {
-        const totalUsers = Array.from(roomList.values()).reduce((total, room) => total + room.peers.size, 0);
+        const totalUsers = Array.from(roomList.values()).reduce((total, room) => total + getVisiblePeers(room).length, 0);
         const totalRooms = roomList.size;
         return { timestamp, totalRooms, totalUsers };
     }
@@ -32,14 +36,14 @@ module.exports = class ServerApi {
     getActiveRooms(roomList) {
         return Array.from(roomList.entries()).map(([roomId, room]) => ({
             id: roomId,
-            peers: room.peers.size,
+            peers: getVisiblePeers(room).length,
             join: 'https://' + this._host + '/' + roomId,
         }));
     }
 
     getMeetings(roomList) {
         const meetings = Array.from(roomList.entries()).map(([id, room]) => {
-            const peers = Array.from(room.peers.values()).map(
+            const peers = getVisiblePeers(room).map(
                 ({
                     peer_info: {
                         peer_name,

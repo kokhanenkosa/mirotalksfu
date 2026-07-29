@@ -1,4 +1,9 @@
 /* Center card section (shared with waitingRoom.css) */
+.center-card-section,
+.login-card {
+    font-family: var(--optrf-font);
+}
+
 .center-card-section {
     display: flex;
     align-items: center;
@@ -24,10 +29,10 @@
     width: 100%;
     margin: 0 auto;
     padding: 48px;
-    background: linear-gradient(160deg, rgba(15, 15, 25, 0.95) 40%, rgba(70, 120, 249, 0.12) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--optrf-surface);
+    border: 1px solid var(--optrf-border);
     border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: var(--optrf-shadow);
     text-align: center;
 }
 
@@ -42,31 +47,31 @@
     height: 72px;
     margin: 0 auto 24px;
     border-radius: 50%;
-    background: rgba(70, 120, 249, 0.1);
-    border: 1px solid rgba(70, 120, 249, 0.2);
+    background: var(--optrf-accent-soft);
+    border: 1px solid var(--optrf-accent);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 .login-icon i {
     font-size: 30px;
-    color: #4678f9;
+    color: var(--optrf-accent);
 }
 
 /* Success variant */
 .login-icon-success {
-    background: linear-gradient(135deg, rgba(46, 206, 137, 0.2), rgba(46, 206, 137, 0.06)) !important;
-    border-color: rgba(46, 206, 137, 0.3) !important;
+    background: var(--optrf-surface-2) !important;
+    border-color: var(--optrf-success) !important;
 }
 .login-icon-success i {
-    color: #2ece89 !important;
+    color: var(--optrf-success) !important;
 }
 
 /* Title */
 .login-title {
     font-size: 26px;
     font-weight: 700;
-    color: #fff;
+    color: var(--optrf-text);
     margin-bottom: 10px;
     letter-spacing: -0.4px;
 }
@@ -74,7 +79,7 @@
 /* Description */
 .login-description {
     font-size: 15px;
-    color: rgba(255, 255, 255, 0.65);
+    color: var(--optrf-text-2);
     line-height: 1.7;
     margin-bottom: 32px;
     max-width: 400px;
@@ -90,9 +95,9 @@
     padding: 10px 14px;
     margin-bottom: 16px;
     border-radius: 14px;
-    background: rgba(255, 75, 75, 0.1);
-    border: 1px solid rgba(255, 75, 75, 0.25);
-    color: #ff6b6b;
+    background: var(--optrf-surface-2);
+    border: 1px solid var(--optrf-danger);
+    color: var(--optrf-danger);
     font-size: 13px;
     text-align: left;
     animation: fadeIn 0.3s ease;
@@ -119,8 +124,8 @@
 .login-input-group {
     display: flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--optrf-input);
+    border: 1px solid var(--optrf-border);
     border-radius: 16px;
     padding: 0 16px;
     margin-bottom: 16px;
@@ -130,14 +135,14 @@
         box-shadow 0.25s ease;
 }
 .login-input-group:focus-within {
-    border-color: rgba(70, 120, 249, 0.4);
-    background: rgba(70, 120, 249, 0.04);
+    border-color: var(--optrf-accent);
+    background: var(--optrf-input);
 }
 .login-input-group:focus-within > i:first-child {
-    color: #4678f9;
+    color: var(--optrf-accent);
 }
 .login-input-group > i:first-child {
-    color: rgba(255, 255, 255, 0.35);
+    color: var(--optrf-muted);
     font-size: 15px;
     margin-right: 12px;
     flex-shrink: 0;
@@ -148,24 +153,24 @@
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    color: #fff;
+    color: var(--optrf-text);
     padding: 14px 0;
     font-size: 15px;
     outline: none;
     text-align: left;
 }
 .login-input-group .form-input::placeholder {
-    color: rgba(255, 255, 255, 0.3);
+    color: var(--optrf-muted);
 }
 
 /* Validation error state */
 .login-input-group.input-error {
-    border-color: rgba(255, 75, 75, 0.5);
-    background: rgba(255, 75, 75, 0.06);
+    border-color: var(--optrf-danger);
+    background: var(--optrf-input);
     animation: inputShake 0.4s ease;
 }
 .login-input-group.input-error > i:first-child {
-    color: #ff4b4b;
+    color: var(--optrf-danger);
 }
 
 @keyframes inputShake {
@@ -196,7 +201,7 @@
         no-repeat right 4px center;
     padding-right: 24px;
     cursor: pointer;
-    color: #fff;
+    color: var(--optrf-text);
     transition:
         border-color 0.2s ease,
         box-shadow 0.2s ease;
@@ -204,12 +209,12 @@
 .login-input-group select.form-input:focus,
 .login-input-group select.form-input:focus-visible {
     outline: none;
-    border-color: rgba(70, 120, 249, 0.5);
-    box-shadow: 0 0 0 2px rgba(70, 120, 249, 0.15);
+    border-color: var(--optrf-accent);
+    box-shadow: 0 0 0 2px var(--optrf-accent-soft);
 }
 .login-input-group select.form-input option {
-    background: #1a1a2e;
-    color: #fff;
+    background: var(--optrf-surface);
+    color: var(--optrf-text);
 }
 
 /* Focus indicators for accessibility */
@@ -217,18 +222,18 @@
 .join-room-btn:focus-visible,
 .random-room-btn:focus-visible,
 .password-toggle:focus-visible {
-    outline: 2px solid #4678f9;
+    outline: 2px solid var(--optrf-accent);
     outline-offset: 2px;
 }
 .login-input-group:focus-within {
-    box-shadow: 0 0 0 2px rgba(70, 120, 249, 0.15);
+    box-shadow: 0 0 0 2px var(--optrf-accent-soft);
 }
 
 /* Password toggle button */
 .password-toggle {
     background: none;
     border: none;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--optrf-muted);
     cursor: pointer;
     width: 44px;
     height: 44px;
@@ -245,11 +250,11 @@
     flex-shrink: 0;
 }
 .password-toggle:hover {
-    color: rgba(255, 255, 255, 0.85);
-    background: rgba(255, 255, 255, 0.06);
+    color: var(--optrf-text);
+    background: var(--optrf-surface-2);
 }
 .password-toggle[aria-pressed='true'] {
-    color: var(--color-accent, #4678f9);
+    color: var(--optrf-accent);
 }
 
 /* Login button */
@@ -260,7 +265,7 @@
     margin-bottom: 0;
     border: none;
     border-radius: 16px;
-    background: linear-gradient(135deg, #4678f9, #3b5de7);
+    background: var(--optrf-accent);
     color: #fff;
     font-size: 16px;
     font-weight: 600;
@@ -271,10 +276,10 @@
         opacity 0.15s ease;
 }
 .login-btn:hover:not(:disabled) {
-    box-shadow: 0 4px 16px rgba(70, 120, 249, 0.3);
+    box-shadow: var(--optrf-shadow);
 }
 .login-btn:active:not(:disabled) {
-    box-shadow: 0 2px 8px rgba(70, 120, 249, 0.15);
+    box-shadow: 0 0 0 2px var(--optrf-accent-soft);
 }
 .login-btn:disabled {
     opacity: 0.7;
@@ -300,7 +305,7 @@
 /* Join Room form background */
 #joinRoomForm {
     display: none;
-    background: linear-gradient(160deg, rgba(15, 15, 25, 0.95) 40%, rgba(70, 120, 249, 0.12) 100%);
+    background: var(--optrf-surface);
     border-radius: 20px;
     padding: 48px;
     margin: -48px;
@@ -318,7 +323,7 @@
 .join-room-title {
     font-size: 22px;
     font-weight: 700;
-    color: #fff;
+    color: var(--optrf-text);
     margin-bottom: 24px;
     line-height: 1.5;
 }
@@ -339,10 +344,10 @@
 .random-room-btn {
     width: 52px;
     min-width: 52px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--optrf-border);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(255, 255, 255, 0.6);
+    background: var(--optrf-surface-2);
+    color: var(--optrf-muted);
     font-size: 17px;
     cursor: pointer;
     display: flex;
@@ -354,9 +359,9 @@
         background 0.2s ease;
 }
 .random-room-btn:hover {
-    border-color: rgba(70, 120, 249, 0.35);
-    color: #4678f9;
-    background: rgba(70, 120, 249, 0.06);
+    border-color: var(--optrf-accent);
+    color: var(--optrf-accent);
+    background: var(--optrf-accent-soft);
 }
 .random-room-btn:active {
     transform: scale(0.95);
@@ -368,7 +373,7 @@
     padding: 15px;
     border: none;
     border-radius: 16px;
-    background: linear-gradient(135deg, #2ece89, #27b578);
+    background: var(--optrf-success);
     color: #fff;
     font-size: 16px;
     font-weight: 600;
@@ -378,21 +383,21 @@
         box-shadow 0.15s ease;
 }
 .join-room-btn:hover {
-    box-shadow: 0 4px 16px rgba(46, 206, 137, 0.3);
+    box-shadow: var(--optrf-shadow);
 }
 .join-room-btn:active {
-    box-shadow: 0 2px 8px rgba(46, 206, 137, 0.15);
+    box-shadow: none;
 }
 
 /* Schedule meeting button (login page) */
 .schedule-meeting-login-btn {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    background: var(--optrf-accent);
 }
 .schedule-meeting-login-btn:hover {
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    box-shadow: var(--optrf-shadow);
 }
 .schedule-meeting-login-btn:active {
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 2px var(--optrf-accent-soft);
 }
 
 /* Divider */
@@ -401,7 +406,7 @@
     align-items: center;
     gap: 12px;
     margin: 4px 0;
-    color: rgba(255, 255, 255, 0.4);
+    color: var(--optrf-muted);
     font-size: 13px;
 }
 .login-divider::before,
@@ -409,7 +414,15 @@
     content: '';
     flex: 1;
     height: 1px;
-    background: rgba(255, 255, 255, 0.12);
+    background: var(--optrf-border);
+}
+
+html[data-theme='light'] .login-input-group select.form-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%233b4146' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+}
+
+html[data-theme='dark'] .login-input-group select.form-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23c9cfd4' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
 }
 
 /* Responsive */

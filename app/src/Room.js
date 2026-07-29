@@ -101,7 +101,10 @@ module.exports = class Room {
     // ROOM INFO
     // ####################################################
 
-    toJson() {
+    toJson(includeObservers = false) {
+        const peers = includeObservers
+            ? [...this.peers]
+            : [...this.peers].filter(([, peer]) => peer?.peer_info?.peer_observer !== true);
         return {
             id: this.id,
             sessionId: this.sessionId,
@@ -130,10 +133,10 @@ module.exports = class Room {
             thereIsPolls: this.thereIsPolls(),
             shareMediaData: this.shareMediaData,
             dominantSpeaker: this.activeSpeakerObserverEnabled,
-            peers: JSON.stringify([...this.peers]),
-            peersCount: this.getPeersCount(),
+            peers: JSON.stringify(peers),
+            peersCount: includeObservers ? this.getPeersCount() : this.getVisiblePeersCount(),
             maxParticipants: this.maxParticipants,
-            maxParticipantsReached: this.peers.size > this.maxParticipants,
+            maxParticipantsReached: this.getVisiblePeersCount() > this.maxParticipants,
             globalLobby: this.globalLobby,
         };
     }
@@ -491,6 +494,14 @@ module.exports = class Room {
 
     getPeersCount() {
         return this.peers.size;
+    }
+
+    getVisiblePeersCount() {
+        let count = 0;
+        this.peers.forEach((peer) => {
+            if (peer?.peer_info?.peer_observer !== true) count += 1;
+        });
+        return count;
     }
 
     getProducerListForPeer(socket_id) {

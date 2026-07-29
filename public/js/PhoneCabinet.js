@@ -11,6 +11,7 @@
     const saveNameBtn = document.getElementById('phoneSaveNameBtn');
     const nameStatusEl = document.getElementById('phoneNameStatus');
     const logoutBtn = document.getElementById('phoneLogoutBtn');
+    const superAdminBtn = document.getElementById('superAdminBtn');
     const roomsBlock = document.getElementById('phoneRoomsBlock');
     const activeList = document.getElementById('phoneActiveRooms');
     const historyList = document.getElementById('phoneHistoryRooms');
@@ -21,6 +22,11 @@
     function show(el, on) {
         if (!el) return;
         el.hidden = !on;
+    }
+
+    function setLandingMode(mode) {
+        document.body.classList.remove('phone-session-pending', 'is-phone-authenticated', 'is-phone-guest');
+        document.body.classList.add(mode === 'authenticated' ? 'is-phone-authenticated' : 'is-phone-guest');
     }
 
     function setNameStatus(msg, isError) {
@@ -159,6 +165,7 @@
             delete window.sessionStorage.phone_number;
             delete window.sessionStorage.phone_can_create;
             delete window.sessionStorage.phone_display_name;
+            delete window.sessionStorage.phone_is_superadmin;
         } catch {
             /* ignore */
         }
@@ -175,6 +182,7 @@
 
     function applySession(data) {
         if (!data?.enabled) {
+            setLandingMode('guest');
             show(gate, false);
             show(cabinet, false);
             show(createPanel, true);
@@ -182,6 +190,7 @@
         }
 
         if (!data.authenticated) {
+            setLandingMode('guest');
             show(gate, true);
             show(cabinet, false);
             show(createPanel, false);
@@ -193,12 +202,15 @@
             return;
         }
 
+        setLandingMode('authenticated');
         show(gate, false);
         show(cabinet, true);
 
         if (phoneNumberEl) phoneNumberEl.textContent = formatPhone(data.phone);
         window.sessionStorage.phone_number = data.phone || '';
         window.sessionStorage.phone_can_create = data.canCreate ? '1' : '0';
+        window.sessionStorage.phone_is_superadmin = data.isSuperAdmin ? '1' : '0';
+        show(superAdminBtn, Boolean(data.isSuperAdmin));
 
         const displayName = data.displayName || window.localStorage.peer_name || '';
         if (displayNameEl) displayNameEl.value = displayName;
@@ -225,6 +237,7 @@
             const data = await res.json();
             applySession(data);
         } catch {
+            setLandingMode('guest');
             show(gate, true);
             show(cabinet, false);
             show(createPanel, false);

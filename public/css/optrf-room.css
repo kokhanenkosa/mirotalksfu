@@ -25,3 +25,234 @@ button.swal2-confirm {
 button.swal2-confirm:hover {
     background: var(--optrf-blue-hover) !important;
 }
+
+/* Legacy Room palette remains in the DOM for compatibility with Room.js only. */
+.optrf-legacy-theme-controls {
+    display: none !important;
+}
+
+/* Bridge the Room-specific variables to the global OPTRF theme. */
+html[data-theme] {
+    --body-bg: var(--optrf-bg);
+    --trx-bg: var(--optrf-surface);
+    --msger-bg: var(--optrf-surface);
+    --left-msg-bg: var(--optrf-surface-2);
+    --right-msg-bg: var(--optrf-accent-soft);
+    --select-bg: var(--optrf-input);
+    --select-focus-color: var(--optrf-accent);
+    --tab-btn-active: var(--optrf-surface-3);
+    --settings-bg: var(--optrf-surface);
+    --wb-bg: var(--optrf-surface);
+    --btns-bg-color: color-mix(in srgb, var(--optrf-surface) 92%, transparent);
+    --dd-color: var(--optrf-accent);
+    --border: 1px solid var(--optrf-border);
+    --border-color: var(--optrf-border);
+    --box-shadow: var(--optrf-shadow-lg);
+}
+
+html[data-theme] body {
+    color: var(--optrf-text);
+    background: var(--optrf-bg) !important;
+}
+
+/* Prejoin. */
+html[data-theme] #initUser,
+html[data-theme] .initComands,
+html[data-theme] .swal2-popup.init-modal-size {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-surface) !important;
+    border-color: var(--optrf-border) !important;
+}
+
+html[data-theme] #initUser select,
+html[data-theme] #initUser input {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-input) !important;
+    border-color: var(--optrf-border) !important;
+}
+
+html[data-theme] #initUser button {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-surface-2) !important;
+    border-color: var(--optrf-border) !important;
+}
+
+html[data-theme] #initUser button:hover {
+    color: #fff !important;
+    background: var(--optrf-accent) !important;
+}
+
+/* Main controls and their dropdowns. */
+html[data-theme] #bottomButtons {
+    background: color-mix(in srgb, var(--optrf-surface) 88%, transparent);
+    border: 1px solid var(--optrf-border) !important;
+    box-shadow: var(--optrf-shadow-lg);
+    backdrop-filter: blur(14px);
+}
+
+html[data-theme] #bottomButtons button:not(.red),
+html[data-theme] #bottomButtons .dropdown-menu button:not(.red) {
+    color: var(--optrf-text);
+}
+
+html[data-theme] #bottomButtons button i {
+    color: inherit !important;
+}
+
+html[data-theme] #bottomButtons .dropdown-menu,
+html[data-theme] #bottomButtons #exitMenu,
+html[data-theme] #bottomButtons #settingsExtraMenu {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-surface) !important;
+    border-color: var(--optrf-border) !important;
+    box-shadow: var(--optrf-shadow-lg);
+}
+
+html[data-theme] #bottomButtons .dropdown-menu button:hover,
+html[data-theme] #bottomButtons #exitMenu button:hover,
+html[data-theme] #bottomButtons #settingsExtraMenu button:hover {
+    background: var(--optrf-surface-3) !important;
+}
+
+html[data-theme] #bottomButtons .device-menu-header,
+html[data-theme] #bottomButtons .device-menu-toggle-row,
+html[data-theme] #bottomButtons #settingsExtraMenu .extra-menu-group {
+    color: var(--optrf-text-2);
+}
+
+/* Chat and participants. */
+html[data-theme] #chatRoom,
+html[data-theme] #chatRoom .chat-app,
+html[data-theme] #chatRoom .people-list,
+html[data-theme] #chatRoom .chat {
+    color: var(--optrf-text);
+    background: var(--optrf-surface) !important;
+    border-color: var(--optrf-border) !important;
+}
+
+html[data-theme] #chatRoom .chat-header,
+html[data-theme] #chatRoom .chat-message {
+    border-color: var(--optrf-border);
+}
+
+html[data-theme] #chatRoom .name,
+html[data-theme] #chatRoom .chat-about,
+html[data-theme] #chatRoom .chat-input-textarea {
+    color: var(--optrf-text) !important;
+}
+
+html[data-theme] #chatRoom .status,
+html[data-theme] #chatRoom .message-data-time,
+html[data-theme] #chatRoom .chat-char-count,
+html[data-theme] #chatRoom .chat-input-hint,
+html[data-theme] #chatRoom .chat-header-category,
+html[data-theme] #chatRoom .chat-conversations-count {
+    color: var(--optrf-muted) !important;
+}
+
+html[data-theme] #chatRoom .chat-input-container,
+html[data-theme] #chatRoom .chat-list > li:hover,
+html[data-theme] #chatRoom .chat-list > li.active {
+    background: var(--optrf-surface-2) !important;
+    border-color: var(--optrf-border);
+}
+
+html[data-theme='light'] #chatRoom .other-message {
+    color: var(--optrf-text);
+    background: var(--optrf-surface-3);
+    border-color: var(--optrf-border);
+}
+
+html[data-theme='light'] #chatRoom .my-message {
+    color: #fff;
+    background: color-mix(in srgb, var(--optrf-accent) 82%, #17324a);
+}
+
+html[data-theme] #chatRoom .chat-toolbar-btn {
+    color: var(--optrf-muted);
+}
+
+html[data-theme] #chatRoom .chat-toolbar-btn:hover {
+    color: var(--optrf-text);
+    background: var(--optrf-surface-3);
+}
+
+/* Settings and modal surfaces. */
+html[data-theme] #mySettings,
+html[data-theme] #pollRoom,
+html[data-theme] #editorRoom,
+html[data-theme] #breakoutPanel,
+html[data-theme] .modal-content,
+html[data-theme] .swal2-popup {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-surface) !important;
+    border-color: var(--optrf-border) !important;
+}
+
+html[data-theme] #mySettings p,
+html[data-theme] #mySettings i,
+html[data-theme] #mySettings .title,
+html[data-theme] #mySettings .inline-check-box,
+html[data-theme] #mySettings table {
+    color: var(--optrf-text);
+}
+
+html[data-theme] #mySettings select,
+html[data-theme] #mySettings input,
+html[data-theme] #mySettings textarea,
+html[data-theme] .modal-content input,
+html[data-theme] .modal-content select,
+html[data-theme] .modal-content textarea {
+    color: var(--optrf-text) !important;
+    background: var(--optrf-input) !important;
+    border-color: var(--optrf-border) !important;
+}
+
+html[data-theme] #mySettings .tablinks {
+    color: var(--optrf-text-2);
+    background: transparent;
+}
+
+html[data-theme] #mySettings .tablinks.active,
+html[data-theme] #mySettings .tablinks:hover {
+    color: var(--optrf-text);
+    background: var(--optrf-surface-3);
+}
+
+html[data-theme] #mySettings .settingsTable,
+html[data-theme] #mySettings .extra-info-row,
+html[data-theme] #mySettings #shortcutsTable {
+    color: var(--optrf-text);
+    background: var(--optrf-surface-2);
+    border-color: var(--optrf-border);
+}
+
+/* Video is intentionally graphite in every global theme. */
+html[data-theme] #videoMediaContainer,
+html[data-theme] #videoPinMediaContainer,
+html[data-theme] .Camera,
+html[data-theme] .video-container,
+html[data-theme] .videoDefault,
+html[data-theme] video {
+    background-color: #111418 !important;
+}
+
+body.super-admin-observer::before {
+    content: 'Скрытый режим наблюдателя';
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    z-index: 1040;
+    transform: translateX(-50%);
+    padding: 7px 12px;
+    color: #fff;
+    background: rgba(0, 168, 232, 0.9);
+    border-radius: 10px;
+    font: 600 12px/1 var(--optrf-font);
+    pointer-events: none;
+}
+
+body.super-admin-observer #bottomButtons button:not(#exitButton),
+body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton)) {
+    display: none !important;
+}

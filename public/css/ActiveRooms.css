@@ -1,19 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
-
 :root {
-    --primary-bg: #0f1117;
-    --container-bg: #181a20;
-    --card-bg: #1e2128;
-    --card-bg-hover: #252830;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
-    --accent-glow: rgba(59, 130, 246, 0.15);
-    --text: #e8ecf1;
-    --text-muted: #8b95a5;
-    --border: #2a2d35;
-    --success: #22c55e;
+    --primary-bg: var(--optrf-bg);
+    --container-bg: var(--optrf-surface);
+    --card-bg: var(--optrf-surface);
+    --card-bg-hover: var(--optrf-surface-2);
+    --accent: var(--optrf-accent);
+    --accent-hover: var(--optrf-accent-hover);
+    --accent-glow: var(--optrf-accent-soft);
+    --text: var(--optrf-text);
+    --text-muted: var(--optrf-muted);
+    --border: var(--optrf-border);
+    --success: var(--optrf-success);
     --gold: #fbbf24;
-    --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+    --card-shadow: var(--optrf-shadow);
     --transition: 0.2s ease;
 }
 
@@ -22,7 +20,7 @@
 }
 
 body {
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     background: var(--primary-bg);
     margin: 0;
     padding: 0;
@@ -70,7 +68,7 @@ body {
     font-weight: 600;
     padding: 4px 10px;
     border-radius: 20px;
-    border: 1px solid rgba(59, 130, 246, 0.25);
+    border: 1px solid var(--optrf-accent);
 }
 
 .refresh-btn {
@@ -129,7 +127,7 @@ body {
     border-radius: 10px;
     border: 1px solid var(--border);
     font-size: 0.95em;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     background: var(--card-bg);
     color: var(--text);
     outline: none;
@@ -247,7 +245,7 @@ body {
     font-size: 0.8em;
     font-weight: 600;
     white-space: nowrap;
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    border: 1px solid var(--optrf-accent);
 }
 
 .peer-badge i {
@@ -290,12 +288,12 @@ body {
     font-weight: 600;
     text-decoration: none;
     transition: all var(--transition);
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
 }
 
 .join-btn:hover {
     background: var(--accent-hover);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+    box-shadow: var(--optrf-shadow);
 }
 
 /* Empty state */

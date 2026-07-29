@@ -258,6 +258,7 @@ class RoomClient {
         this.peer_uuid = peer_uuid;
         this.peer_info = peer_info;
         this.peer_avatar = peer_info.peer_avatar;
+        this.isObserver = peer_info.peer_observer === true;
 
         // Device type
         this.isDesktopDevice = peer_info.is_desktop_device;
@@ -668,6 +669,8 @@ class RoomClient {
         // ###############################################
         this.socket.emit('getProducers'); // newProducers
         // ###############################################
+
+        if (this.isObserver) return;
 
         // Initialize chat DataChannel
         await this.initChatDataProducer();

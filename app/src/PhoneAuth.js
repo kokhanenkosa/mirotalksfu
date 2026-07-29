@@ -16,6 +16,7 @@ class PhoneAuth {
      * @param {string} opts.jwtKey
      * @param {string} opts.jwtExp
      * @param {string[]} opts.creators - E.164 phones that may create rooms
+     * @param {string[]} opts.superAdmins - E.164 phones with full administrative access
      * @param {object} opts.smsc - { login, password, sender, messageTemplate }
      * @param {Function} [opts.log]
      */
@@ -24,6 +25,7 @@ class PhoneAuth {
         this.jwtKey = opts.jwtKey || 'mirotalksfu_jwt_secret';
         this.jwtExp = opts.jwtExp || '7d';
         this.creators = new Set((opts.creators || []).map((p) => formatPhoneE164(p)).filter(Boolean));
+        this.superAdmins = new Set((opts.superAdmins || []).map((p) => formatPhoneE164(p)).filter(Boolean));
         this.smsc = opts.smsc || {};
         this.log = typeof opts.log === 'function' ? opts.log : () => {};
         /** @type {Map<string, { code: string, expiresAt: number, lastSentAt: number }>} */
@@ -37,8 +39,12 @@ class PhoneAuth {
     canCreate(phone) {
         const formatted = formatPhoneE164(phone);
         if (!formatted) return false;
-        if (this.creators.size === 0) return false;
-        return this.creators.has(formatted);
+        return this.isSuperAdmin(formatted) || this.creators.has(formatted);
+    }
+
+    isSuperAdmin(phone) {
+        const formatted = formatPhoneE164(phone);
+        return Boolean(formatted && this.superAdmins.has(formatted));
     }
 
     normalizePhone(phone) {
@@ -89,9 +95,14 @@ class PhoneAuth {
         try {
             const decoded = jwt.verify(token, this.jwtKey);
             if (decoded?.scope !== 'phone' || !decoded?.phone) return null;
+            const phone = formatPhoneE164(decoded.phone);
+            if (!phone) return null;
             return {
-                phone: formatPhoneE164(decoded.phone),
-                canCreate: Boolean(decoded.canCreate),
+                phone,
+                // Роли перечитываются из текущей конфигурации: удаление номера
+                // из env немедленно отзывает доступ даже у старого JWT.
+                canCreate: this.canCreate(phone),
+                isSuperAdmin: this.isSuperAdmin(phone),
             };
         } catch {
             return null;
@@ -109,21 +120,24 @@ class PhoneAuth {
     signSession(phone) {
         const formatted = formatPhoneE164(phone);
         const canCreate = this.canCreate(formatted);
+        const isSuperAdmin = this.isSuperAdmin(formatted);
         const token = jwt.sign(
             {
                 scope: 'phone',
                 phone: formatted,
                 canCreate,
+                isSuperAdmin,
             },
             this.jwtKey,
             { expiresIn: this.jwtExp }
         );
-        return { token, phone: formatted, canCreate };
+        return { token, phone: formatted, canCreate, isSuperAdmin };
     }
 
     setAuthCookie(res, token) {
         const maxAge = 7 * 24 * 60 * 60;
-        const secure = process.env.NODE_ENV === 'production' || String(process.env.SERVER_HOST_URL || '').startsWith('https');
+        const secure =
+            process.env.NODE_ENV === 'production' || String(process.env.SERVER_HOST_URL || '').startsWith('https');
         const parts = [
             `${COOKIE_NAME}=${encodeURIComponent(token)}`,
             'Path=/',
@@ -136,10 +150,7 @@ class PhoneAuth {
     }
 
     clearAuthCookie(res) {
-        res.setHeader(
-            'Set-Cookie',
-            `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
-        );
+        res.setHeader('Set-Cookie', `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
     }
 
     async sendCode(phoneRaw) {

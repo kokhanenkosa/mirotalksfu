@@ -94,6 +94,23 @@ describe('test-ServerAPI', () => {
                 totalUsers: 0,
             });
         });
+
+        it('should exclude hidden observers from user statistics', () => {
+            const roomList = new Map([
+                [
+                    'room1',
+                    {
+                        peers: new Map([
+                            ['peer1', { peer_info: { peer_name: 'User' } }],
+                            ['observer', { peer_info: { peer_name: 'Observer', peer_observer: true } }],
+                        ]),
+                    },
+                ],
+            ]);
+
+            const result = serverApi.getStats(roomList, timestamp);
+            result.totalUsers.should.equal(1);
+        });
     });
 
     describe('getMeetings', () => {

@@ -27,13 +27,13 @@ class MiroTalkWidget {
             checkOnlineStatus: false,
             isOnline: true,
             customMessages: {
-                heading: 'Need a hand?',
+                heading: 'Нужна помощь?',
                 subheading:
-                    'Hop on a <span style="font-weight: bold">Free 1:1 or Group Consultation</span> with a MiroTalk Expert right now!',
-                connectText: 'connect in < 10 seconds',
-                onlineText: 'We are online',
-                offlineText: 'We are offline',
-                poweredBy: 'Powered by <span class="mirotalk-powered-by">MiroTalk</span>',
+                    'Подключитесь к <span style="font-weight: bold">индивидуальной или групповой консультации</span>.',
+                connectText: 'подключение менее чем за 10 секунд',
+                onlineText: 'Мы онлайн',
+                offlineText: 'Мы не в сети',
+                poweredBy: '<span class="mirotalk-powered-by">ОПТ РФ</span>',
             },
         },
     };

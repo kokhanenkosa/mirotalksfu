@@ -508,6 +508,28 @@ a:hover {
 }
 
 /* CTA с кабинетом/гейтом — колонка, не лендинговый flex */
+.phone-session-pending .hero,
+.is-phone-authenticated .hero {
+    display: none !important;
+}
+
+.is-phone-authenticated main {
+    min-height: calc(100vh - 166px);
+}
+
+.is-phone-authenticated main > .cta.section {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+.is-phone-authenticated main > .cta.section > .container {
+    max-width: 70rem;
+}
+
+.is-phone-authenticated .cta-inner:has(#phoneCabinet) {
+    box-shadow: none !important;
+}
+
 .cta-inner:has(#phoneGate),
 .cta-inner:has(#phoneCabinet) {
     display: block !important;
@@ -563,6 +585,13 @@ a:hover {
     gap: 1rem;
     flex-wrap: wrap;
     margin-bottom: 1rem;
+}
+
+.phone-cabinet-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .phone-cabinet-label {

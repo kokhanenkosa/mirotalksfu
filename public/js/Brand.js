@@ -8,7 +8,7 @@ if (!document.querySelector('script[src$="/js/RussianUI.js"], script[src$="../js
     document.head.appendChild(localeScript);
 }
 
-// v3 — сброс старого английского кэша MiroTalk
+// Сброс старого кэша исходного брендинга
 const brandDataKey = 'brandData_optrf_v4';
 
 /** Жёстко фиксируем hero-тексты — env/Coolify не должен их перетирать */
@@ -84,7 +84,7 @@ let BRAND = {
     },
     meta: {
         description: 'Платформа онлайн-обучения ОПТ РФ: занятия в браузере, видео, чат и демонстрация экрана.',
-        keywords: 'видеоконференции, видеозвонок, вебинар, чат, демонстрация экрана, webrtc, sfu',
+        keywords: 'видеоконференции, видеозвонок, вебинар, чат, демонстрация экрана, онлайн-обучение',
     },
     html: {
         topSponsors: false,
@@ -118,7 +118,7 @@ let BRAND = {
         buttonLabel: 'Войти',
     },
     about: {
-        imageUrl: '../images/mirotalk-logo.gif',
+        imageUrl: '../images/logo-no-background.svg',
         title: '<strong>ОПТ РФ</strong>',
         html: `
             <hr />
@@ -152,7 +152,7 @@ let BRAND = {
                 connectText: 'connect in < 5 seconds',
                 onlineText: 'We are online',
                 offlineText: 'We are offline',
-                poweredBy: 'Powered by MiroTalk SFU',
+                poweredBy: 'ОПТ РФ',
             },
             alert: {
                 enabled: false,
