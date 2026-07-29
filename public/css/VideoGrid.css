@@ -391,9 +391,10 @@
     overflow: hidden;
 }
 
+/* Как у студента: contain — без растягивания экрана */
 .Camera.has-cam-bubble > video,
 .has-cam-bubble > video {
-    object-fit: fill !important;
+    object-fit: contain !important;
 }
 
 .Camera.cam-bubble-source-hidden,
@@ -445,7 +446,7 @@
     outline-offset: 4px;
 }
 
-/* Видео заполняет круг одинаково у лектора и студентов (без mirror) */
+/* Видео заполняет круг; кадр (pan/zoom) задаётся inline transform */
 .cam-bubble video {
     position: absolute !important;
     inset: 0 !important;
@@ -453,9 +454,10 @@
     height: 100% !important;
     margin: 0 !important;
     object-fit: cover !important;
-    object-position: 50% 50%;
+    object-position: 50% 50% !important;
     border-radius: 50% !important;
-    transform-origin: center center;
+    transform-origin: center center !important;
+    will-change: transform;
     cursor: inherit;
     pointer-events: none;
 }
@@ -479,17 +481,49 @@
     pointer-events: auto;
 }
 
-/* Панель вне overflow — всегда видна лектору */
+/* Иконка редактирования и панель — fixed, привязаны к кружку через JS */
+#camBubbleEditBtn {
+    position: fixed;
+    z-index: 1201;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    background: rgba(12, 16, 22, 0.92);
+    color: #e8eef5;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+#camBubbleEditBtn.show {
+    display: flex;
+}
+
+#camBubbleEditBtn.is-open {
+    background: var(--optrf-accent, #00a8e8);
+    border-color: #fff;
+    color: #fff;
+}
+
+#camBubbleEditBtn i {
+    font-size: 13px;
+    pointer-events: none;
+}
+
 #camBubbleControlPanel {
     position: fixed;
-    right: 16px;
-    bottom: 88px;
     z-index: 1200;
     display: none;
     flex-direction: column;
     gap: 8px;
     min-width: 220px;
-    max-width: min(280px, calc(100vw - 24px));
+    max-width: min(280px, calc(100vw - 16px));
     padding: 12px 12px 10px;
     border-radius: 14px;
     background: rgba(12, 16, 22, 0.94);
@@ -505,9 +539,31 @@
 }
 
 #camBubbleControlPanel .cam-bubble-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.01em;
+}
+
+#camBubbleControlPanel .cam-bubble-panel-close {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: rgba(232, 238, 245, 0.75);
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    font-size: 16px;
+    line-height: 1;
+}
+
+#camBubbleControlPanel .cam-bubble-panel-close:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
 }
 
 #camBubbleControlPanel .cam-bubble-panel-modes {
@@ -566,16 +622,6 @@
 #camBubbleButton.is-active {
     color: #fff;
     background: var(--optrf-accent, #00a8e8);
-}
-
-@media screen and (max-width: 700px) {
-    #camBubbleControlPanel {
-        right: 8px;
-        left: 8px;
-        bottom: 78px;
-        max-width: none;
-        min-width: 0;
-    }
 }
 
 .videoDefault {

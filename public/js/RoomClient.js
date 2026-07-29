@@ -12347,7 +12347,8 @@ class RoomClient {
     // ####################################################
 
     getDefaultCamBubbleLayout() {
-        return { x: 0.78, y: 0.7, size: 0.2, scale: 1, ox: 0, oy: 0, border: true };
+        // scale > 1 обязателен: иначе у 16:9 в круге нет вертикального запаса для кадра
+        return { x: 0.78, y: 0.7, size: 0.2, scale: 1.35, ox: 0, oy: 0, border: true };
     }
 
     normalizeCamBubbleLayout(raw) {
@@ -12358,9 +12359,9 @@ class RoomClient {
             x: clamp(src.x ?? d.x, 0, 0.95),
             y: clamp(src.y ?? d.y, 0, 0.95),
             size: clamp(src.size ?? d.size, 0.08, 0.55),
-            scale: clamp(src.scale ?? d.scale, 1, 3),
-            ox: clamp(src.ox ?? d.ox, -0.45, 0.45),
-            oy: clamp(src.oy ?? d.oy, -0.45, 0.45),
+            scale: clamp(src.scale ?? d.scale, 1.15, 3),
+            ox: clamp(src.ox ?? d.ox, -0.5, 0.5),
+            oy: clamp(src.oy ?? d.oy, -0.5, 0.5),
             border: src.border === undefined ? d.border : Boolean(src.border),
         };
     }
@@ -12483,18 +12484,42 @@ class RoomClient {
         bubble.classList.toggle('no-border', !L.border);
         bubble.classList.toggle('is-editable', Boolean(editable));
 
-        // object-position = кадр внутри круга; scale = приближение. Без mirror — как у студентов.
-        const posX = 50 + L.ox * 100;
-        const posY = 50 + L.oy * 100;
+        // Кадр: translate по X/Y + scale. object-position по Y у cover/16:9 почти не работает.
+        const panX = L.ox * 100;
+        const panY = L.oy * 100;
         bubbleVideo.style.objectFit = 'cover';
-        bubbleVideo.style.objectPosition = `${posX}% ${posY}%`;
-        bubbleVideo.style.transform = L.scale === 1 ? 'none' : `scale(${L.scale})`;
+        bubbleVideo.style.objectPosition = '50% 50%';
+        bubbleVideo.style.transform = `translate(${panX}%, ${panY}%) scale(${L.scale})`;
         bubbleVideo.style.transformOrigin = 'center center';
         bubbleVideo.classList.remove('mirror');
 
         bubble.dataset.layout = this.encodeCamBubbleLayout(L);
-        if (editable) this.syncCamBubbleControlPanel(L, true);
+        if (editable) {
+            this._camBubbleEl = bubble;
+            this.positionCamBubbleChrome();
+            if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(L);
+        }
         return L;
+    }
+
+    ensureCamBubbleEditBtn() {
+        let btn = document.getElementById('camBubbleEditBtn');
+        if (btn) return btn;
+        btn = document.createElement('button');
+        btn.id = 'camBubbleEditBtn';
+        btn.type = 'button';
+        btn.title = 'Настройки кружка';
+        btn.setAttribute('aria-label', 'Настройки кружка камеры');
+        btn.innerHTML = '<i class="fas fa-pen-to-square"></i>';
+        document.body.appendChild(btn);
+
+        btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleCamBubbleControlPanel();
+        });
+        return btn;
     }
 
     ensureCamBubbleControlPanel() {
@@ -12505,7 +12530,10 @@ class RoomClient {
         panel.setAttribute('role', 'toolbar');
         panel.setAttribute('aria-label', 'Настройки кружка камеры');
         panel.innerHTML = `
-            <div class="cam-bubble-panel-head">Кружок камеры</div>
+            <div class="cam-bubble-panel-head">
+                <span>Кружок камеры</span>
+                <button type="button" class="cam-bubble-panel-close" title="Закрыть" aria-label="Закрыть">×</button>
+            </div>
             <div class="cam-bubble-panel-modes">
                 <button type="button" data-cam-mode="move" class="is-active" title="Переместить кружок по экрану">Кружок</button>
                 <button type="button" data-cam-mode="crop" title="Сдвинуть и масштабировать лицо в круге">Кадр</button>
@@ -12518,14 +12546,19 @@ class RoomClient {
             </label>
             <label class="cam-bubble-panel-slider">
                 <span>Масштаб</span>
-                <input type="range" id="camBubbleScaleRange" min="100" max="250" step="5" value="100" />
+                <input type="range" id="camBubbleScaleRange" min="115" max="250" step="5" value="135" />
             </label>
-            <div class="cam-bubble-panel-hint">Тяните кружок · в «Кадр» — лицо мышью, колёсико — зум</div>
+            <div class="cam-bubble-panel-hint">«Кадр»: тяните лицо · колёсико — зум</div>
         `;
         document.body.appendChild(panel);
 
         panel.addEventListener('pointerdown', (e) => e.stopPropagation());
         panel.addEventListener('click', (e) => {
+            if (e.target.closest('.cam-bubble-panel-close')) {
+                e.preventDefault();
+                this.setCamBubblePanelOpen(false);
+                return;
+            }
             const btn = e.target.closest('[data-cam-mode]');
             if (!btn || !this._camBubbleEditor) return;
             e.preventDefault();
@@ -12534,26 +12567,82 @@ class RoomClient {
 
         const sizeRange = panel.querySelector('#camBubbleSizeRange');
         const scaleRange = panel.querySelector('#camBubbleScaleRange');
-        const onSize = () => {
-            if (!this._camBubbleEditor) return;
-            this._camBubbleEditor.setSize(Number(sizeRange.value) / 100);
-        };
-        const onScale = () => {
-            if (!this._camBubbleEditor) return;
-            this._camBubbleEditor.setScale(Number(scaleRange.value) / 100);
-        };
-        sizeRange.addEventListener('input', onSize);
+        sizeRange.addEventListener('input', () => {
+            this._camBubbleEditor?.setSize(Number(sizeRange.value) / 100);
+        });
         sizeRange.addEventListener('change', () => this._camBubbleEditor?.broadcast());
-        scaleRange.addEventListener('input', onScale);
+        scaleRange.addEventListener('input', () => {
+            this._camBubbleEditor?.setScale(Number(scaleRange.value) / 100);
+        });
         scaleRange.addEventListener('change', () => this._camBubbleEditor?.broadcast());
+
+        if (!this._camBubbleOutsideCloseBound) {
+            this._camBubbleOutsideCloseBound = true;
+            document.addEventListener(
+                'pointerdown',
+                (e) => {
+                    if (!this._camBubblePanelOpen) return;
+                    const t = e.target;
+                    if (t.closest?.('#camBubbleControlPanel, #camBubbleEditBtn, .cam-bubble')) return;
+                    this.setCamBubblePanelOpen(false);
+                },
+                true
+            );
+            window.addEventListener('resize', () => this.positionCamBubbleChrome());
+            window.addEventListener('scroll', () => this.positionCamBubbleChrome(), true);
+        }
 
         return panel;
     }
 
-    syncCamBubbleControlPanel(layout, show) {
+    positionCamBubbleChrome() {
+        const bubble = this._camBubbleEl;
+        const btn = document.getElementById('camBubbleEditBtn');
+        const panel = document.getElementById('camBubbleControlPanel');
+        if (!bubble?.isConnected || !btn) {
+            btn?.classList.remove('show');
+            panel?.classList.remove('show');
+            return;
+        }
+
+        const r = bubble.getBoundingClientRect();
+        if (!r.width || !r.height) {
+            btn.classList.remove('show');
+            return;
+        }
+
+        btn.classList.add('show');
+        btn.classList.toggle('is-open', Boolean(this._camBubblePanelOpen));
+
+        // Иконка у правого верхнего края кружка
+        let btnLeft = r.right - 10;
+        let btnTop = r.top - 6;
+        btnLeft = Math.min(Math.max(8, btnLeft), window.innerWidth - 42);
+        btnTop = Math.min(Math.max(8, btnTop), window.innerHeight - 42);
+        btn.style.left = `${btnLeft}px`;
+        btn.style.top = `${btnTop}px`;
+
+        if (!panel || !this._camBubblePanelOpen) return;
+        panel.classList.add('show');
+
+        // Панель рядом с кружком (справа, иначе слева / снизу)
+        const pw = panel.offsetWidth || 240;
+        const ph = panel.offsetHeight || 200;
+        let left = r.right + 10;
+        let top = r.top;
+        if (left + pw > window.innerWidth - 8) left = r.left - pw - 10;
+        if (left < 8) left = 8;
+        if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
+        if (top < 8) top = 8;
+        panel.style.left = `${left}px`;
+        panel.style.top = `${top}px`;
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+    }
+
+    syncCamBubbleControlPanel(layout) {
         const panel = this.ensureCamBubbleControlPanel();
-        panel.classList.toggle('show', Boolean(show));
-        if (!show || !layout) return;
+        if (!layout) return;
         const L = this.normalizeCamBubbleLayout(layout);
         const sizeRange = panel.querySelector('#camBubbleSizeRange');
         const scaleRange = panel.querySelector('#camBubbleScaleRange');
@@ -12569,12 +12658,32 @@ class RoomClient {
                 btn.classList.toggle('is-active', (this._camBubbleEditMode || 'move') === mode);
             }
         });
+        this.positionCamBubbleChrome();
+    }
+
+    setCamBubblePanelOpen(open) {
+        this._camBubblePanelOpen = Boolean(open);
+        const panel = this.ensureCamBubbleControlPanel();
+        const btn = this.ensureCamBubbleEditBtn();
+        panel.classList.toggle('show', this._camBubblePanelOpen);
+        btn.classList.toggle('is-open', this._camBubblePanelOpen);
+        if (this._camBubblePanelOpen && this._camBubbleEl?.dataset?.layout) {
+            this.syncCamBubbleControlPanel(this.decodeCamBubbleLayout(this._camBubbleEl.dataset.layout));
+        }
+        this.positionCamBubbleChrome();
+    }
+
+    toggleCamBubbleControlPanel() {
+        this.setCamBubblePanelOpen(!this._camBubblePanelOpen);
     }
 
     hideCamBubbleControlPanel() {
-        const panel = document.getElementById('camBubbleControlPanel');
-        if (panel) panel.classList.remove('show');
+        this._camBubblePanelOpen = false;
+        this._camBubbleEl = null;
         this._camBubbleEditor = null;
+        document.getElementById('camBubbleControlPanel')?.classList.remove('show');
+        const btn = document.getElementById('camBubbleEditBtn');
+        if (btn) btn.classList.remove('show', 'is-open');
     }
 
     applyCamBubble(peerId) {
@@ -12621,12 +12730,12 @@ class RoomClient {
         // Без зеркала: лектор видит ровно то, что студенты.
         bubbleVideo.classList.remove('mirror');
 
-        // Одинаковый кадр экрана у всех: без letterbox (иначе кружок «плывёт» относительно контента)
+        // contain — как у студента, без растягивания
         const screenVideo =
             screenTile.querySelector(':scope > video') ||
             [...screenTile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
         if (screenVideo) {
-            screenVideo.style.objectFit = 'fill';
+            screenVideo.style.objectFit = 'contain';
             screenVideo.dataset.camBubbleFit = '1';
         }
 
@@ -12649,11 +12758,13 @@ class RoomClient {
                 resize.title = 'Размер кружка';
                 bubble.appendChild(resize);
             }
-            // Старый тулбар на кружке (клипался overflow) — убираем
             bubble.querySelector('.cam-bubble-toolbar')?.remove();
+            this.ensureCamBubbleEditBtn();
             this.ensureCamBubbleControlPanel();
             this.bindCamBubbleEditor(bubble, bubbleVideo, screenTile);
-            this.syncCamBubbleControlPanel(layout, true);
+            this._camBubbleEl = bubble;
+            this.positionCamBubbleChrome();
+            if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(layout);
         } else {
             bubble.querySelector('.cam-bubble-resize')?.remove();
             bubble.querySelector('.cam-bubble-toolbar')?.remove();
@@ -12713,7 +12824,7 @@ class RoomClient {
             bubble.dataset.editMode = mode;
             this._camBubbleEditMode = mode;
             bubble.classList.toggle('mode-crop', mode === 'crop');
-            this.syncCamBubbleControlPanel(readLayout(), true);
+            if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(readLayout());
             const tip =
                 mode === 'crop'
                     ? 'Режим «Кадр»: тяните лицо мышью, колесо — масштаб'
@@ -12784,10 +12895,12 @@ class RoomClient {
             } else if (dragMode === 'resize') {
                 next.size = startLayout.size + dxScreen;
             } else if (dragMode === 'crop') {
-                next.ox = startLayout.ox - dxBubble * 0.55;
-                next.oy = startLayout.oy - dyBubble * 0.55;
+                // Тянем картинку за мышью; чувствительность одинаковая по осям
+                next.ox = startLayout.ox + dxBubble * 0.85;
+                next.oy = startLayout.oy + dyBubble * 0.85;
             }
             commit(next, false);
+            this.positionCamBubbleChrome();
         });
 
         const endDrag = (e) => {
@@ -12800,6 +12913,7 @@ class RoomClient {
                 /* ignore */
             }
             commit(readLayout(), true);
+            this.positionCamBubbleChrome();
         };
         bubble.addEventListener('pointerup', endDrag);
         bubble.addEventListener('pointercancel', endDrag);
@@ -12838,13 +12952,13 @@ class RoomClient {
                     commit(this.getDefaultCamBubbleLayout(), true);
                     bubble.dataset.editMode = 'move';
                     this._camBubbleEditMode = 'move';
-                    this.syncCamBubbleControlPanel(readLayout(), true);
+                    if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(readLayout());
                     return;
                 }
                 bubble.dataset.editMode = mode;
                 this._camBubbleEditMode = mode;
                 bubble.classList.toggle('mode-crop', mode === 'crop');
-                this.syncCamBubbleControlPanel(readLayout(), true);
+                if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(readLayout());
             },
             setSize: (size) => {
                 const cur = readLayout();
@@ -12918,7 +13032,7 @@ class RoomClient {
         this.userLog(
             'info',
             on
-                ? 'Кружок включён. Панель справа снизу: размер, кадр, масштаб. Тяните кружок мышью.'
+                ? 'Кружок включён. Настройки — по иконке карандаша у кружка.'
                 : 'Камера поверх экрана выключена',
             'top-end',
             5000
