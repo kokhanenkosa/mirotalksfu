@@ -3935,6 +3935,23 @@ class RoomClient {
                 p.className = html.userName;
                 p.innerText = (remotePeerPresenter ? '⭐️ ' : '') + peer_name;
 
+                // Имя + FS рядом (особенно трансляция лектора)
+                const nameBar = document.createElement('div');
+                nameBar.className = 'peer-name-bar';
+                nameBar.appendChild(p);
+                let fsNearName = null;
+                if (
+                    BUTTONS.consumerVideo.fullScreenButton &&
+                    this.isVideoFullScreenSupported &&
+                    (remoteIsScreen || remotePeerPresenter)
+                ) {
+                    fsNearName = this.createButton(id + '__fullScreenNearName', html.fullScreen);
+                    fsNearName.classList.add('peer-name-fs');
+                    fsNearName.title = 'На весь экран';
+                    fsNearName.setAttribute('aria-label', 'На весь экран');
+                    nameBar.appendChild(fsNearName);
+                }
+
                 pm = document.createElement('div');
                 pb = document.createElement('div');
                 pm.setAttribute('id', remotePeerId + '__pitchMeter');
@@ -3956,7 +3973,7 @@ class RoomClient {
                 BUTTONS.consumerVideo.fullScreenButton &&
                     this.isVideoFullScreenSupported &&
                     eVc.appendChild(this.createDropdownItem(fs, 'На весь экран', eVc));
-                // Быстрая кнопка FS на экране трансляции (не только в меню «⋯»)
+                // Быстрая кнопка FS в меню бара (доп.)
                 let fsQuick = null;
                 if (remoteIsScreen && BUTTONS.consumerVideo.fullScreenButton && this.isVideoFullScreenSupported) {
                     fsQuick = this.createButton(id + '__fullScreenQuick', html.fullScreen);
@@ -4001,7 +4018,7 @@ class RoomClient {
                 d.appendChild(elem);
                 d.appendChild(remoteVideoLoader);
                 d.appendChild(i);
-                d.appendChild(p);
+                d.appendChild(nameBar);
                 d.appendChild(pm);
 
                 if (this.isMobileDevice) {
@@ -4020,6 +4037,7 @@ class RoomClient {
                 this.isVideoPictureInPictureSupported && this.handlePIP(elem.id, pip.id);
                 this.isVideoFullScreenSupported && this.handleFS(elem.id, fs.id);
                 if (fsQuick) this.handleFS(elem.id, fsQuick.id);
+                if (fsNearName) this.handleFS(elem.id, fsNearName.id);
                 this.handleVB(d.id, vb.id);
                 this.handleDD(elem.id, remotePeerId);
                 this.handleTS(elem.id, ts.id);
@@ -12419,15 +12437,138 @@ class RoomClient {
     // CAM BUBBLE — камера кружком поверх демонстрации экрана
     // ####################################################
 
+    getCamBubbleBorderColors() {
+        return [
+            'rgba(255,255,255,0.95)', // белый
+            'rgba(0,168,232,0.95)', // акцент
+            'rgba(255,193,7,0.95)', // золото
+            'rgba(20,20,24,0.92)', // тёмный
+        ];
+    }
+
+    getCamBubbleFxNames() {
+        return ['none', 'soft', 'glow', 'ring', 'pulse'];
+    }
+
+    getCamBubbleShapeMeta() {
+        return [
+            { id: 'circle', label: 'Круг' },
+            { id: 'square', label: 'Квадрат' },
+            { id: 'rounded', label: 'Скруглённый' },
+            { id: 'hex', label: 'Шестиугольник' },
+            { id: 'triangle', label: 'Треугольник' },
+            { id: 'diamond', label: 'Ромб' },
+            { id: 'star', label: 'Звезда' },
+            { id: 'daisy', label: 'Ромашка' },
+            { id: 'heart', label: 'Сердце' },
+            { id: 'dodecagon', label: 'Додекагон' },
+            { id: 'shield', label: 'Щит' },
+            { id: 'blob', label: 'Капля' },
+        ];
+    }
+
+    /** clip-path / radius для формы */
+    getCamBubbleShapeStyle(shapeId) {
+        const poly = (pts) => `polygon(${pts})`;
+        const star = () => {
+            const pts = [];
+            for (let i = 0; i < 10; i++) {
+                const a = (Math.PI * 2 * i) / 10 - Math.PI / 2;
+                const r = i % 2 === 0 ? 50 : 22;
+                pts.push(`${50 + r * Math.cos(a)}% ${50 + r * Math.sin(a)}%`);
+            }
+            return poly(pts.join(', '));
+        };
+        const daisy = () => {
+            const pts = [];
+            for (let i = 0; i < 16; i++) {
+                const a = (Math.PI * 2 * i) / 16 - Math.PI / 2;
+                const r = i % 2 === 0 ? 50 : 30;
+                pts.push(`${50 + r * Math.cos(a)}% ${50 + r * Math.sin(a)}%`);
+            }
+            return poly(pts.join(', '));
+        };
+        const dodecagon = () => {
+            const pts = [];
+            for (let i = 0; i < 12; i++) {
+                const a = (Math.PI * 2 * i) / 12 - Math.PI / 2;
+                pts.push(`${50 + 50 * Math.cos(a)}% ${50 + 50 * Math.sin(a)}%`);
+            }
+            return poly(pts.join(', '));
+        };
+        switch (shapeId) {
+            case 'square':
+                return { clip: 'none', radius: '4%', clipped: false };
+            case 'rounded':
+                return { clip: 'none', radius: '22%', clipped: false };
+            case 'hex':
+                return {
+                    clip: poly('25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%'),
+                    radius: '0',
+                    clipped: true,
+                };
+            case 'triangle':
+                return { clip: poly('50% 4%, 96% 92%, 4% 92%'), radius: '0', clipped: true };
+            case 'diamond':
+                return { clip: poly('50% 2%, 98% 50%, 50% 98%, 2% 50%'), radius: '0', clipped: true };
+            case 'star':
+                return { clip: star(), radius: '0', clipped: true };
+            case 'daisy':
+                return { clip: daisy(), radius: '0', clipped: true };
+            case 'heart':
+                return {
+                    clip: poly(
+                        '50% 92%, 90% 58%, 98% 32%, 88% 12%, 68% 8%, 50% 22%, 32% 8%, 12% 12%, 2% 32%, 10% 58%'
+                    ),
+                    radius: '0',
+                    clipped: true,
+                };
+            case 'dodecagon':
+                return { clip: dodecagon(), radius: '0', clipped: true };
+            case 'shield':
+                return {
+                    clip: poly('50% 4%, 92% 16%, 92% 55%, 50% 96%, 8% 55%, 8% 16%'),
+                    radius: '0',
+                    clipped: true,
+                };
+            case 'blob':
+                return {
+                    clip: poly(
+                        '50% 3%, 72% 10%, 90% 28%, 97% 50%, 90% 72%, 70% 90%, 50% 97%, 28% 88%, 10% 70%, 3% 48%, 12% 26%, 30% 10%'
+                    ),
+                    radius: '0',
+                    clipped: true,
+                };
+            case 'circle':
+            default:
+                return { clip: 'none', radius: '50%', clipped: false };
+        }
+    }
+
     getDefaultCamBubbleLayout() {
         // scale > 1 обязателен: иначе у 16:9 в круге нет вертикального запаса для кадра
-        return { x: 0.78, y: 0.7, size: 0.2, scale: 1.35, ox: 0, oy: 0, border: true };
+        return {
+            x: 0.78,
+            y: 0.7,
+            size: 0.2,
+            scale: 1.35,
+            ox: 0,
+            oy: 0,
+            border: true,
+            bw: 3, // толщина px
+            bc: 0, // индекс цвета
+            fx: 1, // soft shadow
+            shape: 0, // круг
+        };
     }
 
     normalizeCamBubbleLayout(raw) {
         const d = this.getDefaultCamBubbleLayout();
         const src = raw && typeof raw === 'object' ? raw : {};
         const clamp = (v, min, max) => Math.min(max, Math.max(min, Number(v)));
+        const colors = this.getCamBubbleBorderColors();
+        const fxs = this.getCamBubbleFxNames();
+        const shapes = this.getCamBubbleShapeMeta();
         return {
             x: clamp(src.x ?? d.x, 0, 0.95),
             y: clamp(src.y ?? d.y, 0, 0.95),
@@ -12436,6 +12577,10 @@ class RoomClient {
             ox: clamp(src.ox ?? d.ox, -0.5, 0.5),
             oy: clamp(src.oy ?? d.oy, -0.5, 0.5),
             border: src.border === undefined ? d.border : Boolean(src.border),
+            bw: clamp(src.bw ?? d.bw, 1, 10),
+            bc: clamp(src.bc ?? d.bc, 0, colors.length - 1),
+            fx: clamp(src.fx ?? d.fx, 0, fxs.length - 1),
+            shape: clamp(src.shape ?? d.shape, 0, shapes.length - 1),
         };
     }
 
@@ -12577,9 +12722,9 @@ class RoomClient {
 
     encodeCamBubbleLayout(layout) {
         const L = this.normalizeCamBubbleLayout(layout);
-        // Целые + underscore: переживают XSS/sanitize надёжнее, чем "0.1,0.2,..."
+        // v3: + shape
         return [
-            'v1',
+            'v3',
             Math.round(L.x * 1000),
             Math.round(L.y * 1000),
             Math.round(L.size * 1000),
@@ -12587,6 +12732,10 @@ class RoomClient {
             Math.round(L.ox * 1000),
             Math.round(L.oy * 1000),
             L.border ? 1 : 0,
+            Math.round(L.bw),
+            Math.round(L.bc),
+            Math.round(L.fx),
+            Math.round(L.shape),
         ].join('_');
     }
 
@@ -12601,10 +12750,11 @@ class RoomClient {
                 /* fallthrough */
             }
         }
-        // v1_x_y_size_scale_ox_oy_border (тысячные)
-        if (s.startsWith('v1_') || s.includes('_')) {
+        // v3_..._fx_shape | v2_..._fx | v1_..._border
+        if (s.startsWith('v3_') || s.startsWith('v2_') || s.startsWith('v1_') || s.includes('_')) {
             const parts = s.split('_');
-            const nums = (parts[0] === 'v1' ? parts.slice(1) : parts).map((v) => Number(v));
+            const ver = parts[0] === 'v1' || parts[0] === 'v2' || parts[0] === 'v3' ? parts[0] : null;
+            const nums = (ver ? parts.slice(1) : parts).map((v) => Number(v));
             if (nums.length >= 6 && !nums.some((n) => Number.isNaN(n))) {
                 return this.normalizeCamBubbleLayout({
                     x: nums[0] / 1000,
@@ -12614,6 +12764,10 @@ class RoomClient {
                     ox: nums[4] / 1000,
                     oy: nums[5] / 1000,
                     border: nums[6] === undefined ? true : nums[6] !== 0,
+                    bw: nums[7],
+                    bc: nums[8],
+                    fx: nums[9],
+                    shape: nums[10],
                 });
             }
         }
@@ -12631,8 +12785,37 @@ class RoomClient {
         });
     }
 
+    /** filter для clip-path форм (box-shadow/border режутся clip-path) */
+    buildCamBubbleClipFilter(L, color, fxName) {
+        const parts = [];
+        if (L.border) {
+            const n = Math.max(1, Math.round(L.bw));
+            for (let i = 0; i < n; i++) parts.push(`drop-shadow(0 0 0.55px ${color})`);
+            if (fxName === 'soft') parts.push('drop-shadow(0 8px 12px rgba(0,0,0,0.55))');
+            if (fxName === 'glow' || fxName === 'pulse') {
+                parts.push(`drop-shadow(0 0 6px ${color})`);
+                parts.push(`drop-shadow(0 0 14px ${color})`);
+            }
+            if (fxName === 'ring') {
+                parts.push('drop-shadow(0 0 1px rgba(255,255,255,0.55))');
+                parts.push('drop-shadow(0 0 4px rgba(255,255,255,0.25))');
+                parts.push('drop-shadow(0 8px 14px rgba(0,0,0,0.4))');
+            }
+        }
+        return parts.join(' ');
+    }
+
     applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, editable) {
         const L = this.normalizeCamBubbleLayout(layout);
+        const colors = this.getCamBubbleBorderColors();
+        const fxs = this.getCamBubbleFxNames();
+        const shapes = this.getCamBubbleShapeMeta();
+        const color = colors[L.bc] || colors[0];
+        const fxName = fxs[L.fx] || 'none';
+        const shapeMeta = shapes[L.shape] || shapes[0];
+        const shapeStyle = this.getCamBubbleShapeStyle(shapeMeta.id);
+        const inCrop = bubble.classList.contains('mode-crop');
+
         bubble.style.left = `${L.x * 100}%`;
         bubble.style.top = `${L.y * 100}%`;
         bubble.style.right = 'auto';
@@ -12641,6 +12824,66 @@ class RoomClient {
         bubble.style.height = 'auto';
         bubble.classList.toggle('no-border', !L.border);
         bubble.classList.toggle('is-editable', Boolean(editable));
+
+        shapes.forEach((s) => bubble.classList.remove(`shape-${s.id}`));
+        bubble.classList.add(`shape-${shapeMeta.id}`);
+        bubble.dataset.shape = shapeMeta.id;
+
+        // Гайд для режима «Кадр»
+        const guideClip =
+            shapeStyle.clip === 'none'
+                ? shapeMeta.id === 'circle'
+                    ? 'circle(50% at 50% 50%)'
+                    : 'none'
+                : shapeStyle.clip;
+        bubble.style.setProperty('--cam-shape-clip', guideClip);
+        bubble.style.setProperty('--cam-shape-radius', shapeStyle.radius);
+
+        // В «Кадр» — квадрат-превью; clip только у направляющей. Иначе — итоговая форма.
+        const useClip = shapeStyle.clipped && !inCrop;
+        bubble.classList.toggle('shape-clipped', useClip);
+        if (inCrop) {
+            bubble.style.clipPath = 'none';
+            bubble.style.borderRadius = '16px';
+        } else {
+            bubble.style.clipPath = shapeStyle.clip === 'none' ? 'none' : shapeStyle.clip;
+            bubble.style.borderRadius = shapeStyle.radius;
+        }
+
+        bubble.style.setProperty('--cam-bubble-glow', color);
+
+        // Рамка / эффекты: у clip-path — drop-shadow, иначе border + box-shadow
+        fxs.forEach((name) => bubble.classList.remove(`fx-${name}`));
+        if (useClip) {
+            bubble.style.borderStyle = 'none';
+            bubble.style.borderWidth = '0';
+            bubble.style.borderColor = 'transparent';
+            bubble.style.boxShadow = 'none';
+            const baseFilter = this.buildCamBubbleClipFilter(L, color, fxName === 'pulse' ? 'glow' : fxName);
+            bubble.style.filter = baseFilter || 'none';
+            bubble.style.setProperty('--cam-bubble-filter', baseFilter || 'none');
+            bubble.style.setProperty(
+                '--cam-bubble-filter-pulse',
+                this.buildCamBubbleClipFilter(L, color, 'glow') || 'none'
+            );
+            if (L.border && fxName === 'pulse') bubble.classList.add('fx-pulse');
+            else bubble.classList.add('fx-none');
+        } else {
+            bubble.style.filter = '';
+            bubble.style.removeProperty('--cam-bubble-filter');
+            bubble.style.removeProperty('--cam-bubble-filter-pulse');
+            if (L.border) {
+                bubble.style.borderStyle = 'solid';
+                bubble.style.borderWidth = `${L.bw}px`;
+                bubble.style.borderColor = color;
+            } else {
+                bubble.style.borderStyle = 'none';
+                bubble.style.borderWidth = '0';
+                bubble.style.borderColor = 'transparent';
+            }
+            if (L.border && fxName !== 'none') bubble.classList.add(`fx-${fxName}`);
+            else bubble.classList.add('fx-none');
+        }
 
         // Кадр: translate по X/Y + scale
         const panX = L.ox * 100;
@@ -12714,7 +12957,6 @@ class RoomClient {
             <div class="cam-bubble-panel-modes">
                 <button type="button" data-cam-mode="move" class="is-active" title="Переместить кружок по экрану">Кружок</button>
                 <button type="button" data-cam-mode="crop" title="Сдвинуть и масштабировать лицо в круге">Кадр</button>
-                <button type="button" data-cam-mode="border" title="Рамка">Рамка</button>
                 <button type="button" data-cam-mode="reset" title="Сбросить">Сброс</button>
             </div>
             <label class="cam-bubble-panel-slider">
@@ -12725,10 +12967,45 @@ class RoomClient {
                 <span>Масштаб</span>
                 <input type="range" id="camBubbleScaleRange" min="115" max="250" step="5" value="135" />
             </label>
-            <div class="cam-bubble-panel-hint">«Кадр»: тяните лицо · колёсико — зум · панель можно перетащить</div>
+            <label class="cam-bubble-panel-fx">
+                <span>Форма</span>
+                <select id="camBubbleShapeSelect"></select>
+            </label>
+            <div class="cam-bubble-panel-frame">
+                <button type="button" id="camBubbleBorderToggle" data-cam-frame="toggle" title="Показать или скрыть рамку">Рамка</button>
+                <label class="cam-bubble-panel-slider">
+                    <span>Толщина</span>
+                    <input type="range" id="camBubbleBorderWidth" min="1" max="8" step="1" value="3" />
+                </label>
+                <div class="cam-bubble-panel-swatches" id="camBubbleBorderColors" title="Цвет рамки">
+                    <button type="button" data-bc="0" style="background:#fff" title="Белый"></button>
+                    <button type="button" data-bc="1" style="background:#00a8e8" title="Голубой"></button>
+                    <button type="button" data-bc="2" style="background:#ffc107" title="Золото"></button>
+                    <button type="button" data-bc="3" style="background:#141418" title="Тёмный"></button>
+                </div>
+                <label class="cam-bubble-panel-fx">
+                    <span>Эффект</span>
+                    <select id="camBubbleBorderFx">
+                        <option value="0">Нет</option>
+                        <option value="1">Тень</option>
+                        <option value="2">Свечение</option>
+                        <option value="3">Кольцо</option>
+                        <option value="4">Пульс</option>
+                    </select>
+                </label>
+            </div>
+            <div class="cam-bubble-panel-hint">«Кадр»: квадрат = превью, пунктир = итоговая форма для студентов</div>
         `;
         document.body.appendChild(panel);
         this.bindCamBubblePanelDrag(panel);
+
+        const shapeSelect = panel.querySelector('#camBubbleShapeSelect');
+        this.getCamBubbleShapeMeta().forEach((s, i) => {
+            const opt = document.createElement('option');
+            opt.value = String(i);
+            opt.textContent = s.label;
+            shapeSelect.appendChild(opt);
+        });
 
         panel.addEventListener('pointerdown', (e) => e.stopPropagation());
         panel.addEventListener('click', (e) => {
@@ -12738,13 +13015,28 @@ class RoomClient {
                 return;
             }
             const modeBtn = e.target.closest('[data-cam-mode]');
-            if (!modeBtn || !this._camBubbleEditor) return;
-            e.preventDefault();
-            this._camBubbleEditor.onToolbarAction(modeBtn.getAttribute('data-cam-mode'));
+            if (modeBtn && this._camBubbleEditor) {
+                e.preventDefault();
+                this._camBubbleEditor.onToolbarAction(modeBtn.getAttribute('data-cam-mode'));
+                return;
+            }
+            const frameToggle = e.target.closest('[data-cam-frame="toggle"]');
+            if (frameToggle && this._camBubbleEditor) {
+                e.preventDefault();
+                this._camBubbleEditor.toggleBorder();
+                return;
+            }
+            const swatch = e.target.closest('[data-bc]');
+            if (swatch && this._camBubbleEditor) {
+                e.preventDefault();
+                this._camBubbleEditor.setBorderColor(Number(swatch.getAttribute('data-bc')));
+            }
         });
 
         const sizeRange = panel.querySelector('#camBubbleSizeRange');
         const scaleRange = panel.querySelector('#camBubbleScaleRange');
+        const bwRange = panel.querySelector('#camBubbleBorderWidth');
+        const fxSelect = panel.querySelector('#camBubbleBorderFx');
         sizeRange.addEventListener('input', () => {
             this._camBubbleEditor?.setSize(Number(sizeRange.value) / 100);
         });
@@ -12753,6 +13045,18 @@ class RoomClient {
             this._camBubbleEditor?.setScale(Number(scaleRange.value) / 100);
         });
         scaleRange.addEventListener('change', () => this._camBubbleEditor?.broadcast());
+        shapeSelect.addEventListener('change', () => {
+            this._camBubbleEditor?.setShape(Number(shapeSelect.value));
+            this._camBubbleEditor?.broadcast();
+        });
+        bwRange.addEventListener('input', () => {
+            this._camBubbleEditor?.setBorderWidth(Number(bwRange.value));
+        });
+        bwRange.addEventListener('change', () => this._camBubbleEditor?.broadcast());
+        fxSelect.addEventListener('change', () => {
+            this._camBubbleEditor?.setBorderFx(Number(fxSelect.value));
+            this._camBubbleEditor?.broadcast();
+        });
 
         if (!this._camBubbleOutsideCloseBound) {
             this._camBubbleOutsideCloseBound = true;
@@ -12883,18 +13187,43 @@ class RoomClient {
         const L = this.normalizeCamBubbleLayout(layout);
         const sizeRange = panel.querySelector('#camBubbleSizeRange');
         const scaleRange = panel.querySelector('#camBubbleScaleRange');
+        const shapeSelect = panel.querySelector('#camBubbleShapeSelect');
+        const bwRange = panel.querySelector('#camBubbleBorderWidth');
+        const fxSelect = panel.querySelector('#camBubbleBorderFx');
+        const borderToggle = panel.querySelector('#camBubbleBorderToggle');
         if (sizeRange && document.activeElement !== sizeRange) {
             sizeRange.value = String(Math.round(L.size * 100));
         }
         if (scaleRange && document.activeElement !== scaleRange) {
             scaleRange.value = String(Math.round(L.scale * 100));
         }
+        if (shapeSelect && document.activeElement !== shapeSelect) {
+            shapeSelect.value = String(L.shape);
+        }
+        if (bwRange && document.activeElement !== bwRange) {
+            bwRange.value = String(L.bw);
+            bwRange.disabled = !L.border;
+        }
+        if (fxSelect && document.activeElement !== fxSelect) {
+            fxSelect.value = String(L.fx);
+            fxSelect.disabled = !L.border;
+        }
+        if (borderToggle) {
+            borderToggle.classList.toggle('is-active', L.border);
+            borderToggle.textContent = L.border ? 'Рамка вкл' : 'Рамка выкл';
+        }
+        panel.querySelectorAll('[data-bc]').forEach((btn) => {
+            const on = Number(btn.getAttribute('data-bc')) === L.bc;
+            btn.classList.toggle('is-active', on);
+            btn.disabled = !L.border;
+        });
         panel.querySelectorAll('[data-cam-mode]').forEach((modeBtn) => {
             const mode = modeBtn.getAttribute('data-cam-mode');
             if (mode === 'move' || mode === 'crop') {
                 modeBtn.classList.toggle('is-active', (this._camBubbleEditMode || 'move') === mode);
             }
         });
+        panel.classList.toggle('frame-off', !L.border);
     }
 
     setCamBubblePanelOpen(open) {
@@ -12912,6 +13241,16 @@ class RoomClient {
                 bubble.dataset.editMode = 'move';
                 this._camBubbleEditMode = 'move';
                 bubble.classList.remove('mode-crop', 'is-dragging');
+                // Вернуть итоговую форму (clip-path), если были в «Кадр»
+                const bubbleVideo = bubble.querySelector('video');
+                if (bubbleVideo && bubble.dataset.layout) {
+                    this.applyCamBubbleLayoutStyles(
+                        bubble,
+                        bubbleVideo,
+                        this.decodeCamBubbleLayout(bubble.dataset.layout),
+                        true
+                    );
+                }
             }
         }
 
@@ -13081,19 +13420,12 @@ class RoomClient {
             if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(readLayout());
             const tip =
                 mode === 'crop'
-                    ? 'Режим «Кадр»: тяните лицо мышью, колесо — масштаб'
-                    : 'Режим «Кружок»: перетаскивайте кружок по экрану';
-            this.userLog('info', tip, 'top-end', 3500);
+                    ? 'Кадр: квадрат — превью, пунктир — итоговая форма для студентов'
+                    : 'Режим «Кружок»: перетаскивайте фигуру по экрану';
+            this.userLog('info', tip, 'top-end', 4000);
         };
 
         const onToolbarAction = (mode) => {
-            if (mode === 'border') {
-                const cur = readLayout();
-                cur.border = !cur.border;
-                commit(cur, true, true);
-                this.userLog('info', cur.border ? 'Рамка включена' : 'Рамка выключена', 'top-end', 2000);
-                return;
-            }
             if (mode === 'reset') {
                 commit(this.getDefaultCamBubbleLayout(), true, true);
                 setEditMode('move');
@@ -13101,6 +13433,15 @@ class RoomClient {
                 return;
             }
             setEditMode(mode);
+            // Переключить clip ↔ превью квадрата
+            commit(readLayout(), false, false);
+        };
+
+        const patchBorder = (patch, immediate = true) => {
+            const cur = readLayout();
+            Object.assign(cur, patch);
+            commit(cur, true, immediate);
+            if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(cur);
         };
 
         this._camBubbleEditor = {
@@ -13108,7 +13449,6 @@ class RoomClient {
             setSize: (size) => {
                 const cur = readLayout();
                 cur.size = size;
-                // live → студенты видят размер/масштаб сразу (троттл)
                 commit(cur, true, false);
             },
             setScale: (scale) => {
@@ -13116,6 +13456,19 @@ class RoomClient {
                 cur.scale = scale;
                 commit(cur, true, false);
             },
+            setShape: (shape) => {
+                const cur = readLayout();
+                cur.shape = shape;
+                commit(cur, true, true);
+            },
+            toggleBorder: () => {
+                const cur = readLayout();
+                patchBorder({ border: !cur.border }, true);
+                this.userLog('info', !cur.border ? 'Рамка включена' : 'Рамка выключена', 'top-end', 2000);
+            },
+            setBorderWidth: (bw) => patchBorder({ bw, border: true }, false),
+            setBorderColor: (bc) => patchBorder({ bc, border: true }, true),
+            setBorderFx: (fx) => patchBorder({ fx, border: true }, true),
             broadcast: () => commit(readLayout(), true, true),
         };
 
@@ -13203,14 +13556,14 @@ class RoomClient {
             this.peer_info.peer_cam_bubble = true;
             if (broadcast) this.broadcastCamBubbleLayout(L, immediate);
         };
+        const patchBorder = (patch, immediate = true) => {
+            const cur = readLayout();
+            Object.assign(cur, patch);
+            commit(cur, true, immediate);
+            if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(cur);
+        };
         return {
             onToolbarAction: (mode) => {
-                if (mode === 'border') {
-                    const cur = readLayout();
-                    cur.border = !cur.border;
-                    commit(cur, true, true);
-                    return;
-                }
                 if (mode === 'reset') {
                     commit(this.getDefaultCamBubbleLayout(), true, true);
                     bubble.dataset.editMode = 'move';
@@ -13222,6 +13575,7 @@ class RoomClient {
                 bubble.dataset.editMode = mode;
                 this._camBubbleEditMode = mode;
                 bubble.classList.toggle('mode-crop', mode === 'crop');
+                commit(readLayout(), false, false);
                 if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(readLayout());
             },
             setSize: (size) => {
@@ -13234,6 +13588,18 @@ class RoomClient {
                 cur.scale = scale;
                 commit(cur, true, false);
             },
+            setShape: (shape) => {
+                const cur = readLayout();
+                cur.shape = shape;
+                commit(cur, true, true);
+            },
+            toggleBorder: () => {
+                const cur = readLayout();
+                patchBorder({ border: !cur.border }, true);
+            },
+            setBorderWidth: (bw) => patchBorder({ bw, border: true }, false),
+            setBorderColor: (bc) => patchBorder({ bc, border: true }, true),
+            setBorderFx: (fx) => patchBorder({ fx, border: true }, true),
             broadcast: () => commit(readLayout(), true, true),
         };
     }
