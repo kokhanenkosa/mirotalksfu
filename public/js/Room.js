@@ -557,7 +557,11 @@ function refreshMainButtonsToolTipPlacement() {
         setTippy('swapCameraButton', 'Переключить камеру', bPlacement);
         setTippy('startScreenButton', 'Начать демонстрацию экрана', bPlacement);
         setTippy('stopScreenButton', 'Остановить демонстрацию экрана', bPlacement);
-        setTippy('camBubbleButton', 'Камера кружком поверх экрана', bPlacement);
+        setTippy(
+            'camBubbleButton',
+            'Камера кружком поверх экрана (панель: Кружок / Кадр / Рамка)',
+            bPlacement
+        );
         setTippy('raiseHandButton', 'Поднять руку', bPlacement);
         setTippy('lowerHandButton', 'Опустить руку', bPlacement);
         setTippy('chatButton', 'Показать или скрыть чат', bPlacement);

@@ -100,15 +100,10 @@ module.exports = class Peer {
                 if (!data.status) this.peer_info.peer_cam_bubble_layout = null;
                 break;
             case 'camBubbleLayout':
-                try {
-                    const layout =
-                        typeof data.status === 'string' ? JSON.parse(data.status) : data.status;
-                    if (layout && typeof layout === 'object') {
-                        this.peer_info.peer_cam_bubble_layout = layout;
-                        this.peer_info.peer_cam_bubble = true;
-                    }
-                } catch {
-                    /* ignore bad layout */
+                // Клиент шлёт компактную строку "x,y,size,scale,ox,oy,border" или JSON.
+                if (data.status !== undefined && data.status !== null && data.status !== '') {
+                    this.peer_info.peer_cam_bubble_layout = data.status;
+                    this.peer_info.peer_cam_bubble = true;
                 }
                 break;
             default:
