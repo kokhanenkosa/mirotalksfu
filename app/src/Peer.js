@@ -97,6 +97,19 @@ module.exports = class Peer {
                 break;
             case 'camBubble':
                 this.peer_info.peer_cam_bubble = Boolean(data.status);
+                if (!data.status) this.peer_info.peer_cam_bubble_layout = null;
+                break;
+            case 'camBubbleLayout':
+                try {
+                    const layout =
+                        typeof data.status === 'string' ? JSON.parse(data.status) : data.status;
+                    if (layout && typeof layout === 'object') {
+                        this.peer_info.peer_cam_bubble_layout = layout;
+                        this.peer_info.peer_cam_bubble = true;
+                    }
+                } catch {
+                    /* ignore bad layout */
+                }
                 break;
             default:
                 break;

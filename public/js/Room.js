@@ -1002,10 +1002,15 @@ function getLectoriumActive() {
     return ['1', 'true', 'yes', 'on'].includes(String(v).toLowerCase());
 }
 
-/** В лектории / трансляции на сцене только ведущий; остальные — только в списке чата. */
-function shouldShowPeerVideoTile(peerPresenter) {
-    if (isLectoriumEnabled || isBroadcastingEnabled) return Boolean(peerPresenter);
-    return true;
+/**
+ * Аватар videoOff в лектории/трансляции: только у ведущего.
+ * Активные producers слушателей (после «дать слово») показываем всегда — см. handleNewProducers.
+ */
+function shouldShowPeerVideoTile(peerPresenter, peerInfo = null) {
+    if (!(isLectoriumEnabled || isBroadcastingEnabled)) return true;
+    if (peerPresenter) return true;
+    if (peerInfo && (peerInfo.peer_video || peerInfo.peer_screen)) return true;
+    return false;
 }
 
 function getHideMeActive() {
@@ -1215,6 +1220,7 @@ function getPeerInfo() {
         peer_recording: isRecording,
         peer_video_privacy: isVideoPrivacyActive,
         peer_cam_bubble: false,
+        peer_cam_bubble_layout: null,
         peer_hand: false,
         peer_observer: isSuperAdminObserver,
         is_desktop_device: isDesktopDevice,

@@ -262,6 +262,7 @@ class RoomClient {
         this.locallyMutedPeers = new Set();
         this.remotePeerPresenter = new Map();
         this.hearOnlyPresenter = false;
+        this._broadcastSpotlit = false; // слушатель, которому ведущий дал слово
 
         // Device type
         this.isDesktopDevice = peer_info.is_desktop_device;
@@ -894,7 +895,7 @@ class RoomClient {
                 continue;
             }
 
-            if (!peer_video && shouldShowPeerVideoTile(peer_presenter)) {
+            if (!peer_video && shouldShowPeerVideoTile(peer_presenter, peer_info)) {
                 console.log('Detected peer video off ' + peer_name);
                 this.setVideoOff(peer_info, true);
             }
@@ -1428,12 +1429,8 @@ class RoomClient {
                     console.warn('Skipping own producer to prevent echo', { producer_id, type });
                     continue;
                 }
-                // Лекторий / трансляция: видео/экран слушателей на сцену не берём (они только в чате).
-                const isVideoOrScreen = type === mediaType.video || type === mediaType.screen;
-                if (isVideoOrScreen && !shouldShowPeerVideoTile(peer_info?.peer_presenter)) {
-                    console.log('Skip non-presenter media tile', { peer_name, type, lectorium: isLectoriumEnabled });
-                    continue;
-                }
+                // Активный producer = ведущий дал слово / слушатель шарит — всегда принимаем.
+                // Пассивных слушателей без media по-прежнему не рисуем (setVideoOff).
                 await this.consume(producer_id, peer_name, peer_info, type);
             }
 
@@ -1505,7 +1502,30 @@ class RoomClient {
         this.updatePeerInfo(data.peer_name, data.peer_id, data.type, data.status, false, data.peer_presenter);
         if (data.type === 'camBubble') {
             const peer = this.peers?.get?.(data.peer_id);
-            if (peer?.peer_info) peer.peer_info.peer_cam_bubble = Boolean(data.status);
+            if (peer?.peer_info) {
+                peer.peer_info.peer_cam_bubble = Boolean(data.status);
+                if (!data.status) peer.peer_info.peer_cam_bubble_layout = null;
+            }
+            this.refreshCamBubble(data.peer_id);
+        }
+        if (data.type === 'camBubbleLayout') {
+            const peer = this.peers?.get?.(data.peer_id);
+            let layout = data.status;
+            if (typeof layout === 'string') {
+                try {
+                    layout = JSON.parse(layout);
+                } catch {
+                    layout = null;
+                }
+            }
+            if (peer?.peer_info && layout) {
+                peer.peer_info.peer_cam_bubble = true;
+                peer.peer_info.peer_cam_bubble_layout = layout;
+            }
+            if (data.peer_id === this.peer_id && layout) {
+                this.peer_info.peer_cam_bubble = true;
+                this.peer_info.peer_cam_bubble_layout = layout;
+            }
             this.refreshCamBubble(data.peer_id);
         }
     };
@@ -2191,21 +2211,22 @@ class RoomClient {
 
         switch (type) {
             case mediaType.audio:
-                if (!BUTTONS.main.startAudioButton) return;
+                // В лектории кнопки скрыты, но «дать слово» временно разрешает produce.
+                if (!BUTTONS.main.startAudioButton && !this._broadcastSpotlit) return;
                 this.isAudioAllowed = true;
                 mediaConstraints = this.getAudioConstraints(deviceId);
                 this.peer_info.peer_audio = true;
                 audio = true;
                 break;
             case mediaType.video:
-                if (!BUTTONS.main.startVideoButton) return;
+                if (!BUTTONS.main.startVideoButton && !this._broadcastSpotlit) return;
                 this.isVideoAllowed = true;
                 mediaConstraints = swapCamera ? this.getCameraConstraints() : this.getVideoConstraints(deviceId);
                 this.peer_info.peer_video = true;
                 video = true;
                 break;
             case mediaType.screen:
-                if (!BUTTONS.main.startScreenButton) return;
+                if (!BUTTONS.main.startScreenButton && !this._broadcastSpotlit) return;
                 mediaConstraints = this.getScreenConstraints();
                 this.peer_info.peer_screen = true;
                 screen = true;
@@ -3836,16 +3857,7 @@ class RoomClient {
         switch (type) {
             case mediaType.video:
             case mediaType.screen:
-                if (!shouldShowPeerVideoTile(remotePeerPresenter)) {
-                    console.log('Skip consumer tile for non-presenter', { peer_name, type });
-                    try {
-                        consumer.close();
-                    } catch {
-                        /* ignore */
-                    }
-                    this.consumers.delete(id);
-                    return;
-                }
+                // Реальный поток слушателя после «дать слово» — всегда показываем.
                 this.removeVideoOff(remotePeerId);
 
                 d = document.createElement('div');
@@ -4744,21 +4756,21 @@ class RoomClient {
     }
 
     setIsAudio(peer_id, status) {
-        if (!isBroadcastingEnabled || (isBroadcastingEnabled && isPresenter)) {
-            console.log('Set local audio enabled: ' + status);
-            this.peer_info.peer_audio = status;
-            const audioStatus = this.getPeerAudioBtn(peer_id); // producer, consumers
-            const audioVolume = this.getPeerAudioVolumeBar(peer_id); // consumers
-            if (audioStatus) audioStatus.className = status ? html.audioOn : html.audioOff;
-            if (audioVolume) status ? show(audioVolume) : hide(audioVolume);
-        }
+        // В лектории слушатель тоже должен обновлять статус после «дать слово».
+        console.log('Set local audio enabled: ' + status);
+        this.peer_info.peer_audio = status;
+        const audioStatus = this.getPeerAudioBtn(peer_id); // producer, consumers
+        const audioVolume = this.getPeerAudioVolumeBar(peer_id); // consumers
+        if (audioStatus) audioStatus.className = status ? html.audioOn : html.audioOff;
+        if (audioVolume) status ? show(audioVolume) : hide(audioVolume);
     }
 
     setIsVideo(status) {
-        if (!isBroadcastingEnabled || (isBroadcastingEnabled && isPresenter)) {
-            this.peer_info.peer_video = status;
-            if (!this.peer_info.peer_video) {
-                console.log('Set local video enabled: ' + status);
+        this.peer_info.peer_video = status;
+        if (!this.peer_info.peer_video) {
+            console.log('Set local video enabled: ' + status);
+            // Пассивным слушателям в broadcast не нужен свой videoOff-тайл.
+            if (!isBroadcastingEnabled || isPresenter || this._broadcastSpotlit) {
                 this.setVideoOff(this.peer_info, false);
                 this.sendVideoOff();
             }
@@ -4766,10 +4778,10 @@ class RoomClient {
     }
 
     setIsScreen(status) {
-        if (!isBroadcastingEnabled || (isBroadcastingEnabled && isPresenter)) {
-            this.peer_info.peer_screen = status;
-            if (!this.peer_info.peer_screen && !this.peer_info.peer_video) {
-                console.log('Set local screen enabled: ' + status);
+        this.peer_info.peer_screen = status;
+        if (!this.peer_info.peer_screen && !this.peer_info.peer_video) {
+            console.log('Set local screen enabled: ' + status);
+            if (!isBroadcastingEnabled || isPresenter || this._broadcastSpotlit) {
                 this.setVideoOff(this.peer_info, false);
                 this.sendVideoOff();
             }
@@ -5449,7 +5461,8 @@ class RoomClient {
                     if (!videoPlayer.classList.contains('videoCircle')) {
                         videoPlayer.style.objectFit = 'contain';
                     }
-                    cam.className = '';
+                    // Не затираем className: нужны Camera / data-* / cam-bubble.
+                    cam.classList.add('Camera', 'is-pinned-video');
                     cam.style.width = '100%';
                     cam.style.height = '100%';
                     this.toggleVideoPin(pinVideoPosition.value);
@@ -5465,13 +5478,18 @@ class RoomClient {
                     }
                     if (!isScreen && !isBroadcastingEnabled) videoPlayer.style.objectFit = 'var(--videoObjFit)';
                     this.videoPinMediaContainer.removeChild(cam);
-                    cam.className = 'Camera';
+                    cam.classList.add('Camera');
+                    cam.classList.remove('is-pinned-video');
                     this.videoMediaContainer.appendChild(cam);
                     this.removeVideoPinMediaContainer();
                     setColor(btnPn, 'white');
                 }
                 this.resizeVideoMenuBar();
                 handleAspectRatio();
+                const bubblePeerId = cam.dataset?.peerId || videoPlayer.getAttribute('name');
+                if (bubblePeerId) {
+                    setTimeout(() => this.refreshCamBubble(bubblePeerId), 0);
+                }
                 if (this.isFollowMeActive && isPresenter) {
                     if (this.isVideoPinned) {
                         const peerId = videoPlayer.getAttribute('name');
@@ -11418,6 +11436,34 @@ class RoomClient {
         }
     }
 
+    /**
+     * После «дать слово» в лектории/трансляции временно открываем кнопки media слушателю.
+     */
+    unlockBroadcastSpotlitControls(type) {
+        this._broadcastSpotlit = true;
+        if (!(isBroadcastingEnabled || isLectoriumEnabled) || isPresenter) return;
+
+        if (type === mediaType.audio || type === 'audio') {
+            BUTTONS.main.startAudioButton = true;
+            elemDisplay('startAudioButton', true);
+            elemDisplay('stopAudioButton', false);
+        }
+        if (type === mediaType.video || type === 'video') {
+            BUTTONS.main.startVideoButton = true;
+            elemDisplay('startVideoButton', true);
+            elemDisplay('stopVideoButton', false);
+            elemDisplay('tabVideoDevicesBtn', true);
+        }
+        if (type === mediaType.screen || type === 'screen') {
+            BUTTONS.main.startScreenButton = true;
+            elemDisplay('startScreenButton', true);
+            elemDisplay('stopScreenButton', false);
+        }
+        // Настройки устройств могут понадобиться для выбора микрофона/камеры.
+        BUTTONS.main.settingsButton = true;
+        elemDisplay('settingsButton', true);
+    }
+
     peerMediaStartConfirm(type, imageUrl, title, text) {
         sound('notify');
         Swal.fire({
@@ -11432,23 +11478,50 @@ class RoomClient {
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then(async (result) => {
-            if (result.isConfirmed) {
+            if (!result.isConfirmed) return;
+            try {
+                this.unlockBroadcastSpotlitControls(type);
                 switch (type) {
                     case mediaType.audio:
-                        this.producerExist(mediaType.audio)
-                            ? await this.resumeProducer(mediaType.audio)
-                            : await this.produce(mediaType.audio, microphoneSelect.value);
+                        if (this.producerExist(mediaType.audio)) {
+                            await this.resumeProducer(mediaType.audio);
+                        } else {
+                            await this.produce(mediaType.audio, microphoneSelect?.value);
+                        }
                         this.updatePeerInfo(this.peer_name, this.peer_id, 'audio', true);
+                        this.event(_EVENTS.startAudio);
+                        elemDisplay('startAudioButton', false);
+                        elemDisplay('stopAudioButton', true);
                         break;
                     case mediaType.video:
-                        await this.produce(mediaType.video, videoSelect.value);
+                        if (this.producerExist(mediaType.video)) {
+                            await this.resumeProducer(mediaType.video);
+                        } else {
+                            await this.produce(mediaType.video, videoSelect?.value);
+                        }
+                        this.updatePeerInfo(this.peer_name, this.peer_id, 'video', true);
+                        this.event(_EVENTS.startVideo);
+                        elemDisplay('startVideoButton', false);
+                        elemDisplay('stopVideoButton', true);
                         break;
                     case mediaType.screen:
                         await this.produce(mediaType.screen);
+                        this.updatePeerInfo(this.peer_name, this.peer_id, 'screen', true);
+                        this.event(_EVENTS.startScreen);
+                        elemDisplay('startScreenButton', false);
+                        elemDisplay('stopScreenButton', true);
                         break;
                     default:
                         break;
                 }
+            } catch (err) {
+                console.error('peerMediaStartConfirm failed', { type, err });
+                this.userLog(
+                    'error',
+                    'Не удалось включить медиа. Проверьте разрешения браузера и попробуйте снова.',
+                    'top-end',
+                    8000
+                );
             }
         });
     }
@@ -12141,6 +12214,15 @@ class RoomClient {
                 case 'camBubble':
                     this.peer_info.peer_cam_bubble = Boolean(status);
                     break;
+                case 'camBubbleLayout':
+                    try {
+                        this.peer_info.peer_cam_bubble_layout =
+                            typeof status === 'string' ? JSON.parse(status) : status;
+                        this.peer_info.peer_cam_bubble = true;
+                    } catch {
+                        /* ignore */
+                    }
+                    break;
                 case 'hand':
                     this.peer_info.peer_hand = status;
                     const peer_hand = this.getPeerHandBtn(peer_id);
@@ -12171,16 +12253,17 @@ class RoomClient {
             };
             this.socket.emit('updatePeerInfo', data);
         } else {
-            const canUpdateMediaStatus = !isBroadcastingEnabled || (isBroadcastingEnabled && presenter);
             switch (type) {
                 case 'audio':
-                    if (canUpdateMediaStatus) this.setPeerAudio(peer_id, status);
+                    // В т.ч. слушатель, которому дали слово в лектории.
+                    this.setPeerAudio(peer_id, status);
                     break;
                 case 'video':
                     break;
                 case 'screen':
                     break;
                 case 'camBubble':
+                case 'camBubbleLayout':
                     break;
                 case 'hand':
                     const peer_hand = this.getPeerHandBtn(peer_id);
@@ -12211,18 +12294,70 @@ class RoomClient {
     // CAM BUBBLE — камера кружком поверх демонстрации экрана
     // ####################################################
 
+    getDefaultCamBubbleLayout() {
+        return { x: 0.78, y: 0.7, size: 0.2, scale: 1, ox: 0, oy: 0, border: true };
+    }
+
+    normalizeCamBubbleLayout(raw) {
+        const d = this.getDefaultCamBubbleLayout();
+        const src = raw && typeof raw === 'object' ? raw : {};
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, Number(v)));
+        return {
+            x: clamp(src.x ?? d.x, 0, 0.95),
+            y: clamp(src.y ?? d.y, 0, 0.95),
+            size: clamp(src.size ?? d.size, 0.08, 0.55),
+            scale: clamp(src.scale ?? d.scale, 1, 3),
+            ox: clamp(src.ox ?? d.ox, -0.45, 0.45),
+            oy: clamp(src.oy ?? d.oy, -0.45, 0.45),
+            border: src.border === undefined ? d.border : Boolean(src.border),
+        };
+    }
+
     isCamBubbleActiveForPeer(peerId) {
         if (peerId === this.peer_id) return Boolean(this.peer_info?.peer_cam_bubble);
         const peer = this.peers?.get?.(peerId);
         return Boolean(peer?.peer_info?.peer_cam_bubble);
     }
 
+    getCamBubbleLayoutForPeer(peerId) {
+        if (peerId === this.peer_id) {
+            return this.normalizeCamBubbleLayout(this.peer_info?.peer_cam_bubble_layout);
+        }
+        const peer = this.peers?.get?.(peerId);
+        return this.normalizeCamBubbleLayout(peer?.peer_info?.peer_cam_bubble_layout);
+    }
+
     getPeerMediaTile(peerId, mediaKind) {
-        const tiles = document.querySelectorAll(`.Camera[data-media-kind="${mediaKind}"]`);
+        const tiles = document.querySelectorAll(`[data-media-kind="${mediaKind}"]`);
         for (const tile of tiles) {
             if (tile.dataset.peerId === peerId) return tile;
         }
+        // fallback: локальная камера по name=peerId
+        if (mediaKind === 'video') {
+            const video = document.querySelector(`video[name="${peerId}"]`);
+            const cam = video?.closest('div');
+            if (cam) return cam;
+        }
         return null;
+    }
+
+    applyCamBubbleStageLayout(active) {
+        if (!this.videoPinMediaContainer || !this.videoMediaContainer) return;
+        if (active && this.isVideoPinned) {
+            this.videoPinMediaContainer.style.top = '0';
+            this.videoPinMediaContainer.style.left = '0';
+            this.videoPinMediaContainer.style.width = '100%';
+            this.videoPinMediaContainer.style.height = '100%';
+            this.videoPinMediaContainer.style.display = 'block';
+            this.videoMediaContainer.style.display = 'none';
+            this.videoMediaContainer.classList.add('cam-bubble-stage-hidden');
+        } else {
+            this.videoMediaContainer.style.display = '';
+            this.videoMediaContainer.classList.remove('cam-bubble-stage-hidden');
+            if (this.isVideoPinned && typeof pinVideoPosition !== 'undefined') {
+                this.toggleVideoPin(pinVideoPosition.value);
+            }
+        }
     }
 
     clearCamBubble(peerId) {
@@ -12236,6 +12371,7 @@ class RoomClient {
             videoTile.classList.remove('cam-bubble-source-hidden');
             videoTile.style.display = '';
         }
+        if (peerId === this.peer_id) this.applyCamBubbleStageLayout(false);
         try {
             handleAspectRatio();
         } catch {
@@ -12244,19 +12380,47 @@ class RoomClient {
         this.syncCamBubbleButton();
     }
 
+    applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, editable) {
+        const L = this.normalizeCamBubbleLayout(layout);
+        bubble.style.left = `${L.x * 100}%`;
+        bubble.style.top = `${L.y * 100}%`;
+        bubble.style.right = 'auto';
+        bubble.style.bottom = 'auto';
+        bubble.style.width = `${L.size * 100}%`;
+        bubble.style.height = 'auto';
+        bubble.classList.toggle('no-border', !L.border);
+        bubble.classList.toggle('is-editable', Boolean(editable));
+        const mirror = bubbleVideo.classList.contains('mirror') ? ' rotateY(180deg)' : '';
+        bubbleVideo.style.transform = `translate(-50%, -50%) translate(${L.ox * 100}%, ${L.oy * 100}%) scale(${L.scale})${mirror}`;
+        bubble.dataset.layout = JSON.stringify(L);
+        return L;
+    }
+
     applyCamBubble(peerId) {
         const screenTile = this.getPeerMediaTile(peerId, 'screen');
         const videoTile = this.getPeerMediaTile(peerId, 'video');
-        if (!screenTile || !videoTile) return false;
+        if (!screenTile || !videoTile) {
+            // Пин мог снять классы / тайлы ещё не готовы — повторим.
+            if (peerId === this.peer_id) {
+                clearTimeout(this._camBubbleRetry);
+                this._camBubbleRetry = setTimeout(() => this.refreshCamBubble(peerId), 120);
+            }
+            return false;
+        }
 
         const sourceVideo = videoTile.querySelector('video');
         if (!sourceVideo?.srcObject) return false;
+
+        screenTile.classList.add('Camera', 'has-cam-bubble');
+        if (!screenTile.dataset.peerId) screenTile.dataset.peerId = peerId;
+        if (!screenTile.dataset.mediaKind) screenTile.dataset.mediaKind = 'screen';
 
         let bubble = screenTile.querySelector('.cam-bubble');
         if (!bubble) {
             bubble = document.createElement('div');
             bubble.className = 'cam-bubble';
-            bubble.setAttribute('aria-hidden', 'true');
+            bubble.setAttribute('role', 'group');
+            bubble.setAttribute('aria-label', 'Камера поверх экрана');
             screenTile.appendChild(bubble);
         }
 
@@ -12274,13 +12438,41 @@ class RoomClient {
             bubbleVideo.srcObject = sourceVideo.srcObject;
         }
         bubbleVideo.play?.().catch(() => {});
+        bubbleVideo.classList.toggle(
+            'mirror',
+            peerId === this.peer_id && sourceVideo.classList.contains('mirror')
+        );
 
-        // Зеркало только для своей камеры (как обычно в вебкам-превью).
-        bubbleVideo.classList.toggle('mirror', peerId === this.peer_id && sourceVideo.classList.contains('mirror'));
+        const editable = peerId === this.peer_id && Boolean(isPresenter);
+        const layout = this.getCamBubbleLayoutForPeer(peerId);
+        this.applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, editable);
 
-        screenTile.classList.add('has-cam-bubble');
+        if (editable) {
+            this.bindCamBubbleEditor(bubble, bubbleVideo, screenTile);
+            if (!bubble.querySelector('.cam-bubble-resize')) {
+                const resize = document.createElement('div');
+                resize.className = 'cam-bubble-resize';
+                resize.title = 'Изменить размер';
+                bubble.appendChild(resize);
+            }
+            if (!bubble.querySelector('.cam-bubble-hint')) {
+                const hint = document.createElement('div');
+                hint.className = 'cam-bubble-hint';
+                hint.textContent =
+                    'Перетащите · Alt+перетаскивание — кадр · колесо — масштаб · двойной клик — рамка';
+                bubble.appendChild(hint);
+            }
+        } else {
+            bubble.querySelector('.cam-bubble-resize')?.remove();
+            bubble.querySelector('.cam-bubble-hint')?.remove();
+        }
+
         videoTile.classList.add('cam-bubble-source-hidden');
         videoTile.style.display = 'none';
+        if (!videoTile.dataset.mediaKind) videoTile.dataset.mediaKind = 'video';
+        if (!videoTile.dataset.peerId) videoTile.dataset.peerId = peerId;
+
+        if (peerId === this.peer_id) this.applyCamBubbleStageLayout(true);
 
         try {
             handleAspectRatio();
@@ -12289,6 +12481,114 @@ class RoomClient {
         }
         this.syncCamBubbleButton();
         return true;
+    }
+
+    bindCamBubbleEditor(bubble, bubbleVideo, screenTile) {
+        if (bubble.dataset.editorBound === '1') return;
+        bubble.dataset.editorBound = '1';
+
+        let mode = null; // move | resize | pan
+        let startX = 0;
+        let startY = 0;
+        let startLayout = null;
+
+        const readLayout = () => {
+            try {
+                return this.normalizeCamBubbleLayout(JSON.parse(bubble.dataset.layout || '{}'));
+            } catch {
+                return this.getDefaultCamBubbleLayout();
+            }
+        };
+
+        const commit = (layout, broadcast) => {
+            const L = this.applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, true);
+            this.peer_info.peer_cam_bubble_layout = L;
+            this.peer_info.peer_cam_bubble = true;
+            if (broadcast) this.broadcastCamBubbleLayout(L);
+        };
+
+        bubble.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const isResize = e.target.classList?.contains('cam-bubble-resize');
+            mode = isResize ? 'resize' : e.altKey ? 'pan' : 'move';
+            startX = e.clientX;
+            startY = e.clientY;
+            startLayout = readLayout();
+            bubble.setPointerCapture?.(e.pointerId);
+            bubble.classList.add('is-dragging');
+        });
+
+        bubble.addEventListener('pointermove', (e) => {
+            if (!mode || !startLayout) return;
+            const rect = screenTile.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            const dx = (e.clientX - startX) / rect.width;
+            const dy = (e.clientY - startY) / rect.height;
+            const next = { ...startLayout };
+            if (mode === 'move') {
+                next.x = startLayout.x + dx;
+                next.y = startLayout.y + dy;
+            } else if (mode === 'resize') {
+                next.size = startLayout.size + dx;
+            } else if (mode === 'pan') {
+                next.ox = startLayout.ox + dx;
+                next.oy = startLayout.oy + dy;
+            }
+            commit(next, false);
+        });
+
+        const endDrag = (e) => {
+            if (!mode) return;
+            mode = null;
+            bubble.classList.remove('is-dragging');
+            try {
+                bubble.releasePointerCapture?.(e.pointerId);
+            } catch {
+                /* ignore */
+            }
+            commit(readLayout(), true);
+        };
+        bubble.addEventListener('pointerup', endDrag);
+        bubble.addEventListener('pointercancel', endDrag);
+
+        bubble.addEventListener(
+            'wheel',
+            (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const cur = readLayout();
+                const factor = e.deltaY > 0 ? 0.94 : 1.06;
+                cur.scale = cur.scale * factor;
+                commit(cur, true);
+            },
+            { passive: false }
+        );
+
+        bubble.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const cur = readLayout();
+            cur.border = !cur.border;
+            commit(cur, true);
+            this.userLog('info', cur.border ? 'Рамка кружка включена' : 'Рамка кружка выключена', 'top-end', 2500);
+        });
+    }
+
+    broadcastCamBubbleLayout(layout) {
+        clearTimeout(this._camBubbleLayoutTimer);
+        this._camBubbleLayoutTimer = setTimeout(() => {
+            const L = this.normalizeCamBubbleLayout(layout);
+            this.peer_info.peer_cam_bubble_layout = L;
+            this.updatePeerInfo(
+                this.peer_name,
+                this.peer_id,
+                'camBubbleLayout',
+                JSON.stringify(L),
+                true
+            );
+        }, 60);
     }
 
     refreshCamBubble(peerId) {
@@ -12316,17 +12616,33 @@ class RoomClient {
                     return false;
                 }
             }
+            if (!this.peer_info.peer_cam_bubble_layout) {
+                this.peer_info.peer_cam_bubble_layout = this.getDefaultCamBubbleLayout();
+            }
+            // Закрепляем экран на весь холст — лектор видит то же, что студенты.
+            if (!this.isVideoPinned && this.screenProducerId) {
+                const pinBtn = this.getId(`${this.screenProducerId}__pin`);
+                if (pinBtn) pinBtn.click();
+            }
         }
 
         this.peer_info.peer_cam_bubble = on;
         this.updatePeerInfo(this.peer_name, this.peer_id, 'camBubble', on, true);
+        if (on) {
+            this.broadcastCamBubbleLayout(this.peer_info.peer_cam_bubble_layout);
+        }
+        // После pin тайлы стабилизируются с задержкой.
         this.refreshCamBubble(this.peer_id);
+        setTimeout(() => this.refreshCamBubble(this.peer_id), 50);
+        setTimeout(() => this.refreshCamBubble(this.peer_id), 250);
         this.syncCamBubbleButton();
         this.userLog(
             'info',
-            on ? 'Камера поверх экрана включена' : 'Камера поверх экрана выключена',
+            on
+                ? 'Камера поверх экрана: как у студентов. Перетаскивайте кружок мышью.'
+                : 'Камера поверх экрана выключена',
             'top-end',
-            3500
+            4500
         );
         return on;
     }
