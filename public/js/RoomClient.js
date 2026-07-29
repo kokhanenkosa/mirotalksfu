@@ -1600,7 +1600,7 @@ class RoomClient {
         Swal.fire({
             background: swalBackground,
             position: 'top',
-            title: 'Help Requested',
+            title: 'Запрошена помощь',
             html: renderRoomTemplate('popupBreakoutHelpTemplate', {
                 text: {
                     peerName: data.peer_name,
@@ -1609,7 +1609,7 @@ class RoomClient {
             }),
             showDenyButton: true,
             confirmButtonText: `${icons.signIn} Join Room`,
-            denyButtonText: 'Dismiss',
+            denyButtonText: 'Закрыть',
             customClass: {
                 popup: 'breakout-swal breakout-swal--help',
                 htmlContainer: 'breakout-swal-html',
@@ -1636,7 +1636,7 @@ class RoomClient {
             allowEscapeKey: false,
             background: swalBackground,
             position: 'center',
-            title: 'Breakout Room Ready',
+            title: 'Сессионная комната готова',
             html: renderRoomTemplate('popupBreakoutJoinTemplate', {
                 text: {
                     displayName,
@@ -1647,7 +1647,7 @@ class RoomClient {
             }),
             showDenyButton: true,
             confirmButtonText: `${icons.arrowRight} Join`,
-            denyButtonText: 'Stay',
+            denyButtonText: 'Остаться',
             customClass: {
                 popup: 'breakout-swal breakout-swal--join',
                 htmlContainer: 'breakout-swal-html',
@@ -1797,7 +1797,7 @@ class RoomClient {
 
     showReconnectAlert(reason) {
         this.renderReconnectBanner({
-            title: 'Connection lost',
+            title: 'Соединение потеряно',
             message: `${reason || 'Network issue'}.`,
             meta: 'Retrying',
             icon: 'fa-solid fa-plug',
@@ -1808,7 +1808,7 @@ class RoomClient {
 
     showMaxAttemptsAlert() {
         this.renderReconnectBanner({
-            title: 'Unable to reconnect',
+            title: 'Не удалось восстановить соединение',
             message: 'Connection could not be restored.',
             meta: '',
             icon: 'fa-solid fa-triangle-exclamation',
@@ -1876,7 +1876,7 @@ class RoomClient {
         const seconds = Math.max(1, Math.round(delay / 1000));
 
         this.renderReconnectBanner({
-            title: 'Reconnecting',
+            title: 'Восстановление соединения',
             message: `Attempt ${attempt} of ${this.maxReconnectAttempts}.`,
             meta: `Retry in ${seconds}s`,
             icon: 'fa-solid fa-rotate-right',
@@ -1897,7 +1897,7 @@ class RoomClient {
         }
 
         this.renderReconnectBanner({
-            title: 'Back online',
+            title: 'Соединение восстановлено',
             message: 'Connection restored.',
             meta: 'Reloading',
             icon: 'fa-solid fa-wifi',
@@ -1923,9 +1923,9 @@ class RoomClient {
             background: swalBackground,
             position: 'top',
             icon: 'warning',
-            title: 'Server away',
+            title: 'Сервер недоступен',
             html: renderRoomTemplate('popupServerAwayTemplate'),
-            denyButtonText: `Leave room`,
+            denyButtonText: `Покинуть комнату`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -2007,10 +2007,10 @@ class RoomClient {
             background: swalBackground,
             imageUrl: image.user,
             position: 'center',
-            title: 'Username',
+            title: 'Имя пользователя',
             html: renderRoomTemplate('popupUsernameInUseTemplate'),
             showDenyButton: false,
-            confirmButtonText: `OK`,
+            confirmButtonText: `ОК`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -2055,12 +2055,12 @@ class RoomClient {
             background: swalBackground,
             position: 'center',
             imageUrl: image.broadcasting,
-            title: 'Room broadcasting Enabled',
-            text: 'Would you like to continue the room broadcast?',
+            title: 'Трансляция комнаты включена',
+            text: 'Продолжить трансляцию комнаты?',
             showDenyButton: true,
             confirmButtonColor: '#18392B',
-            confirmButtonText: `Yes`,
-            denyButtonText: `No`,
+            confirmButtonText: `Да`,
+            denyButtonText: `Нет`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -4252,10 +4252,10 @@ class RoomClient {
                 background: swalBackground,
                 position: 'center',
                 icon: 'question',
-                text: 'Do you want to share your screen?',
+                text: 'Начать демонстрацию экрана?',
                 showDenyButton: true,
-                confirmButtonText: `Yes`,
-                denyButtonText: `No`,
+                confirmButtonText: `Да`,
+                denyButtonText: `Нет`,
                 showClass: { popup: 'animate__animated animate__fadeInDown' },
                 hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             }).then((result) => {
@@ -6887,11 +6887,11 @@ class RoomClient {
         Swal.fire({
             background: swalBackground,
             position: 'top',
-            title: 'Delete this Message?',
+            title: 'Удалить это сообщение?',
             imageUrl: image.delete,
             showDenyButton: true,
-            confirmButtonText: `Yes`,
-            denyButtonText: `No`,
+            confirmButtonText: `Да`,
+            denyButtonText: `Нет`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -7112,11 +7112,11 @@ class RoomClient {
         Swal.fire({
             background: swalBackground,
             position: 'top',
-            title: 'Clean up all chat Messages?',
+            title: 'Удалить все сообщения чата?',
             imageUrl: image.delete,
             showDenyButton: true,
-            confirmButtonText: `Yes`,
-            denyButtonText: `No`,
+            confirmButtonText: `Да`,
+            denyButtonText: `Нет`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -7536,11 +7536,11 @@ class RoomClient {
                     allowOutsideClick: false,
                     allowEscapeKey: false,
                     background: swalBackground,
-                    title: 'Edit Poll',
+                    title: 'Изменить опрос',
                     html: this.createPollInputs(poll),
                     focusConfirm: false,
                     showCancelButton: true,
-                    confirmButtonText: 'Save',
+                    confirmButtonText: 'Сохранить',
                     cancelButtonText: 'Cancel',
                     cancelButtonColor: '#dc3545',
                     preConfirm: () => {
@@ -7572,11 +7572,11 @@ class RoomClient {
                 Swal.fire({
                     background: swalBackground,
                     position: 'top',
-                    title: 'Delete this poll?',
+                    title: 'Удалить этот опрос?',
                     imageUrl: image.delete,
                     showDenyButton: true,
-                    confirmButtonText: `Yes`,
-                    denyButtonText: `No`,
+                    confirmButtonText: `Да`,
+                    denyButtonText: `Нет`,
                     showClass: { popup: 'animate__animated animate__fadeInDown' },
                     hideClass: { popup: 'animate__animated animate__fadeOutUp' },
                 }).then((result) => {
@@ -7966,12 +7966,12 @@ class RoomClient {
             background: swalBackground,
             position: 'center',
             imageUrl: image.editor || image.delete,
-            title: 'Exit Private Note mode?',
-            text: 'Your private note will be lost unless you save it to a file.',
+            title: 'Выйти из режима личных заметок?',
+            text: 'Несохранённая личная заметка будет потеряна.',
             showDenyButton: true,
             showCancelButton: true,
-            confirmButtonText: 'Save as Text',
-            denyButtonText: 'Save as HTML',
+            confirmButtonText: 'Сохранить как текст',
+            denyButtonText: 'Сохранить как HTML',
             cancelButtonText: 'Discard',
             reverseButtons: true,
             allowOutsideClick: false,
@@ -8039,8 +8039,8 @@ class RoomClient {
             title: this.isEditorPrivate ? 'Clear your private note?' : 'Clear the editor content?',
             imageUrl: image.delete,
             showDenyButton: true,
-            confirmButtonText: `Yes`,
-            denyButtonText: `No`,
+            confirmButtonText: `Да`,
+            denyButtonText: `Нет`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -8059,13 +8059,13 @@ class RoomClient {
             background: swalBackground,
             position: 'top',
             imageUrl: image.save,
-            title: 'Editor save options',
+            title: 'Формат сохранения редактора',
             showDenyButton: true,
             showCancelButton: true,
             cancelButtonColor: 'red',
             denyButtonColor: 'green',
-            confirmButtonText: `Text`,
-            denyButtonText: `Html`,
+            confirmButtonText: `Текст`,
+            denyButtonText: `HTML`,
             cancelButtonText: `Cancel`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -8134,9 +8134,9 @@ class RoomClient {
             background: swalBackground,
             position: 'center',
             imageUrl: image.recording,
-            title: 'Recording is ON',
+            title: 'Запись включена',
             html: renderRoomTemplate('popupRecordingOnLeaveRoomTemplate'),
-            confirmButtonText: 'OK',
+            confirmButtonText: 'ОК',
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -8151,11 +8151,11 @@ class RoomClient {
             background: swalBackground,
             position: 'center',
             imageUrl: image.recording,
-            title: 'Server Sync Recording Enabled',
+            title: 'Серверная запись включена',
             html: renderRoomTemplate('popupRecordingServerAdviceTemplate'),
             showDenyButton: true,
-            confirmButtonText: 'OK',
-            denyButtonText: 'Switch Off',
+            confirmButtonText: 'ОК',
+            denyButtonText: 'Выключить',
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -8225,14 +8225,14 @@ class RoomClient {
             background: swalBackground,
             position: 'top',
             imageUrl: image.recording,
-            title: 'Recording options',
-            text: 'Select the recording type you want to start. Audio will be recorded from all participants.',
+            title: 'Параметры записи',
+            text: 'Выберите тип записи. Звук будет записан от всех участников.',
             showDenyButton: true,
             showCancelButton: true,
             cancelButtonColor: 'red',
             denyButtonColor: 'green',
-            confirmButtonText: `Camera`,
-            denyButtonText: `Screen/Window`,
+            confirmButtonText: `Камера`,
+            denyButtonText: `Экран или окно`,
             cancelButtonText: `Cancel`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -8630,7 +8630,7 @@ class RoomClient {
             Swal.fire({
                 background: swalBackground,
                 position: 'top',
-                title: 'Recording',
+                title: 'Запись',
                 html: renderRoomTemplate('popupRecordingInfoTemplate', {
                     text: {
                         indicator: '🔴',
@@ -8999,7 +8999,7 @@ class RoomClient {
             },
             showDenyButton: true,
             confirmButtonText,
-            denyButtonText: 'Cancel',
+            denyButtonText: 'Отмена',
             preConfirm: () => {
                 if (!selectedFile) {
                     Swal.showValidationMessage('Choose a file before continuing.');
@@ -9024,9 +9024,9 @@ class RoomClient {
         this.sound('open');
 
         const file = await this.openFilePickerModal({
-            title: 'Share file',
+            title: 'Отправить файл',
             accept: this.fileSharingInput,
-            confirmButtonText: 'Send',
+            confirmButtonText: 'Отправить',
         });
 
         if (file) {
@@ -9263,13 +9263,13 @@ class RoomClient {
                     allowOutsideClick: false,
                     background: swalBackground,
                     position: 'center',
-                    title: 'Received file',
+                    title: 'Получен файл',
                     text: this.incomingFileInfo.fileName + ' size ' + this.bytesToSize(this.incomingFileInfo.fileSize),
                     imageUrl: e.target.result,
                     imageAlt: 'mirotalksfu-file-img-download',
                     showDenyButton: true,
-                    confirmButtonText: `Save`,
-                    denyButtonText: `Cancel`,
+                    confirmButtonText: `Сохранить`,
+                    denyButtonText: `Отмена`,
                     showClass: { popup: 'animate__animated animate__fadeInDown' },
                     hideClass: { popup: 'animate__animated animate__fadeOutUp' },
                 }).then((result) => {
@@ -9284,11 +9284,11 @@ class RoomClient {
                 allowOutsideClick: false,
                 background: swalBackground,
                 position: 'center',
-                title: 'Received file',
+                title: 'Получен файл',
                 text: this.incomingFileInfo.fileName + ' size ' + this.bytesToSize(this.incomingFileInfo.fileSize),
                 showDenyButton: true,
-                confirmButtonText: `Save`,
-                denyButtonText: `Cancel`,
+                confirmButtonText: `Сохранить`,
+                denyButtonText: `Отмена`,
                 showClass: { popup: 'animate__animated animate__fadeInDown' },
                 hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             }).then((result) => {
@@ -9354,11 +9354,11 @@ class RoomClient {
             background: swalBackground,
             position: 'center',
             imageUrl: image.videoShare,
-            title: 'Share a Video or Audio',
-            text: 'Paste a Video or Audio URL',
+            title: 'Показать видео или аудио',
+            text: 'Вставьте ссылку на видео или аудио',
             input: 'text',
             showCancelButton: true,
-            confirmButtonText: `Share`,
+            confirmButtonText: `Показать`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -9492,9 +9492,9 @@ class RoomClient {
                     background: swalBackground,
                     position: 'top',
                     imageUrl: image.videoShare,
-                    title: 'Unmute Video',
-                    text: 'Tap the button below to unmute and play the video with sound.',
-                    confirmButtonText: 'Unmute',
+                    title: 'Включить звук видео',
+                    text: 'Нажмите кнопку ниже, чтобы воспроизвести видео со звуком.',
+                    confirmButtonText: 'Включить звук',
                     didOpen: () => {
                         const unmuteButton = Swal.getConfirmButton();
                         if (unmuteButton) unmuteButton.focus();
@@ -9684,9 +9684,9 @@ class RoomClient {
                             background: swalBackground,
                             imageUrl: image.locked,
                             input: 'text',
-                            inputPlaceholder: 'Set Room password',
-                            confirmButtonText: `OK`,
-                            denyButtonText: `Cancel`,
+                            inputPlaceholder: 'Задайте пароль комнаты',
+                            confirmButtonText: `ОК`,
+                            denyButtonText: `Отмена`,
                             showClass: { popup: 'animate__animated animate__fadeInDown' },
                             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
                             inputValidator: (pwd) => {
@@ -10150,9 +10150,9 @@ class RoomClient {
             allowEscapeKey: false,
             background: swalBackground,
             imageUrl: image.forbidden,
-            title: 'Oops, Room not valid',
-            text: 'Invalid Room name! Path traversal pattern detected!',
-            confirmButtonText: `OK`,
+            title: 'Некорректная комната',
+            text: 'Название комнаты содержит недопустимые символы.',
+            confirmButtonText: `ОК`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then(() => {
@@ -10167,9 +10167,9 @@ class RoomClient {
             allowEscapeKey: false,
             background: swalBackground,
             imageUrl: image.forbidden,
-            title: 'Oops, Room not allowed',
-            text: 'This room is not allowed for this user',
-            confirmButtonText: `OK`,
+            title: 'Нет доступа к комнате',
+            text: 'Этому пользователю запрещён вход в комнату.',
+            confirmButtonText: `ОК`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then(() => {
@@ -10209,10 +10209,10 @@ class RoomClient {
                 allowEscapeKey: false,
                 background: swalBackground,
                 imageUrl: image.locked,
-                title: 'Oops, Room is Locked',
+                title: 'Комната закрыта паролем',
                 input: 'text',
-                inputPlaceholder: 'Enter the Room password',
-                confirmButtonText: `OK`,
+                inputPlaceholder: 'Введите пароль комнаты',
+                confirmButtonText: `ОК`,
                 showClass: { popup: 'animate__animated animate__fadeInDown' },
                 hideClass: { popup: 'animate__animated animate__fadeOutUp' },
                 inputValidator: (pwd) => {
@@ -10238,10 +10238,10 @@ class RoomClient {
             background: swalBackground,
             position: 'center',
             imageUrl: image.locked,
-            title: 'Oops, Wrong Room Password',
-            text: 'The room is locked, try with another one.',
+            title: 'Неверный пароль комнаты',
+            text: 'Попробуйте ввести другой пароль.',
             showDenyButton: false,
-            confirmButtonText: `Ok`,
+            confirmButtonText: `ОК`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -10258,9 +10258,9 @@ class RoomClient {
             showConfirmButton: false,
             background: swalBackground,
             icon: 'warning',
-            title: 'Lobby enabled and no presenter available',
-            text: 'A presenter is required to start the meeting. Please try joining again later.',
-            denyButtonText: `Leave room`,
+            title: 'Ведущий ещё не вошёл',
+            text: 'Для начала встречи нужен ведущий. Попробуйте войти позже.',
+            denyButtonText: `Покинуть комнату`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             timer: 6000,
@@ -10278,10 +10278,10 @@ class RoomClient {
             showDenyButton: true,
             showConfirmButton: false,
             background: swalBackground,
-            title: 'Room has lobby enabled',
+            title: 'В комнате включён зал ожидания',
             html: renderRoomTemplate('popupLobbyWaitJoinTemplate'),
-            confirmButtonText: `Ok`,
-            denyButtonText: `Leave room`,
+            confirmButtonText: `ОК`,
+            denyButtonText: `Покинуть комнату`,
             customClass: {
                 popup: 'lobby-join-popup',
                 htmlContainer: 'lobby-join-popup-html',
@@ -10323,9 +10323,9 @@ class RoomClient {
             showDenyButton: false,
             showConfirmButton: true,
             background: swalBackground,
-            title: 'Request declined',
+            title: 'Запрос отклонён',
             html: renderRoomTemplate('popupLobbyRejectTemplate'),
-            confirmButtonText: `Leave room`,
+            confirmButtonText: `Покинуть комнату`,
             customClass: {
                 popup: 'lobby-join-popup lobby-join-popup--reject',
                 htmlContainer: 'lobby-join-popup-html lobby-join-outcome-html',
@@ -10349,9 +10349,9 @@ class RoomClient {
             showConfirmButton: true,
             background: swalBackground,
             imageUrl: image.forbidden,
-            title: 'Banned',
-            text: 'You are banned from this room!',
-            confirmButtonText: `Ok`,
+            title: 'Доступ заблокирован',
+            text: 'Вам запрещён вход в эту комнату.',
+            confirmButtonText: `ОК`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then(() => {
@@ -11217,8 +11217,8 @@ class RoomClient {
             title: title,
             text: text,
             showDenyButton: true,
-            confirmButtonText: `Yes`,
-            denyButtonText: `No`,
+            confirmButtonText: `Да`,
+            denyButtonText: `Нет`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then(async (result) => {
@@ -11279,12 +11279,12 @@ class RoomClient {
                     background: swalBackground,
                     position: 'center',
                     imageUrl: image.forbidden,
-                    title: 'Ban current participant',
+                    title: 'Заблокировать участника',
                     input: 'text',
-                    inputPlaceholder: 'Ban reason',
+                    inputPlaceholder: 'Причина блокировки',
                     showDenyButton: true,
-                    confirmButtonText: `Yes`,
-                    denyButtonText: `No`,
+                    confirmButtonText: `Да`,
+                    denyButtonText: `Нет`,
                     showClass: { popup: 'animate__animated animate__fadeInDown' },
                     hideClass: { popup: 'animate__animated animate__fadeOutUp' },
                 })
@@ -11313,12 +11313,12 @@ class RoomClient {
                     background: swalBackground,
                     position: 'center',
                     imageUrl: data.broadcast ? image.users : image.user,
-                    title: 'Eject ' + whoEject,
+                    title: 'Удалить из комнаты: ' + whoEject,
                     input: 'text',
-                    inputPlaceholder: 'Eject reason',
+                    inputPlaceholder: 'Причина удаления',
                     showDenyButton: true,
-                    confirmButtonText: `Yes`,
-                    denyButtonText: `No`,
+                    confirmButtonText: `Да`,
+                    denyButtonText: `Нет`,
                     showClass: { popup: 'animate__animated animate__fadeInDown' },
                     hideClass: { popup: 'animate__animated animate__fadeOutUp' },
                 })
@@ -11401,8 +11401,8 @@ class RoomClient {
                     title: title,
                     text: text,
                     showDenyButton: true,
-                    confirmButtonText: `Yes`,
-                    denyButtonText: `No`,
+                    confirmButtonText: `Да`,
+                    denyButtonText: `Нет`,
                     showClass: { popup: 'animate__animated animate__fadeInDown' },
                     hideClass: { popup: 'animate__animated animate__fadeOutUp' },
                 })
@@ -12078,15 +12078,15 @@ class RoomClient {
             background: swalBackground,
             imageUrl: image.geolocation,
             position: 'center',
-            title: 'Geo Location',
+            title: 'Геолокация',
             html: renderRoomTemplate('popupGeoLocationPromptTemplate', {
                 text: {
                     message: `Would you like to share your location to ${cmd.from_peer_name}?`,
                 },
             }),
             showDenyButton: true,
-            confirmButtonText: `Yes`,
-            denyButtonText: `No`,
+            confirmButtonText: `Да`,
+            denyButtonText: `Нет`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -12174,15 +12174,15 @@ class RoomClient {
             background: swalBackground,
             imageUrl: image.geolocation,
             position: 'center',
-            title: 'Geo Location',
+            title: 'Геолокация',
             html: renderRoomTemplate('popupGeoLocationPromptTemplate', {
                 text: {
                     message: `Would you like to open ${cmd.from_peer_name} geolocation?`,
                 },
             }),
             showDenyButton: true,
-            confirmButtonText: `Yes`,
-            denyButtonText: `No`,
+            confirmButtonText: `Да`,
+            denyButtonText: `Нет`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -12460,11 +12460,11 @@ class RoomClient {
                 const result = await Swal.fire({
                     background: swalBackground,
                     position: 'top',
-                    title: 'Share Avatar to Room?',
-                    text: 'Are you sure you want to share the avatar video and audio with all participants?',
+                    title: 'Показать аватар в комнате?',
+                    text: 'Показать видео и звук аватара всем участникам?',
                     showDenyButton: true,
-                    confirmButtonText: 'Yes',
-                    denyButtonText: 'No',
+                    confirmButtonText: 'Да',
+                    denyButtonText: 'Нет',
                     showClass: { popup: 'animate__animated animate__fadeInDown' },
                     hideClass: { popup: 'animate__animated animate__fadeOutUp' },
                 });
@@ -13085,10 +13085,10 @@ class RoomClient {
 
     initRtmpCustomDestination() {
         const rtmpPresets = {
-            YouTube: { url: 'rtmp://a.rtmp.youtube.com/live2', placeholder: 'YouTube stream key' },
-            Facebook: { url: 'rtmps://live-api-s.facebook.com:443/rtmp', placeholder: 'Facebook stream key' },
-            Twitch: { url: 'rtmp://live.twitch.tv/app', placeholder: 'Twitch stream key' },
-            Custom: { url: '', placeholder: 'Stream key' },
+            YouTube: { url: 'rtmp://a.rtmp.youtube.com/live2', placeholder: 'Ключ трансляции YouTube' },
+            Facebook: { url: 'rtmps://live-api-s.facebook.com:443/rtmp', placeholder: 'Ключ трансляции Facebook' },
+            Twitch: { url: 'rtmp://live.twitch.tv/app', placeholder: 'Ключ трансляции Twitch' },
+            Custom: { url: '', placeholder: 'Ключ трансляции' },
         };
 
         const rtmpCustomUrl = this.getId('rtmpCustomUrl');
@@ -13393,7 +13393,7 @@ class RoomClient {
             background: swalBackground,
             imageUrl: image.rtmp,
             position: 'center',
-            title: 'LIVE',
+            title: 'ЭФИР',
             html: isCustomDestination
                 ? `<p style="background:transparent; color:rgb(8, 189, 89);">Streaming to external platform</p>`
                 : `<p style="background:transparent; color:rgb(8, 189, 89);">${rtmp}</p>`,

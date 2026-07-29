@@ -408,117 +408,117 @@ async function initClient() {
 
     if (!isMobileDevice) {
         refreshMainButtonsToolTipPlacement();
-        setTippy('mySettingsCloseBtn', 'Close', 'bottom');
+        setTippy('mySettingsCloseBtn', 'Закрыть', 'bottom');
         setTippy(
             'switchDominantSpeakerFocus',
-            'If Active, When a participant speaks, their video will be focused and enlarged',
+            'Автоматически увеличивать видео говорящего участника',
             'right'
         );
         setTippy(
             'switchNoiseSuppression',
-            'If Active, the audio will be processed to reduce background noise, making the voice clearer',
+            'Подавлять фоновый шум и делать голос разборчивее',
             'right'
         );
         setTippy(
             'switchPushToTalk',
-            'If Active, When SpaceBar keydown the microphone will be resumed, on keyup will be paused, like a walkie-talkie',
+            'Удерживайте пробел, чтобы говорить, и отпустите, чтобы выключить микрофон',
             'right'
         );
-        setTippy('lobbyAcceptAllBtn', 'Accept', 'top');
-        setTippy('lobbyRejectAllBtn', 'Reject', 'top');
+        setTippy('lobbyAcceptAllBtn', 'Принять всех', 'top');
+        setTippy('lobbyRejectAllBtn', 'Отклонить всех', 'top');
         setTippy(
             'switchBroadcasting',
-            'Broadcasting is the dissemination of audio or video content to a large audience (one to many)',
+            'Трансляция аудио и видео для большой аудитории',
             'right'
         );
         setTippy(
             'switchLobby',
-            'Lobby mode lets you protect your meeting by only allowing people to enter after a formal approval by a moderator',
+            'Вход участников только после одобрения модератором',
             'right'
         );
-        setTippy('initVideoAudioRefreshButton', 'Refresh audio/video devices', 'top');
+        setTippy('initVideoAudioRefreshButton', 'Обновить список устройств', 'top');
         setTippy(
             'screenOptimizationLabel',
-            'Detail: For high fidelity (screen sharing with text/graphics)<br />Motion: For high frame rate (video playback, game streaming',
+            'Детализация: для текста и графики<br />Движение: для видео и игр',
             'right',
             true
         );
-        setTippy('switchPitchBar', 'Toggle audio pitch bar', 'right');
-        setTippy('switchSounds', 'Toggle the sounds notifications', 'right');
-        setTippy('switchShare', "Show 'Share Room' popup on join", 'right');
-        setTippy('switchKeepButtonsVisible', 'Keep buttons always visible', 'right');
-        setTippy('switchKeepAwake', 'Prevent the device from sleeping (if supported)', 'right');
-        setTippy('switchChatPin', 'Auto pin chat when opened', 'right');
-        setTippy('roomId', 'Room name (click to copy)', 'right');
-        setTippy('sessionTime', 'Session time', 'right');
-        setTippy('recordingImage', 'Toggle recording', 'right');
+        setTippy('switchPitchBar', 'Показать или скрыть индикатор громкости', 'right');
+        setTippy('switchSounds', 'Включить или выключить звуки уведомлений', 'right');
+        setTippy('switchShare', 'Показывать окно приглашения после входа', 'right');
+        setTippy('switchKeepButtonsVisible', 'Всегда показывать кнопки управления', 'right');
+        setTippy('switchKeepAwake', 'Не выключать экран устройства', 'right');
+        setTippy('switchChatPin', 'Автоматически закреплять открытый чат', 'right');
+        setTippy('roomId', 'Название комнаты — нажмите, чтобы скопировать', 'right');
+        setTippy('sessionTime', 'Время встречи', 'right');
+        setTippy('recordingImage', 'Начать или остановить запись', 'right');
         setTippy(
             'switchHostOnlyRecording',
-            'Only the host (presenter) has the capability to record the meeting',
+            'Записывать встречу может только ведущий',
             'right'
         );
-        setTippy('refreshVideoFiles', 'Refresh', 'left');
-        setTippy('switchServerRecording', 'The recording will be stored on the server rather than locally', 'right');
-        setTippy('whiteboardGhostButton', 'Toggle transparent background', 'bottom');
-        setTippy('whiteboardGridBtn', 'Toggle whiteboard grid', 'bottom');
-        setTippy('wbBackgroundColorEl', 'Background color', 'bottom');
-        setTippy('wbDrawingColorEl', 'Drawing color', 'bottom');
-        setTippy('whiteboardPencilBtn', 'Drawing mode', 'bottom');
-        setTippy('whiteboardVanishingBtn', 'Vanishing pen (disappears in 5s)', 'bottom');
-        setTippy('whiteboardEraserBtn', 'Eraser', 'bottom');
-        setTippy('whiteboardObjectBtn', 'Object mode', 'bottom');
-        setTippy('whiteboardUndoBtn', 'Undo', 'bottom');
-        setTippy('whiteboardRedoBtn', 'Redo', 'bottom');
-        setTippy('whiteboardLockBtn', 'Toggle Lock whiteboard', 'right');
-        setTippy('whiteboardUnlockBtn', 'Toggle Lock whiteboard', 'right');
-        setTippy('whiteboardCloseBtn', 'Close', 'bottom');
-        setTippy('chatCleanTextButton', 'Clean', 'top');
-        setTippy('chatPasteButton', 'Paste', 'top');
-        setTippy('chatSendButton', 'Send', 'top');
-        setTippy('showChatOnMsg', 'Show chat on new message comes', 'bottom');
-        setTippy('speechIncomingMsg', 'Speech the incoming messages', 'bottom');
-        setTippy('chatSpeechStartButton', 'Start speech recognition', 'top');
-        setTippy('chatSpeechStopButton', 'Stop speech recognition', 'top');
-        setTippy('chatEmojiButton', 'Emoji', 'top');
-        setTippy('chatShowParticipantsListBtn', 'Toggle participants list', 'bottom');
+        setTippy('refreshVideoFiles', 'Обновить', 'left');
+        setTippy('switchServerRecording', 'Сохранять запись на сервере, а не на устройстве', 'right');
+        setTippy('whiteboardGhostButton', 'Включить или выключить прозрачный фон', 'bottom');
+        setTippy('whiteboardGridBtn', 'Показать или скрыть сетку доски', 'bottom');
+        setTippy('wbBackgroundColorEl', 'Цвет фона', 'bottom');
+        setTippy('wbDrawingColorEl', 'Цвет рисования', 'bottom');
+        setTippy('whiteboardPencilBtn', 'Режим рисования', 'bottom');
+        setTippy('whiteboardVanishingBtn', 'Исчезающий маркер — линии пропадают через 5 секунд', 'bottom');
+        setTippy('whiteboardEraserBtn', 'Ластик', 'bottom');
+        setTippy('whiteboardObjectBtn', 'Режим объектов', 'bottom');
+        setTippy('whiteboardUndoBtn', 'Отменить действие', 'bottom');
+        setTippy('whiteboardRedoBtn', 'Повторить действие', 'bottom');
+        setTippy('whiteboardLockBtn', 'Заблокировать или разблокировать доску', 'right');
+        setTippy('whiteboardUnlockBtn', 'Заблокировать или разблокировать доску', 'right');
+        setTippy('whiteboardCloseBtn', 'Закрыть', 'bottom');
+        setTippy('chatCleanTextButton', 'Очистить', 'top');
+        setTippy('chatPasteButton', 'Вставить', 'top');
+        setTippy('chatSendButton', 'Отправить', 'top');
+        setTippy('showChatOnMsg', 'Показывать чат при новом сообщении', 'bottom');
+        setTippy('speechIncomingMsg', 'Озвучивать входящие сообщения', 'bottom');
+        setTippy('chatSpeechStartButton', 'Начать распознавание речи', 'top');
+        setTippy('chatSpeechStopButton', 'Остановить распознавание речи', 'top');
+        setTippy('chatEmojiButton', 'Эмодзи', 'top');
+        setTippy('chatShowParticipantsListBtn', 'Показать или скрыть список участников', 'bottom');
         setTippy('chatMarkdownButton', 'Markdown', 'top');
-        setTippy('fileShareChatButton', 'Share the file', 'top');
-        setTippy('chatCloseButton', 'Close', 'bottom');
-        setTippy('chatTogglePin', 'Toggle pin', 'bottom');
-        setTippy('chatHideParticipantsList', 'Hide', 'bottom');
-        setTippy('chatMaxButton', 'Maximize', 'bottom');
-        setTippy('chatMinButton', 'Minimize', 'bottom');
-        setTippy('pollTogglePin', 'Toggle pin', 'bottom');
-        setTippy('breakoutTogglePin', 'Toggle pin', 'bottom');
-        setTippy('pollMaxButton', 'Maximize', 'bottom');
-        setTippy('pollMinButton', 'Minimize', 'bottom');
-        setTippy('pollSaveButton', 'Save results', 'bottom');
-        setTippy('pollCloseBtn', 'Close', 'bottom');
-        setTippy('editorLockBtn', 'Toggle Lock editor', 'bottom');
-        setTippy('editorUnlockBtn', 'Toggle Lock editor', 'bottom');
-        setTippy('editorCollabBtn', 'Switch to Private Note (your notes will NOT be shared)', 'bottom');
-        setTippy('editorPrivateBtn', 'Switch back to Collaborative editor', 'bottom');
-        setTippy('editorTogglePin', 'Toggle pin', 'bottom');
-        setTippy('editorUndoBtn', 'Undo', 'bottom');
-        setTippy('editorRedoBtn', 'Redo', 'bottom');
-        setTippy('editorCopyBtn', 'Copy', 'bottom');
-        setTippy('editorSaveBtn', 'Save', 'bottom');
-        setTippy('editorCloseBtn', 'Close', 'bottom');
-        setTippy('editorCleanBtn', 'Clean', 'bottom');
-        setTippy('pollAddOptionBtn', 'Add option', 'top');
-        setTippy('pollDelOptionBtn', 'Delete option', 'top');
-        setTippy('participantsSaveBtn', 'Save participants info', 'bottom');
-        setTippy('participantsRaiseHandBtn', 'Toggle raise hands', 'bottom');
-        setTippy('participantsUnreadMessagesBtn', 'Toggle unread messages', 'bottom');
-        setTippy('transcriptionCloseBtn', 'Close', 'bottom');
-        setTippy('transcriptionTogglePinBtn', 'Toggle pin', 'bottom');
-        setTippy('transcriptionMaxBtn', 'Maximize', 'bottom');
-        setTippy('transcriptionMinBtn', 'Minimize', 'bottom');
-        setTippy('transcriptionSpeechStatus', 'Status', 'bottom');
-        setTippy('transcriptShowOnMsg', 'Show transcript on new message comes', 'bottom');
-        setTippy('transcriptSendToAll', 'When enabled, your transcription will be sent to all participants', 'bottom');
-        setTippy('transcriptionSpeechStart', 'Start transcription', 'top');
-        setTippy('transcriptionSpeechStop', 'Stop transcription', 'top');
+        setTippy('fileShareChatButton', 'Отправить файл', 'top');
+        setTippy('chatCloseButton', 'Закрыть', 'bottom');
+        setTippy('chatTogglePin', 'Закрепить или открепить', 'bottom');
+        setTippy('chatHideParticipantsList', 'Скрыть', 'bottom');
+        setTippy('chatMaxButton', 'Развернуть', 'bottom');
+        setTippy('chatMinButton', 'Свернуть', 'bottom');
+        setTippy('pollTogglePin', 'Закрепить или открепить', 'bottom');
+        setTippy('breakoutTogglePin', 'Закрепить или открепить', 'bottom');
+        setTippy('pollMaxButton', 'Развернуть', 'bottom');
+        setTippy('pollMinButton', 'Свернуть', 'bottom');
+        setTippy('pollSaveButton', 'Сохранить результаты', 'bottom');
+        setTippy('pollCloseBtn', 'Закрыть', 'bottom');
+        setTippy('editorLockBtn', 'Заблокировать или разблокировать редактор', 'bottom');
+        setTippy('editorUnlockBtn', 'Заблокировать или разблокировать редактор', 'bottom');
+        setTippy('editorCollabBtn', 'Перейти к личным заметкам', 'bottom');
+        setTippy('editorPrivateBtn', 'Вернуться к совместному редактору', 'bottom');
+        setTippy('editorTogglePin', 'Закрепить или открепить', 'bottom');
+        setTippy('editorUndoBtn', 'Отменить действие', 'bottom');
+        setTippy('editorRedoBtn', 'Повторить действие', 'bottom');
+        setTippy('editorCopyBtn', 'Копировать', 'bottom');
+        setTippy('editorSaveBtn', 'Сохранить', 'bottom');
+        setTippy('editorCloseBtn', 'Закрыть', 'bottom');
+        setTippy('editorCleanBtn', 'Очистить', 'bottom');
+        setTippy('pollAddOptionBtn', 'Добавить вариант', 'top');
+        setTippy('pollDelOptionBtn', 'Удалить вариант', 'top');
+        setTippy('participantsSaveBtn', 'Сохранить список участников', 'bottom');
+        setTippy('participantsRaiseHandBtn', 'Показать или скрыть поднятые руки', 'bottom');
+        setTippy('participantsUnreadMessagesBtn', 'Показать или скрыть непрочитанные сообщения', 'bottom');
+        setTippy('transcriptionCloseBtn', 'Закрыть', 'bottom');
+        setTippy('transcriptionTogglePinBtn', 'Закрепить или открепить', 'bottom');
+        setTippy('transcriptionMaxBtn', 'Развернуть', 'bottom');
+        setTippy('transcriptionMinBtn', 'Свернуть', 'bottom');
+        setTippy('transcriptionSpeechStatus', 'Состояние', 'bottom');
+        setTippy('transcriptShowOnMsg', 'Показывать расшифровку при новом сообщении', 'bottom');
+        setTippy('transcriptSendToAll', 'Отправлять расшифровку всем участникам', 'bottom');
+        setTippy('transcriptionSpeechStart', 'Начать расшифровку', 'top');
+        setTippy('transcriptionSpeechStop', 'Остановить расшифровку', 'top');
     }
     setupWhiteboard();
     if (isSuperAdminObserver) {
@@ -543,19 +543,19 @@ function refreshMainButtonsToolTipPlacement() {
         const bPlacement = position == 'vertical' ? 'top' : 'right';
 
         // Bottom buttons
-        setTippy('startAudioButton', 'Start the audio', bPlacement);
-        setTippy('stopAudioButton', 'Stop the audio', bPlacement);
-        setTippy('startVideoButton', 'Start the video', bPlacement);
-        setTippy('stopVideoButton', 'Stop the video', bPlacement);
-        setTippy('swapCameraButton', 'Swap the camera', bPlacement);
-        setTippy('startScreenButton', 'Start screen share', bPlacement);
-        setTippy('stopScreenButton', 'Stop screen share', bPlacement);
-        setTippy('raiseHandButton', 'Raise your hand', bPlacement);
-        setTippy('lowerHandButton', 'Lower your hand', bPlacement);
-        setTippy('chatButton', 'Toggle the chat', bPlacement);
-        setTippy('participantsButton', 'Toggle participants list', bPlacement);
-        setTippy('settingsButton', 'Toggle the settings', bPlacement);
-        setTippy('exitButton', 'Leave room', bPlacement);
+        setTippy('startAudioButton', 'Включить микрофон', bPlacement);
+        setTippy('stopAudioButton', 'Выключить микрофон', bPlacement);
+        setTippy('startVideoButton', 'Включить камеру', bPlacement);
+        setTippy('stopVideoButton', 'Выключить камеру', bPlacement);
+        setTippy('swapCameraButton', 'Переключить камеру', bPlacement);
+        setTippy('startScreenButton', 'Начать демонстрацию экрана', bPlacement);
+        setTippy('stopScreenButton', 'Остановить демонстрацию экрана', bPlacement);
+        setTippy('raiseHandButton', 'Поднять руку', bPlacement);
+        setTippy('lowerHandButton', 'Опустить руку', bPlacement);
+        setTippy('chatButton', 'Показать или скрыть чат', bPlacement);
+        setTippy('participantsButton', 'Показать или скрыть список участников', bPlacement);
+        setTippy('settingsButton', 'Показать или скрыть настройки', bPlacement);
+        setTippy('exitButton', 'Покинуть комнату', bPlacement);
     }
 }
 
@@ -1082,8 +1082,8 @@ function getRoomDuration() {
             Swal.fire({
                 background: swalBackground,
                 position: 'center',
-                title: 'Time Limit Reached',
-                text: 'The room has reached its time limit and will close shortly',
+                title: 'Время встречи истекло',
+                text: 'Комната достигла ограничения по времени и скоро будет закрыта.',
                 icon: 'warning',
                 timer: 6000, // 6 seconds
                 timerProgressBar: true,
@@ -1628,7 +1628,7 @@ async function shareRoom(useNavigator = false) {
     if (navigator.share && useNavigator) {
         try {
             await navigator.share({ url: RoomURL });
-            userLog('info', 'Room Shared successfully', 'top-end');
+            userLog('info', 'Ссылка на комнату отправлена', 'top-end');
         } catch (err) {
             share();
         }
@@ -1641,7 +1641,7 @@ async function shareRoom(useNavigator = false) {
         Swal.fire({
             background: swalBackground,
             position: 'center',
-            title: 'Share the room',
+            title: 'Поделиться комнатой',
             html: renderRoomTemplate('popupShareRoomTemplate', {
                 text: {
                     roomUrl: RoomURL,
@@ -1651,8 +1651,8 @@ async function shareRoom(useNavigator = false) {
             showCancelButton: true,
             cancelButtonColor: 'red',
             denyButtonColor: 'green',
-            confirmButtonText: `Copy URL`,
-            denyButtonText: `Email invite`,
+            confirmButtonText: `Копировать ссылку`,
+            denyButtonText: `Пригласить по почте`,
             cancelButtonText: `Close`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -1703,7 +1703,7 @@ function copyRoomURL() {
     tmpInput.setSelectionRange(0, 99999); // For mobile devices
     navigator.clipboard.writeText(tmpInput.value);
     document.body.removeChild(tmpInput);
-    userLog('info', 'Meeting URL copied to clipboard 👍', 'top-end');
+    userLog('info', 'Ссылка на встречу скопирована 👍', 'top-end');
 }
 
 function copyToClipboard(txt, showTxt = true) {
@@ -1715,8 +1715,8 @@ function copyToClipboard(txt, showTxt = true) {
     navigator.clipboard.writeText(tmpInput.value);
     document.body.removeChild(tmpInput);
     showTxt
-        ? userLog('info', `${txt} copied to clipboard 👍`, 'top-end')
-        : userLog('info', `Copied to clipboard 👍`, 'top-end');
+        ? userLog('info', `${txt} — скопировано 👍`, 'top-end')
+        : userLog('info', `Скопировано 👍`, 'top-end');
 }
 
 function shareRoomByEmail() {
@@ -1726,10 +1726,10 @@ function shareRoomByEmail() {
         background: swalBackground,
         imageUrl: image.email,
         position: 'center',
-        title: 'Select a Date and Time',
+        title: 'Выберите дату и время',
         html: renderRoomTemplate('popupDateTimePickerTemplate'),
         showCancelButton: true,
-        confirmButtonText: 'OK',
+        confirmButtonText: 'ОК',
         cancelButtonColor: 'red',
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -1976,11 +1976,11 @@ function roomIsReady() {
 async function updateMyPeerAvatarByUrl() {
     const result = await Swal.fire({
         background: swalBackground,
-        title: 'Set avatar URL',
+        title: 'Укажите ссылку на аватар',
         input: 'url',
         inputLabel: 'Public image URL',
         inputPlaceholder: 'https://example.com/avatar.jpg',
-        confirmButtonText: 'Apply',
+        confirmButtonText: 'Применить',
         showCancelButton: true,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -2108,10 +2108,10 @@ function applyPeerAvatar(avatarSrc) {
         rc.peer_info.peer_avatar = peer_avatar;
         rc.updatePeerInfo(peer_name, rc.peer_id, 'avatar', peer_avatar);
 
-        userLog('info', 'Avatar applied and saved for future sessions');
+        userLog('info', 'Аватар применён и сохранён');
     } catch (err) {
         console.error('Failed to set avatar URL', err);
-        userLog('error', 'Unable to apply avatar URL');
+        userLog('error', 'Не удалось применить ссылку на аватар');
     }
 }
 
@@ -2136,7 +2136,7 @@ function resetMyPeerAvatarInMemory() {
     rc.peer_info.peer_avatar = false;
     rc.updatePeerInfo(peer_name, rc.peer_id, 'avatar', false);
 
-    userLog('info', 'Avatar reset to default');
+    userLog('info', 'Установлен стандартный аватар');
 }
 
 function updateMyAvatarResetButtonVisibility() {
@@ -2356,7 +2356,7 @@ function handleButtons() {
     };
     hideMeButton.onclick = (e) => {
         if (isHideALLVideosActive) {
-            return userLog('warning', 'To use this feature, please toggle video focus mode', 'top-end', 6000);
+            return userLog('warning', 'Для этой функции включите режим фокуса видео', 'top-end', 6000);
         }
         isHideMeActive = !isHideMeActive;
         rc.handleHideMe();
@@ -2395,7 +2395,7 @@ function handleButtons() {
     };
     refreshVideoFiles.onclick = () => {
         rc.getRTMP();
-        userLog('info', 'Refreshed video files', 'top-end');
+        userLog('info', 'Список видео обновлён', 'top-end');
     };
     tabAspectBtn.onclick = (e) => {
         rc.openTab(e, 'tabAspect');
@@ -2690,7 +2690,7 @@ function handleButtons() {
     startAudioButton.onclick = async () => {
         const moderator = rc.getModerator();
         if (moderator.audio_cant_unmute) {
-            return userLog('warning', 'The moderator does not allow you to unmute', 'top-end', 6000);
+            return userLog('warning', 'Модератор запретил включать микрофон', 'top-end', 6000);
         }
         if (isPushToTalkActive) return;
         setAudioButtonsDisabled(true);
@@ -2721,7 +2721,7 @@ function handleButtons() {
     startVideoButton.onclick = async () => {
         const moderator = rc.getModerator();
         if (moderator.video_cant_unhide) {
-            return userLog('warning', 'The moderator does not allow you to unhide', 'top-end', 6000);
+            return userLog('warning', 'Модератор запретил включать камеру', 'top-end', 6000);
         }
         setVideoButtonsDisabled(true);
         if (!isEnumerateVideoDevices) await initEnumerateVideoDevices();
@@ -2736,7 +2736,7 @@ function handleButtons() {
     startScreenButton.onclick = async () => {
         const moderator = rc.getModerator();
         if (moderator.screen_cant_share) {
-            return userLog('warning', 'The moderator does not allow you to share the screen', 'top-end', 6000);
+            return userLog('warning', 'Модератор запретил демонстрацию экрана', 'top-end', 6000);
         }
         await rc.produce(RoomClient.mediaType.screen);
     };
@@ -2748,7 +2748,7 @@ function handleButtons() {
     };
     startRtmpButton.onclick = () => {
         if (rc.selectedRtmpFilename == '') {
-            userLog('warning', 'Please select the Video file to stream', 'top-end', 6000);
+            userLog('warning', 'Выберите видеофайл для трансляции', 'top-end', 6000);
             return;
         }
         rc.startRTMP();
@@ -2782,7 +2782,7 @@ function handleButtons() {
     };
     videoCloseBtn.onclick = () => {
         if (rc._moderator.media_cant_sharing) {
-            return userLog('warning', 'The moderator does not allow you close this media', 'top-end', 6000);
+            return userLog('warning', 'Модератор запретил закрывать это медиа', 'top-end', 6000);
         }
         rc.closeVideo(true);
     };
@@ -2903,15 +2903,15 @@ function handleButtons() {
 
 function setButtonsInit() {
     if (!isMobileDevice) {
-        setTippy('initAudioButton', 'Toggle the audio', 'top');
-        setTippy('initVideoButton', 'Toggle the video', 'top');
-        setTippy('initAudioVideoButton', 'Toggle the audio & video', 'top');
-        setTippy('initStartScreenButton', 'Toggle screen sharing', 'top');
-        setTippy('initStopScreenButton', 'Toggle screen sharing', 'top');
-        setTippy('initVideoMirrorButton', 'Toggle video mirror', 'top');
-        setTippy('initVirtualBackgroundButton', 'Set Virtual Background or Blur', 'top');
-        setTippy('initUsernameEmojiButton', 'Toggle username emoji', 'top');
-        setTippy('initExitButton', 'Leave meeting', 'top');
+        setTippy('initAudioButton', 'Включить или выключить микрофон', 'top');
+        setTippy('initVideoButton', 'Включить или выключить камеру', 'top');
+        setTippy('initAudioVideoButton', 'Включить или выключить микрофон и камеру', 'top');
+        setTippy('initStartScreenButton', 'Включить или выключить демонстрацию экрана', 'top');
+        setTippy('initStopScreenButton', 'Включить или выключить демонстрацию экрана', 'top');
+        setTippy('initVideoMirrorButton', 'Включить или выключить зеркальное видео', 'top');
+        setTippy('initVirtualBackgroundButton', 'Настроить фон или размытие', 'top');
+        setTippy('initUsernameEmojiButton', 'Показать или скрыть эмодзи рядом с именем', 'top');
+        setTippy('initExitButton', 'Покинуть встречу', 'top');
     }
     if (!isAudioAllowed) hide(initAudioButton);
     if (!isVideoAllowed) hide(initVideoButton);
@@ -3344,7 +3344,7 @@ function handleSelects() {
         localStorageSettings.keep_buttons_visible = isButtonsBarOver;
         lS.setSettings(localStorageSettings);
         const status = isButtonsBarOver ? 'enabled' : 'disabled';
-        userLog('info', `Buttons always visible ${status}`, 'top-end');
+        userLog('info', `Постоянное отображение кнопок: ${status}`, 'top-end');
         e.target.blur();
     };
 
@@ -3363,7 +3363,7 @@ function handleSelects() {
         localStorageSettings.chat_pin = isChatPinEnabled;
         lS.setSettings(localStorageSettings);
         const status = isChatPinEnabled ? 'enabled' : 'disabled';
-        userLog('info', `Chat auto pin ${status}`, 'top-end');
+        userLog('info', `Автоматическое закрепление чата: ${status}`, 'top-end');
         e.target.blur();
     };
 
@@ -3606,7 +3606,7 @@ function handleKeyboardShortcuts() {
     } else {
         switchShortcuts.onchange = (e) => {
             const status = setKeyboardShortcuts(e.currentTarget.checked);
-            userLog('info', `Keyboard shortcuts ${status}`, 'top-end');
+            userLog('info', `Горячие клавиши: ${status}`, 'top-end');
             e.target.blur();
         };
 
@@ -3629,98 +3629,98 @@ function handleKeyboardShortcuts() {
             switch (key) {
                 case 'a':
                     if (notPresenter && !audio && (audio_cant_unmute || !BUTTONS.main.startAudioButton)) {
-                        userLog('warning', 'The presenter has disabled your ability to enable audio', 'top-end');
+                        userLog('warning', 'Ведущий запретил включать микрофон', 'top-end');
                         break;
                     }
                     audio ? stopAudioButton.click() : startAudioButton.click();
                     break;
                 case 'v':
                     if (notPresenter && !video && (video_cant_unhide || !BUTTONS.main.startVideoButton)) {
-                        userLog('warning', 'The presenter has disabled your ability to enable video', 'top-end');
+                        userLog('warning', 'Ведущий запретил включать камеру', 'top-end');
                         break;
                     }
                     video ? stopVideoButton.click() : startVideoButton.click();
                     break;
                 case 's':
                     if (notPresenter && !screen && (screen_cant_share || !BUTTONS.main.startScreenButton)) {
-                        userLog('warning', 'The presenter has disabled your ability to share the screen', 'top-end');
+                        userLog('warning', 'Ведущий запретил демонстрацию экрана', 'top-end');
                         break;
                     }
                     screen ? stopScreenButton.click() : startScreenButton.click();
                     break;
                 case 'h':
                     if (notPresenter && !BUTTONS.main.raiseHandButton) {
-                        userLog('warning', 'The presenter has disabled your ability to raise your hand', 'top-end');
+                        userLog('warning', 'Ведущий запретил поднимать руку', 'top-end');
                         break;
                     }
                     hand ? lowerHandButton.click() : raiseHandButton.click();
                     break;
                 case 'c':
                     if (notPresenter && !BUTTONS.main.chatButton) {
-                        userLog('warning', 'The presenter has disabled your ability to open the chat', 'top-end');
+                        userLog('warning', 'Ведущий запретил открывать чат', 'top-end');
                         break;
                     }
                     chatButton.click();
                     break;
                 case 'o':
                     if (notPresenter && !BUTTONS.main.settingsButton) {
-                        userLog('warning', 'The presenter has disabled your ability to open the settings', 'top-end');
+                        userLog('warning', 'Ведущий запретил открывать настройки', 'top-end');
                         break;
                     }
                     settingsButton.click();
                     break;
                 case 'x':
                     if (notPresenter && !BUTTONS.main.hideMeButton) {
-                        userLog('warning', 'The presenter has disabled your ability to hide yourself', 'top-end');
+                        userLog('warning', 'Ведущий запретил скрывать собственное видео', 'top-end');
                         break;
                     }
                     hideMeButton.click();
                     break;
                 case 'r':
                     if (notPresenter && (hostOnlyRecording || !BUTTONS.settings.tabRecording)) {
-                        userLog('warning', 'The presenter has disabled your ability to start recording', 'top-end');
+                        userLog('warning', 'Ведущий запретил начинать запись', 'top-end');
                         break;
                     }
                     isRecording ? stopRecButton.click() : startRecButton.click();
                     break;
                 case 'j':
                     if (notPresenter && !BUTTONS.main.emojiRoomButton) {
-                        userLog('warning', 'The presenter has disabled your ability to open the room emoji', 'top-end');
+                        userLog('warning', 'Ведущий запретил использовать реакции', 'top-end');
                         break;
                     }
                     emojiRoomButton.click();
                     break;
                 case 'k':
                     if (notPresenter && !BUTTONS.main.transcriptionButton) {
-                        userLog('warning', 'The presenter has disabled your ability to start transcription', 'top-end');
+                        userLog('warning', 'Ведущий запретил запускать расшифровку', 'top-end');
                         break;
                     }
                     transcriptionButton.click();
                     break;
                 case 'p':
                     if (notPresenter && !BUTTONS.main.pollButton) {
-                        userLog('warning', 'The presenter has disabled your ability to start a poll', 'top-end');
+                        userLog('warning', 'Ведущий запретил создавать опросы', 'top-end');
                         break;
                     }
                     pollButton.click();
                     break;
                 case 'e':
                     if (notPresenter && !BUTTONS.main.editorButton) {
-                        userLog('warning', 'The presenter has disabled your ability to open the editor', 'top-end');
+                        userLog('warning', 'Ведущий запретил открывать редактор', 'top-end');
                         break;
                     }
                     editorButton.click();
                     break;
                 case 'w':
                     if (notPresenter && !BUTTONS.main.whiteboardButton) {
-                        userLog('warning', 'The presenter has disabled your ability to open the whiteboard', 'top-end');
+                        userLog('warning', 'Ведущий запретил открывать доску', 'top-end');
                         break;
                     }
                     whiteboardButton.click();
                     break;
                 case 'd':
                     if (!showDocumentPipBtn) {
-                        userLog('warning', 'The document PIP is not supported in this browser', 'top-end');
+                        userLog('warning', 'Браузер не поддерживает документ в режиме «картинка в картинке»', 'top-end');
                         break;
                     }
                     if (notPresenter && !BUTTONS.main.documentPiPButton) {
@@ -3735,14 +3735,14 @@ function handleKeyboardShortcuts() {
                     break;
                 case 't':
                     if (notPresenter && !BUTTONS.main.snapshotRoomButton) {
-                        userLog('warning', 'The presenter has disabled your ability to take a snapshot', 'top-end');
+                        userLog('warning', 'Ведущий запретил делать снимки', 'top-end');
                         break;
                     }
                     snapshotRoomButton.click();
                     break;
                 case 'f':
                     if (notPresenter && !BUTTONS.settings.fileSharing) {
-                        userLog('warning', 'The presenter has disabled your ability to share files', 'top-end');
+                        userLog('warning', 'Ведущий запретил отправлять файлы', 'top-end');
                         break;
                     }
                     fileShareButton.click();
@@ -5369,10 +5369,10 @@ function whiteboardAddObj(type) {
         case 'imgUrl':
             Swal.fire({
                 background: swalBackground,
-                title: 'Image URL',
+                title: 'Ссылка на изображение',
                 input: 'text',
                 showCancelButton: true,
-                confirmButtonText: 'OK',
+                confirmButtonText: 'ОК',
                 showClass: { popup: 'animate__animated animate__fadeInDown' },
                 hideClass: { popup: 'animate__animated animate__fadeOutUp' },
             }).then((result) => {
@@ -5383,7 +5383,7 @@ function whiteboardAddObj(type) {
                             addWbCanvasObj(myImg);
                         });
                     } else {
-                        userLog('error', 'The URL is not a valid image', 'top-end');
+                        userLog('error', 'Ссылка не ведёт на допустимое изображение', 'top-end');
                     }
                 }
             });
@@ -5533,10 +5533,10 @@ function wbHandleVanishingObjects() {
 function createStickyNote() {
     Swal.fire({
         background: swalBackground,
-        title: 'Create Sticky Note',
+        title: 'Создать заметку',
         html: renderRoomTemplate('popupStickyNoteTemplate'),
         showCancelButton: true,
-        confirmButtonText: 'Create',
+        confirmButtonText: 'Создать',
         cancelButtonText: 'Cancel',
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -5637,8 +5637,8 @@ function setupFileSelection(title, accept, renderToCanvas) {
             dropArea.addEventListener('drop', handleDrop);
         },
         showDenyButton: true,
-        confirmButtonText: `OK`,
-        denyButtonText: `Cancel`,
+        confirmButtonText: `ОК`,
+        denyButtonText: `Отмена`,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
@@ -5921,11 +5921,11 @@ function confirmClearBoard() {
         background: swalBackground,
         imageUrl: image.delete,
         position: 'top',
-        title: 'Clean the board',
-        text: 'Are you sure you want to clean the board?',
+        title: 'Очистить доску',
+        text: 'Очистить всё содержимое доски?',
         showDenyButton: true,
-        confirmButtonText: `Yes`,
-        denyButtonText: `No`,
+        confirmButtonText: `Да`,
+        denyButtonText: `Нет`,
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     }).then((result) => {
@@ -5945,9 +5945,9 @@ function showWhiteboardShortcuts() {
     Swal.fire({
         background: swalBackground,
         position: 'center',
-        title: 'Whiteboard Shortcuts',
+        title: 'Горячие клавиши доски',
         html: whiteboardShortcutsContent.innerHTML,
-        confirmButtonText: 'Got it!',
+        confirmButtonText: 'Понятно',
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
     });
@@ -5968,7 +5968,7 @@ function toggleLockUnlockWhiteboard() {
     whiteboardAction(getWhiteboardAction(action));
 
     if (wbIsLock) {
-        userLog('info', 'The whiteboard is locked. \n The participants cannot interact with it.', 'top-right');
+        userLog('info', 'Доска заблокирована. Участники не могут её редактировать.', 'top-right');
         sound('locked');
     }
 }
@@ -6109,7 +6109,7 @@ function handleWhiteboardDrop(e) {
             renderPdfToCanvas(file);
             break;
         default:
-            userLog('warning', `Unsupported file type: ${fileType}. Please drop an image or PDF file.`, 'top-end');
+            userLog('warning', `Формат ${fileType} не поддерживается. Выберите изображение или PDF.`, 'top-end');
             break;
     }
 }
@@ -6678,9 +6678,9 @@ function getParticipantsList(peers) {
 function setParticipantsTippy(peers) {
     //
     if (!isMobileDevice) {
-        setTippy('muteAllButton', 'Mute all participants', 'top');
-        setTippy('hideAllButton', 'Hide all participants', 'top');
-        setTippy('stopAllButton', 'Stop screen share to all participants', 'top');
+        setTippy('muteAllButton', 'Выключить микрофоны у всех участников', 'top');
+        setTippy('hideAllButton', 'Выключить камеры у всех участников', 'top');
+        setTippy('stopAllButton', 'Остановить демонстрацию экрана у всех участников', 'top');
         //
         for (let peer of Array.from(peers.keys())) {
             const peer_info = peers.get(peer).peer_info;
@@ -6690,9 +6690,9 @@ function setParticipantsTippy(peers) {
             const peerVideoBtn = rc.getId(peer_id + '___pVideo');
             const peerScreenBtn = rc.getId(peer_id + '___pScreen');
 
-            if (peerAudioBtn) setTippy(peerAudioBtn.id, 'Mute', 'top');
-            if (peerVideoBtn) setTippy(peerVideoBtn.id, 'Hide', 'top');
-            if (peerScreenBtn) setTippy(peerScreenBtn.id, 'Stop', 'top');
+            if (peerAudioBtn) setTippy(peerAudioBtn.id, 'Выключить звук', 'top');
+            if (peerVideoBtn) setTippy(peerVideoBtn.id, 'Скрыть', 'top');
+            if (peerScreenBtn) setTippy(peerScreenBtn.id, 'Остановить', 'top');
         }
     }
 }
@@ -7141,18 +7141,18 @@ function showImageSelector() {
     }
 
     // Create clean virtual bg Image
-    createImage('initCleanVbImg', image.user, 'Remove virtual background', 'cleanVb', () =>
+    createImage('initCleanVbImg', image.user, 'Убрать виртуальный фон', 'cleanVb', () =>
         handleVirtualBackground(null, null)
     );
 
     // Create High Blur Image
-    createImage('initHighBlurImg', image.blurHigh, 'High Blur', 'high', () => handleVirtualBackground(20));
+    createImage('initHighBlurImg', image.blurHigh, 'Сильное размытие', 'high', () => handleVirtualBackground(20));
 
     // Create Low Blur Image
-    createImage('initLowBlurImg', image.blurLow, 'Low Blur', 'low', () => handleVirtualBackground(10));
+    createImage('initLowBlurImg', image.blurLow, 'Слабое размытие', 'low', () => handleVirtualBackground(10));
 
     // Create transparent virtual bg Image
-    createImage('initTransparentBg', image.transparentBg, 'Transparent Virtual background', 'transparentVb', () =>
+    createImage('initTransparentBg', image.transparentBg, 'Прозрачный виртуальный фон', 'transparentVb', () =>
         handleVirtualBackground(null, null, true)
     );
 
@@ -7187,7 +7187,7 @@ function showImageSelector() {
             handleFileUpload(event.target.files[0]);
         });
 
-        setupFileUploadButton('initUploadImg', image.upload, 'Upload your custom image', () => fileInput.click());
+        setupFileUploadButton('initUploadImg', image.upload, 'Загрузить своё изображение', () => fileInput.click());
 
         return fileInput;
     }
@@ -7465,11 +7465,11 @@ window.addEventListener('popstate', (event) => {
     Swal.fire({
         background: swalBackground,
         position: 'top',
-        title: 'Leave session?',
-        text: 'Are you sure you want to exit this session?',
+        title: 'Покинуть встречу?',
+        text: 'Вы действительно хотите выйти из этой встречи?',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Yes',
+        confirmButtonText: 'Да',
         cancelButtonText: 'No',
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
@@ -7598,7 +7598,7 @@ function askBreakoutHelp() {
         breakoutRoom: room_id,
     });
 
-    rc.userLog('info', 'Help request sent to presenter', 'top-end', 3000);
+    rc.userLog('info', 'Запрос помощи отправлен ведущему', 'top-end', 3000);
     sound('notification');
 }
 
@@ -7665,7 +7665,7 @@ async function deleteAllBreakoutRooms() {
         `,
         showDenyButton: true,
         confirmButtonText: '<i class="fas fa-trash"></i> Delete',
-        denyButtonText: 'Cancel',
+        denyButtonText: 'Отмена',
         customClass: {
             popup: 'breakout-swal breakout-swal--end',
             htmlContainer: 'breakout-swal-html',
@@ -7927,7 +7927,7 @@ async function launchBreakoutRooms() {
     });
 
     if (assignments.length === 0) {
-        return rc.userLog('warning', 'Please assign at least one participant to a room', 'top-end', 4000);
+        return rc.userLog('warning', 'Назначьте в комнату хотя бы одного участника', 'top-end', 4000);
     }
 
     // Group assignments by room for summary
@@ -7956,7 +7956,7 @@ async function launchBreakoutRooms() {
     const confirmed = await Swal.fire({
         background: swalBackground,
         position: 'top',
-        title: 'Launch Breakout Rooms',
+        title: 'Запустить сессионные комнаты',
         html: renderRoomTemplate('popupBreakoutLaunchTemplate', {
             text: {
                 participantCount: String(assignments.length),
@@ -7968,7 +7968,7 @@ async function launchBreakoutRooms() {
         }),
         showDenyButton: true,
         confirmButtonText: '<i class="fas fa-rocket"></i> Launch',
-        denyButtonText: 'Cancel',
+        denyButtonText: 'Отмена',
         customClass: {
             popup: 'breakout-swal breakout-swal--launch',
             htmlContainer: 'breakout-swal-html',
@@ -8000,7 +8000,7 @@ async function launchBreakoutRooms() {
         duration: 'per-room',
     });
 
-    rc.userLog('info', `Breakout rooms launched! ${assignments.length} participant(s) assigned`, 'top-end', 4000);
+    rc.userLog('info', `Сессионные комнаты запущены. Назначено участников: ${assignments.length}`, 'top-end', 4000);
 
     // Staggered refresh to show updated counts as participants join their rooms
     setTimeout(() => refreshBreakoutPanel(), 2000);
@@ -8014,7 +8014,7 @@ async function presenterJoinBreakoutRoom(breakoutRoom) {
     const breakoutInfo = await getBreakoutRoomsInfo();
     const info = breakoutInfo.find((r) => r.room === breakoutRoom);
     if (!info || info.peers === 0) {
-        return rc.userLog('warning', 'No peers in this room yet', 'top-end', 3000);
+        return rc.userLog('warning', 'В этой комнате пока нет участников', 'top-end', 3000);
     }
 
     const room = breakoutRooms.find((r) => r.id === breakoutRoom);
@@ -8030,7 +8030,7 @@ function broadcastToBreakoutRooms(targetRoom = null) {
     const input = getId('breakoutBroadcastInput');
     const message = input.value.trim();
     if (!message) {
-        return rc.userLog('warning', 'Please type a message to broadcast', 'top-end', 3000);
+        return rc.userLog('warning', 'Введите сообщение для рассылки', 'top-end', 3000);
     }
 
     rc.socket.emit('breakoutRoomBroadcast', {
@@ -8099,12 +8099,12 @@ function editBreakoutDuration(index) {
     Swal.fire({
         background: swalBackground,
         position: 'center',
-        title: 'Set Room Duration',
+        title: 'Задать длительность комнаты',
         html: renderRoomTemplate('popupBreakoutDurationPickerTemplate'),
         showCancelButton: true,
         showDenyButton: true,
-        confirmButtonText: 'Set',
-        denyButtonText: 'Unlimited',
+        confirmButtonText: 'Задать',
+        denyButtonText: 'Без ограничения',
         cancelButtonText: 'Cancel',
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
@@ -8147,18 +8147,18 @@ function editBreakoutDuration(index) {
 
 function autoAssignBreakoutRooms() {
     if (breakoutRooms.length === 0) {
-        return rc.userLog('warning', 'Add at least one room first', 'top-end', 3000);
+        return rc.userLog('warning', 'Сначала добавьте хотя бы одну комнату', 'top-end', 3000);
     }
 
     const selects = Array.from(document.querySelectorAll('.breakout-room-select'));
     if (selects.length === 0) {
-        return rc.userLog('warning', 'No participants to assign', 'top-end', 3000);
+        return rc.userLog('warning', 'Нет участников для распределения', 'top-end', 3000);
     }
 
     // Only assign unassigned participants
     const unassigned = selects.filter((sel) => !sel.value);
     if (unassigned.length === 0) {
-        return rc.userLog('info', 'All participants are already assigned', 'top-end', 3000);
+        return rc.userLog('info', 'Все участники уже распределены', 'top-end', 3000);
     }
 
     // Shuffle unassigned participants randomly
@@ -8190,13 +8190,13 @@ async function endAllBreakoutSessions() {
     if (totalPeers === 0) {
         breakoutRooms = [];
         refreshBreakoutPanel();
-        return rc.userLog('info', 'All breakout rooms cleared', 'top-end', 3000);
+        return rc.userLog('info', 'Все сессионные комнаты удалены', 'top-end', 3000);
     }
 
     const confirmed = await Swal.fire({
         background: swalBackground,
         position: 'top',
-        title: 'End All Breakout Sessions?',
+        title: 'Завершить все сессионные комнаты?',
         html: renderRoomTemplate('popupBreakoutEndTemplate', {
             text: {
                 participantCount: String(totalPeers),
@@ -8205,7 +8205,7 @@ async function endAllBreakoutSessions() {
         }),
         showDenyButton: true,
         confirmButtonText: '<i class="fas fa-door-open"></i> End All',
-        denyButtonText: 'Cancel',
+        denyButtonText: 'Отмена',
         customClass: {
             popup: 'breakout-swal breakout-swal--end',
             htmlContainer: 'breakout-swal-html',
@@ -8228,14 +8228,14 @@ async function endAllBreakoutSessions() {
             mainRoom: room_id,
             countdown: countdown,
         });
-        rc.userLog('info', `Breakout sessions ending in ${countdown} seconds...`, 'top-end', 3000);
+        rc.userLog('info', `Сессионные комнаты закроются через ${countdown} сек.`, 'top-end', 3000);
     } else {
         rc.socket.emit('breakoutRoomEnd', {
             peer_name: peer_name,
             peer_uuid: peer_uuid,
             mainRoom: room_id,
         });
-        rc.userLog('info', 'Ending all breakout sessions...', 'top-end', 3000);
+        rc.userLog('info', 'Завершение всех сессионных комнат...', 'top-end', 3000);
     }
 
     setTimeout(
@@ -8253,16 +8253,16 @@ function validateBreakoutDuration(input) {
     if (total === 0) {
         const match = input.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
         if (!match) {
-            rc.userLog('warning', 'Invalid duration format. Use the time picker or set unlimited', 'top-end', 4000);
+            rc.userLog('warning', 'Неверный формат времени. Выберите время или режим без ограничения', 'top-end', 4000);
             return null;
         }
         const minutes = parseInt(match[2], 10);
         const seconds = parseInt(match[3], 10);
         if (minutes > 59 || seconds > 59) {
-            rc.userLog('warning', 'Invalid duration. Minutes and seconds must be 0-59', 'top-end', 4000);
+            rc.userLog('warning', 'Минуты и секунды должны быть от 0 до 59', 'top-end', 4000);
             return null;
         }
-        rc.userLog('warning', 'Duration must be greater than 0', 'top-end', 4000);
+        rc.userLog('warning', 'Длительность должна быть больше нуля', 'top-end', 4000);
         return null;
     }
     return input;
@@ -8302,7 +8302,7 @@ function startBreakoutCountdown(seconds, { warn = false } = {}) {
     updateTimerDisplay(displayEl, remaining);
 
     if (warn && rc) {
-        rc.userLog('warning', `Breakout session closing in ${remaining} seconds`, 'top-end', 5000);
+        rc.userLog('warning', `Сессионная комната закроется через ${remaining} сек.`, 'top-end', 5000);
     }
 
     breakoutTimerInterval = setInterval(() => {
@@ -8311,19 +8311,19 @@ function startBreakoutCountdown(seconds, { warn = false } = {}) {
 
         if (warn) {
             if ((remaining === 30 || remaining === 10 || remaining === 5) && rc) {
-                rc.userLog('warning', `Returning to main room in ${remaining} seconds`, 'top-end', 3000);
+                rc.userLog('warning', `Возврат в основную комнату через ${remaining} сек.`, 'top-end', 3000);
                 sound('notification');
             }
         } else {
             if (remaining <= 30 && remaining > 0 && remaining % 10 === 0 && rc) {
-                rc.userLog('warning', `Breakout session ends in ${remaining} seconds`, 'top-end', 3000);
+                rc.userLog('warning', `Сессионная комната закроется через ${remaining} сек.`, 'top-end', 3000);
             }
         }
 
         if (remaining <= 0) {
             clearInterval(breakoutTimerInterval);
             breakoutTimerInterval = null;
-            if (rc) rc.userLog('info', 'Breakout session ended. Returning to main room...', 'top-end', 4000);
+            if (rc) rc.userLog('info', 'Сессионная комната завершена. Возвращаемся в основную...', 'top-end', 4000);
             setTimeout(() => returnToMainRoom(), 2000);
         }
     }, 1000);
