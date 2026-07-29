@@ -215,9 +215,40 @@
                             <!-- Мини-кабинет после авторизации -->
                             <div id="phoneCabinet" class="phone-cabinet dashboard-account" hidden>
                                 <div class="phone-cabinet-head">
-                                    <div class="phone-cabinet-user">
-                                        <span class="phone-cabinet-label">Вы вошли как</span>
-                                        <strong id="phoneCabinetNumber" class="phone-cabinet-number"></strong>
+                                    <div class="phone-cabinet-identity">
+                                        <div class="phone-cabinet-user">
+                                            <span class="phone-cabinet-label">Телефон</span>
+                                            <strong id="phoneCabinetNumber" class="phone-cabinet-number"></strong>
+                                        </div>
+                                        <div class="phone-cabinet-name">
+                                            <span class="phone-cabinet-label">Имя</span>
+                                            <div class="phone-cabinet-name-inline">
+                                                <strong id="phoneDisplayNameText" class="phone-cabinet-name-text"></strong>
+                                                <input
+                                                    id="phoneDisplayName"
+                                                    class="phone-cabinet-name-input"
+                                                    type="text"
+                                                    maxlength="32"
+                                                    placeholder="Как вас представлять"
+                                                    autocomplete="nickname"
+                                                    hidden
+                                                />
+                                                <button
+                                                    id="phoneEditNameBtn"
+                                                    class="phone-cabinet-edit-name"
+                                                    type="button"
+                                                    aria-label="Изменить имя"
+                                                    title="Изменить имя"
+                                                >
+                                                    <i class="fas fa-pen" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                            <p
+                                                id="phoneNameStatus"
+                                                class="phone-cabinet-status"
+                                                aria-live="polite"
+                                            ></p>
+                                        </div>
                                     </div>
                                     <div class="phone-cabinet-actions">
                                         <a
@@ -231,25 +262,6 @@
                                             Выйти
                                         </button>
                                     </div>
-                                </div>
-                                <div class="phone-cabinet-name">
-                                    <label class="phone-cabinet-label" for="phoneDisplayName"
-                                        >Имя в комнатах</label
-                                    >
-                                    <div class="phone-cabinet-name-row">
-                                        <input
-                                            id="phoneDisplayName"
-                                            class="form-input"
-                                            type="text"
-                                            maxlength="32"
-                                            placeholder="Как вас представлять"
-                                            autocomplete="nickname"
-                                        />
-                                        <button id="phoneSaveNameBtn" class="button button-primary br-6" type="button">
-                                            Сохранить
-                                        </button>
-                                    </div>
-                                    <p id="phoneNameStatus" class="phone-cabinet-status" aria-live="polite"></p>
                                 </div>
                                 <div id="phoneRoomsBlock" class="phone-rooms" hidden>
                                     <div class="phone-rooms-section">

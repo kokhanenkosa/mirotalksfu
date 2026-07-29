@@ -260,6 +260,8 @@ class RoomClient {
         this.peer_avatar = peer_info.peer_avatar;
         this.isObserver = peer_info.peer_observer === true;
         this.locallyMutedPeers = new Set();
+        this.remotePeerPresenter = new Map();
+        this.hearOnlyPresenter = false;
 
         // Device type
         this.isDesktopDevice = peer_info.is_desktop_device;
@@ -3763,6 +3765,7 @@ class RoomClient {
         const remotePeerAudioVolume = peer_info.peer_audio_volume;
         const remotePrivacyOn = peer_info.peer_video_privacy;
         const remotePeerPresenter = peer_info.peer_presenter;
+        this.remotePeerPresenter.set(remotePeerId, !!remotePeerPresenter);
 
         switch (type) {
             case mediaType.video:
@@ -3978,7 +3981,9 @@ class RoomClient {
                 elem.setAttribute('volumeBar', remotePeerId + '___pVolume');
                 elem.autoplay = true;
                 elem.volume = 1.0;
-                elem.muted = this.locallyMutedPeers.has(remotePeerId);
+                elem.muted =
+                    this.locallyMutedPeers.has(remotePeerId) ||
+                    (this.hearOnlyPresenter && !this.remotePeerPresenter.get(remotePeerId));
 
                 if (!this.hasAudioTrack(stream)) {
                     elem.muted = true;
@@ -4097,6 +4102,7 @@ class RoomClient {
         let d, vb, i, h, au, lm, sf, sm, sv, gl, ban, ko, p, pm, pb, pv, st, ri;
 
         const { peer_id, peer_name, peer_avatar, peer_audio, peer_presenter } = peer_info;
+        if (remotePeer) this.remotePeerPresenter.set(peer_id, !!peer_presenter);
 
         this.removeVideoOff(peer_id);
 
@@ -10808,6 +10814,46 @@ class RoomClient {
     // HANDLE AUDIO
     // ###################################################
 
+    toggleHearOnlyPresenter() {
+        this.hearOnlyPresenter = !this.hearOnlyPresenter;
+
+        for (const [volumeInputId, audioElementId] of this.audioConsumers.entries()) {
+            const peerId = volumeInputId.split('___')[0];
+            const audioElement = this.getId(audioElementId);
+            if (!audioElement) continue;
+            if (peerId === this.peer_id) {
+                audioElement.muted = true;
+                continue;
+            }
+
+            audioElement.muted =
+                this.locallyMutedPeers.has(peerId) ||
+                (this.hearOnlyPresenter && !this.remotePeerPresenter.get(peerId));
+        }
+
+        const button = this.getId('hearOnlyPresenterButton');
+        if (button) {
+            button.classList.toggle('is-active', this.hearOnlyPresenter);
+            button.style.color = this.hearOnlyPresenter ? 'var(--optrf-accent)' : '';
+            button.setAttribute('aria-pressed', String(this.hearOnlyPresenter));
+            button.setAttribute(
+                'aria-label',
+                this.hearOnlyPresenter ? 'Слышать всех участников' : 'Слышать только лектора'
+            );
+            button.setAttribute(
+                'title',
+                this.hearOnlyPresenter ? 'Слышать всех участников' : 'Слышать только лектора'
+            );
+        }
+
+        this.userLog(
+            'info',
+            this.hearOnlyPresenter ? 'Вы слышите только лектора' : 'Вы снова слышите всех участников',
+            'top-end',
+            3000
+        );
+    }
+
     handleLocalPeerMute(peerId, buttonId, labelElement = null) {
         const button = this.getId(buttonId);
         if (!button) return;
@@ -10817,7 +10863,10 @@ class RoomClient {
             const audioElementId = this.audioConsumers.get(peerId + '___pVolume');
             const audioElement = this.getId(audioElementId);
 
-            if (audioElement) audioElement.muted = isMuted;
+            if (audioElement) {
+                audioElement.muted =
+                    isMuted || (this.hearOnlyPresenter && !this.remotePeerPresenter.get(peerId));
+            }
 
             button.className = isMuted ? 'fas fa-volume-high' : 'fas fa-volume-xmark';
             button.style.color = isMuted ? 'red' : '';

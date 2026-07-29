@@ -8,7 +8,8 @@
 
     const phoneNumberEl = document.getElementById('phoneCabinetNumber');
     const displayNameEl = document.getElementById('phoneDisplayName');
-    const saveNameBtn = document.getElementById('phoneSaveNameBtn');
+    const displayNameTextEl = document.getElementById('phoneDisplayNameText');
+    const editNameBtn = document.getElementById('phoneEditNameBtn');
     const nameStatusEl = document.getElementById('phoneNameStatus');
     const logoutBtn = document.getElementById('phoneLogoutBtn');
     const superAdminBtn = document.getElementById('superAdminBtn');
@@ -18,6 +19,8 @@
     const activeEmpty = document.getElementById('phoneActiveEmpty');
     const historyEmpty = document.getElementById('phoneHistoryEmpty');
     const guestHint = document.getElementById('phoneGuestHint');
+    let displayNameBeforeEdit = '';
+    let isSavingDisplayName = false;
 
     function show(el, on) {
         if (!el) return;
@@ -33,6 +36,18 @@
         if (!nameStatusEl) return;
         nameStatusEl.textContent = msg || '';
         nameStatusEl.classList.toggle('is-error', Boolean(isError));
+    }
+
+    function setDisplayNameEditing(editing) {
+        show(displayNameTextEl, !editing);
+        show(displayNameEl, editing);
+        show(editNameBtn, !editing);
+        if (editing) {
+            window.requestAnimationFrame(() => {
+                displayNameEl?.focus();
+                displayNameEl?.select();
+            });
+        }
     }
 
     function formatPhone(phone) {
@@ -124,13 +139,19 @@
     }
 
     async function saveDisplayName() {
+        if (isSavingDisplayName) return false;
         const name = (displayNameEl?.value || '').trim();
         setNameStatus('');
         if (!name) {
             setNameStatus('Укажите имя', true);
-            return;
+            displayNameEl?.focus();
+            return false;
         }
-        if (saveNameBtn) saveNameBtn.disabled = true;
+        if (name === displayNameBeforeEdit) {
+            setDisplayNameEditing(false);
+            return true;
+        }
+        isSavingDisplayName = true;
         try {
             const res = await fetch('/phone/profile', {
                 method: 'POST',
@@ -141,15 +162,23 @@
             const data = await res.json().catch(() => ({}));
             if (!res.ok || !data.ok) {
                 setNameStatus(data.error || 'Не удалось сохранить', true);
-                return;
+                displayNameEl?.focus();
+                return false;
             }
             window.localStorage.peer_name = data.displayName;
             window.sessionStorage.phone_display_name = data.displayName;
+            if (displayNameEl) displayNameEl.value = data.displayName;
+            if (displayNameTextEl) displayNameTextEl.textContent = data.displayName;
+            displayNameBeforeEdit = data.displayName;
             setNameStatus('Сохранено');
+            setDisplayNameEditing(false);
+            return true;
         } catch {
             setNameStatus('Ошибка сети', true);
+            displayNameEl?.focus();
+            return false;
         } finally {
-            if (saveNameBtn) saveNameBtn.disabled = false;
+            isSavingDisplayName = false;
         }
     }
 
@@ -214,6 +243,9 @@
 
         const displayName = data.displayName || window.localStorage.peer_name || '';
         if (displayNameEl) displayNameEl.value = displayName;
+        if (displayNameTextEl) displayNameTextEl.textContent = displayName || 'Не указано';
+        displayNameBeforeEdit = displayName;
+        setDisplayNameEditing(false);
         if (displayName) {
             window.localStorage.peer_name = displayName;
             window.sessionStorage.phone_display_name = displayName;
@@ -245,12 +277,25 @@
         }
     }
 
-    saveNameBtn?.addEventListener('click', saveDisplayName);
+    editNameBtn?.addEventListener('click', () => {
+        displayNameBeforeEdit = (displayNameEl?.value || '').trim();
+        setNameStatus('');
+        setDisplayNameEditing(true);
+    });
     displayNameEl?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
-            saveDisplayName();
+            displayNameEl.blur();
         }
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            displayNameEl.value = displayNameBeforeEdit;
+            setNameStatus('');
+            setDisplayNameEditing(false);
+        }
+    });
+    displayNameEl?.addEventListener('blur', () => {
+        if (!displayNameEl.hidden) saveDisplayName();
     });
     logoutBtn?.addEventListener('click', logout);
 

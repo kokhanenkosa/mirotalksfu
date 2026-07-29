@@ -556,6 +556,7 @@ function refreshMainButtonsToolTipPlacement() {
         setTippy('participantsButton', 'Показать или скрыть список участников', bPlacement);
         setTippy('settingsButton', 'Показать или скрыть настройки', bPlacement);
         setTippy('phoneCabinetButton', 'Мой кабинет', bPlacement);
+        setTippy('hearOnlyPresenterButton', 'Слышать только лектора', bPlacement);
         setTippy('exitButton', 'Покинуть комнату', bPlacement);
     }
 }
@@ -2918,6 +2919,9 @@ function handleButtons() {
     };
     phoneCabinetButton.onclick = () => {
         window.location.assign('/');
+    };
+    hearOnlyPresenterButton.onclick = () => {
+        rc.toggleHearOnlyPresenter();
     };
     restartICEButton.onclick = async () => {
         await rc.restartIce();
