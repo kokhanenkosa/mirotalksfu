@@ -43,12 +43,18 @@
             const label = LABELS[preference];
             const icon = button.querySelector('.optrf-theme-icon');
             if (icon) icon.textContent = ICONS[preference];
-            button.title = `Тема: ${label}. Нажмите для переключения`;
+            button.title = `Тема: ${label}. Открыть список`;
             button.setAttribute('aria-label', button.title);
         });
 
         document.querySelectorAll('[data-optrf-theme-label]').forEach((label) => {
             label.textContent = LABELS[preference];
+        });
+
+        document.querySelectorAll('[data-optrf-theme-value]').forEach((option) => {
+            const isActive = option.dataset.optrfThemeValue === preference;
+            option.classList.toggle('is-active', isActive);
+            option.setAttribute('aria-checked', String(isActive));
         });
     }
 
@@ -97,12 +103,54 @@
         button.className = 'optrf-theme-option';
         button.dataset.optrfThemeToggle = '';
         button.innerHTML = '<b class="optrf-theme-icon" aria-hidden="true"></b>';
+        button.setAttribute('aria-haspopup', 'menu');
+        button.setAttribute('aria-expanded', 'false');
+
+        const menu = document.createElement('div');
+        menu.className = 'optrf-theme-menu';
+        menu.setAttribute('role', 'menu');
+        menu.setAttribute('aria-label', 'Выбор темы');
+        menu.hidden = true;
+
+        VALUES.forEach((value) => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'optrf-theme-menu-option';
+            option.dataset.optrfThemeValue = value;
+            option.setAttribute('role', 'menuitemradio');
+            option.innerHTML = `<span class="optrf-theme-menu-icon" aria-hidden="true">${ICONS[value]}</span><span>${LABELS[value]}</span>`;
+            option.addEventListener('click', () => {
+                setPreference(value);
+                menu.hidden = true;
+                button.setAttribute('aria-expanded', 'false');
+                button.focus();
+            });
+            menu.appendChild(option);
+        });
+
         button.addEventListener('click', () => {
-            const current = getPreference();
-            const next = VALUES[(VALUES.indexOf(current) + 1) % VALUES.length];
-            setPreference(next);
+            const willOpen = menu.hidden;
+            menu.hidden = !willOpen;
+            button.setAttribute('aria-expanded', String(willOpen));
+            if (willOpen) {
+                menu.querySelector('.is-active')?.focus();
+            }
         });
         wrapper.appendChild(button);
+        wrapper.appendChild(menu);
+
+        document.addEventListener('click', (event) => {
+            if (wrapper.contains(event.target)) return;
+            menu.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape' || menu.hidden) return;
+            menu.hidden = true;
+            button.setAttribute('aria-expanded', 'false');
+            button.focus();
+        });
 
         wrapper.classList.add('optrf-theme-switcher--floating');
         document.body.appendChild(wrapper);

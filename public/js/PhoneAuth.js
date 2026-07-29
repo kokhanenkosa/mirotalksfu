@@ -207,6 +207,10 @@
                 window.sessionStorage.phone_auth = data.token;
                 window.sessionStorage.phone_number = data.phone || phone;
                 window.sessionStorage.phone_can_create = data.canCreate ? '1' : '0';
+                if (data.displayName) {
+                    window.sessionStorage.phone_display_name = data.displayName;
+                    window.localStorage.peer_name = data.displayName;
+                }
             }
 
             const safeNext = nextUrl.startsWith('/') ? nextUrl : '/';

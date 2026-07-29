@@ -707,7 +707,116 @@ a:hover {
     color: var(--optrf-muted);
 }
 
+/* Кабинет авторизованного пользователя */
+.is-phone-authenticated main,
+.is-phone-authenticated main > .cta.section,
+.is-phone-authenticated main > .cta.section > .container {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.is-phone-authenticated main > .cta.section > .container {
+    max-width: 1080px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.is-phone-authenticated .cta-inner:has(#phoneCabinet) {
+    display: grid !important;
+    gap: 1.75rem;
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    padding: 2rem !important;
+    overflow: visible;
+    box-sizing: border-box;
+    box-shadow: var(--optrf-shadow) !important;
+}
+
+.is-phone-authenticated .phone-cabinet {
+    display: grid;
+    gap: 1.25rem;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.is-phone-authenticated .phone-cabinet-head {
+    margin: 0;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--optrf-border);
+}
+
+.is-phone-authenticated .phone-cabinet-name,
+.is-phone-authenticated .phone-rooms-section {
+    padding: 1rem;
+    background: var(--optrf-surface-2);
+    border: 1px solid var(--optrf-border);
+    border-radius: var(--optrf-radius);
+}
+
+.is-phone-authenticated .phone-cabinet-name .form-input {
+    text-align: left;
+}
+
+.is-phone-authenticated .phone-cabinet-status:empty {
+    display: none;
+}
+
+.is-phone-authenticated .phone-rooms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-top: 0;
+}
+
+.is-phone-authenticated #createRoomPanel {
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--optrf-border);
+}
+
+.is-phone-authenticated #joinDescription {
+    margin-bottom: 1rem;
+    padding: 0;
+    font-size: clamp(1.25rem, 2vw, 1.6rem);
+    line-height: 1.25;
+}
+
+.is-phone-authenticated #createRoomPanel .mb-24 {
+    margin-bottom: 0;
+}
+
+.is-phone-authenticated #lastRoomContainer {
+    margin-top: 1rem;
+}
+
 @media (max-width: 640px) {
+    .is-phone-authenticated main > .cta.section {
+        padding-top: 1rem !important;
+    }
+
+    .is-phone-authenticated .cta-inner:has(#phoneCabinet) {
+        gap: 1.25rem;
+        padding: 1.25rem !important;
+    }
+
+    .is-phone-authenticated .phone-rooms {
+        grid-template-columns: 1fr;
+    }
+
+    .is-phone-authenticated .phone-cabinet-actions,
+    .is-phone-authenticated .phone-cabinet-actions > * {
+        width: 100%;
+    }
+
+    .is-phone-authenticated .phone-cabinet-actions > * {
+        text-align: center;
+    }
+
+    .is-phone-authenticated .phone-cabinet-name-row {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
     .phone-rooms-item {
         flex-direction: column;
         align-items: stretch;

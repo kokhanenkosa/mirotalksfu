@@ -566,6 +566,7 @@ function refreshMainButtonsToolTipPlacement() {
 function setTippy(elem, content, placement, allowHTML = false) {
     const element = document.getElementById(elem);
     if (element) {
+        content = window.optrfTranslate ? window.optrfTranslate(content) : content;
         if (element._tippy) {
             element._tippy.destroy();
         }
@@ -578,8 +579,6 @@ function setTippy(elem, content, placement, allowHTML = false) {
         } catch (err) {
             console.error('setTippy error', err.message);
         }
-    } else {
-        console.warn('setTippy element not found with content', content);
     }
 }
 
@@ -1293,6 +1292,21 @@ async function whoAreYou() {
         default_name = getCookie(room_id + '_name');
     }
 
+    try {
+        const { data: phoneProfile } = await axios.get('/phone/me', { timeout: 5000 });
+        if (phoneProfile?.authenticated) {
+            window.sessionStorage.phone_auth = window.sessionStorage.phone_auth || 'cookie';
+            window.sessionStorage.phone_number = phoneProfile.phone || '';
+            if (phoneProfile.displayName) {
+                default_name = phoneProfile.displayName;
+                window.sessionStorage.phone_display_name = phoneProfile.displayName;
+                window.localStorage.peer_name = phoneProfile.displayName;
+            }
+        }
+    } catch (error) {
+        console.warn('Не удалось получить профиль телефона', error.message || error);
+    }
+
     if (!BUTTONS.main.startVideoButton) {
         isVideoAllowed = false;
         isInitVideoLoaded = true;
@@ -1338,10 +1352,7 @@ async function whoAreYou() {
 
             // Define peer_name based on the profile properties and preferences
             const peerNamePreference = profile.peer_name || {};
-            default_name =
-                (peerNamePreference.email && profile.email) ||
-                (peerNamePreference.name && profile.name) ||
-                default_name;
+            default_name = default_name || (peerNamePreference.name && profile.name) || '';
 
             // Set localStorage and force_peer_name if applicable
             if (default_name && peerNamePreference.force) {
@@ -1362,7 +1373,7 @@ async function whoAreYou() {
         title: 'Настройка подключения',
         input: 'text',
         inputPlaceholder: 'Введите имя',
-        inputAttributes: { maxlength: 254, id: 'usernameInput' },
+        inputAttributes: { maxlength: 32, id: 'usernameInput', autocomplete: 'name' },
         inputValue: default_name,
         html: initUser, // Inject HTML
         confirmButtonText: `Присоединиться к встрече`,
@@ -1379,15 +1390,22 @@ async function whoAreYou() {
             if (isVideoAllowed && !isInitVideoLoaded) {
                 return 'Подождите, пока камера будет готова...';
             }
+            name = String(name || '').trim();
             if (!name) return 'Введите имя';
-            const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(name);
-            if ((isEmail && name.length > 254) || (!isEmail && name.length > 32)) {
-                return isEmail ? 'Email must be max 254 char' : 'Name must be max 32 char';
-            }
+            if (name.length > 32) return 'Имя должно быть не длиннее 32 символов';
             name = filterXSS(name);
-            if (isHtml(name)) return 'Invalid name!';
+            if (isHtml(name)) return 'Недопустимые символы в имени';
             if (!getCookie(room_id + '_name')) {
                 window.localStorage.peer_name = name;
+            }
+            if (window.sessionStorage.phone_auth) {
+                window.sessionStorage.phone_display_name = name;
+                fetch('/phone/profile', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ displayName: name }),
+                }).catch(() => {});
             }
             setCookie(room_id + '_name', name, 30);
             peer_name = name;

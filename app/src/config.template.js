@@ -1617,7 +1617,7 @@ module.exports = {
          * - id           : Your website ID from Umami
          */
         stats: {
-            enabled: process.env.STATS_ENABLED !== 'false',
+            enabled: process.env.STATS_ENABLED === 'true',
             src: process.env.STATS_SRC || 'https://stats.mirotalk.com/script.js',
             id: process.env.STATS_ID || '41d26670-f275-45bb-af82-3ce91fe57756',
         },

@@ -299,6 +299,7 @@ html[data-theme='dark'] .logo-for-dark {
     border-radius: 50%;
     box-shadow: var(--optrf-shadow);
     font-family: var(--optrf-font);
+    isolation: isolate;
 }
 
 .optrf-theme-switcher--floating {
@@ -331,6 +332,58 @@ html[data-theme='dark'] .logo-for-dark {
     min-width: 1em;
     font-size: 15px;
     line-height: 1;
+    text-align: center;
+}
+
+.optrf-theme-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    display: grid;
+    width: 168px;
+    padding: 6px;
+    color: var(--optrf-text);
+    background: var(--optrf-surface);
+    border: 1px solid var(--optrf-border);
+    border-radius: 12px;
+    box-shadow: var(--optrf-shadow-lg);
+}
+
+.optrf-theme-menu[hidden] {
+    display: none !important;
+}
+
+.optrf-theme-menu-option {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 38px;
+    padding: 7px 10px;
+    color: var(--optrf-text);
+    text-align: left;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    font: 500 14px/1.2 var(--optrf-font);
+    cursor: pointer;
+}
+
+.optrf-theme-menu-option:hover,
+.optrf-theme-menu-option:focus-visible {
+    color: var(--optrf-text);
+    background: var(--optrf-surface-2);
+    outline: none;
+}
+
+.optrf-theme-menu-option.is-active {
+    color: var(--optrf-accent);
+    background: var(--optrf-accent-soft);
+}
+
+.optrf-theme-menu-icon {
+    font-size: 14px;
     text-align: center;
 }
 

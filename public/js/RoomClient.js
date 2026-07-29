@@ -3258,12 +3258,12 @@ class RoomClient {
                 if (isScreen && this.videoMediaContainer.childElementCount > 1) pn.click();
 
                 if (!this.isMobileDevice) {
-                    this.setTippy(pn.id, 'Toggle Pin', 'bottom');
-                    this.setTippy(ha.id, 'Toggle Focus mode', 'bottom');
-                    this.setTippy(pip.id, 'Toggle picture in picture', 'bottom');
-                    this.setTippy(ts.id, 'Snapshot', 'bottom');
-                    this.setTippy(vp.id, 'Toggle video privacy', 'bottom');
-                    this.setTippy(au.id, 'Audio status', 'bottom');
+                    this.setTippy(pn.id, 'Закрепить или открепить', 'bottom');
+                    this.setTippy(ha.id, 'Включить или выключить режим фокуса', 'bottom');
+                    this.setTippy(pip.id, 'Включить или выключить режим «картинка в картинке»', 'bottom');
+                    this.setTippy(ts.id, 'Снимок', 'bottom');
+                    this.setTippy(vp.id, 'Включить или выключить приватность видео', 'bottom');
+                    this.setTippy(au.id, 'Состояние микрофона', 'bottom');
                 }
 
                 handleAspectRatio();
@@ -3934,13 +3934,13 @@ class RoomClient {
                 }
 
                 if (!this.isMobileDevice) {
-                    this.setTippy(pn.id, 'Toggle Pin', 'bottom');
-                    this.setTippy(ha.id, 'Toggle Focus mode', 'bottom');
-                    this.setTippy(pip.id, 'Toggle picture in picture', 'bottom');
-                    this.setTippy(ts.id, 'Snapshot', 'bottom');
-                    this.setTippy(cm.id, 'Hide', 'bottom');
-                    this.setTippy(au.id, 'Mute', 'bottom');
-                    this.setTippy(pv.id, '🔊 Volume', 'bottom');
+                    this.setTippy(pn.id, 'Закрепить или открепить', 'bottom');
+                    this.setTippy(ha.id, 'Включить или выключить режим фокуса', 'bottom');
+                    this.setTippy(pip.id, 'Включить или выключить режим «картинка в картинке»', 'bottom');
+                    this.setTippy(ts.id, 'Снимок', 'bottom');
+                    this.setTippy(cm.id, 'Скрыть', 'bottom');
+                    this.setTippy(au.id, 'Выключить звук', 'bottom');
+                    this.setTippy(pv.id, '🔊 Громкость', 'bottom');
                 }
 
                 // Use helper function to set audio volume
@@ -4202,14 +4202,14 @@ class RoomClient {
         if (isParticipantsListOpen) getRoomParticipants();
 
         if (!this.isMobileDevice && remotePeer) {
-            this.setTippy(sm.id, 'Send message', 'bottom');
-            this.setTippy(sf.id, 'Send file', 'bottom');
-            this.setTippy(sv.id, 'Send video', 'bottom');
-            this.setTippy(au.id, 'Mute', 'bottom');
-            this.setTippy(pv.id, '🔊 Volume', 'bottom');
-            this.setTippy(gl.id, 'Geolocation', 'bottom');
-            this.setTippy(ban.id, 'Ban', 'bottom');
-            this.setTippy(ko.id, 'Eject', 'bottom');
+            this.setTippy(sm.id, 'Отправить сообщение', 'bottom');
+            this.setTippy(sf.id, 'Отправить файл', 'bottom');
+            this.setTippy(sv.id, 'Отправить видео', 'bottom');
+            this.setTippy(au.id, 'Выключить звук', 'bottom');
+            this.setTippy(pv.id, '🔊 Громкость', 'bottom');
+            this.setTippy(gl.id, 'Геолокация', 'bottom');
+            this.setTippy(ban.id, 'Заблокировать', 'bottom');
+            this.setTippy(ko.id, 'Удалить из комнаты', 'bottom');
         }
 
         remotePeer ? this.setPeerAudio(peer_id, peer_audio) : this.setIsAudio(peer_id, peer_audio);
@@ -4533,6 +4533,7 @@ class RoomClient {
         if (this.isMobileDevice) return;
         const element = this.getId(elem);
         if (element) {
+            content = window.optrfTranslate ? window.optrfTranslate(content) : content;
             if (element._tippy) {
                 element._tippy.destroy();
             }
@@ -5257,7 +5258,7 @@ class RoomClient {
         const btnFs = this.getId(fsId);
         if (!videoPlayer || !btnFs) return;
 
-        this.setTippy(fsId, 'Full screen', 'bottom');
+        this.setTippy(fsId, 'На весь экран', 'bottom');
 
         const videoWrap = this.getId(elemId + '__video');
         const fsTarget = videoWrap || videoPlayer;
@@ -6684,10 +6685,10 @@ class RoomClient {
         chatHistory.scrollTop += 500;
 
         if (!this.isMobileDevice) {
-            this.setTippy('msg-delete-' + chatMessagesId, 'Delete', 'top');
-            this.setTippy('msg-copy-' + chatMessagesId, 'Copy', 'top');
-            this.setTippy('msg-speech-' + chatMessagesId, 'Speech', 'top');
-            this.setTippy('msg-react-' + chatMessagesId, 'React', 'top');
+            this.setTippy('msg-delete-' + chatMessagesId, 'Удалить', 'top');
+            this.setTippy('msg-copy-' + chatMessagesId, 'Копировать', 'top');
+            this.setTippy('msg-speech-' + chatMessagesId, 'Озвучить', 'top');
+            this.setTippy('msg-react-' + chatMessagesId, 'Поставить реакцию', 'top');
         }
 
         chatMessagesId++;
@@ -7607,9 +7608,9 @@ class RoomClient {
             pollsContainer.appendChild(pollDiv);
 
             if (!this.isMobileDevice) {
-                setTippy('toggleVoters', 'Toggle voters', 'top');
-                setTippy('delPoll', 'Delete poll', 'top');
-                setTippy('editPoll', 'Edit poll', 'top');
+                setTippy('toggleVoters', 'Показать или скрыть проголосовавших', 'top');
+                setTippy('delPoll', 'Удалить опрос', 'top');
+                setTippy('editPoll', 'Изменить опрос', 'top');
             }
         });
     }
@@ -9603,9 +9604,9 @@ class RoomClient {
 
         this.handlePN(video.id, pn.id, d.id);
         if (!this.isMobileDevice) {
-            this.setTippy(pn.id, 'Toggle Pin video player', 'bottom');
-            this.setTippy(e.id, 'Close video player', 'bottom');
-            this.setTippy(fsBtn.id, 'Full screen', 'bottom');
+            this.setTippy(pn.id, 'Закрепить или открепить видеоплеер', 'bottom');
+            this.setTippy(e.id, 'Закрыть видеоплеер', 'bottom');
+            this.setTippy(fsBtn.id, 'На весь экран', 'bottom');
         }
 
         handleAspectRatio();
@@ -10094,8 +10095,8 @@ class RoomClient {
             `;
 
             if (!this.isMobileDevice) {
-                setTippy(lobbyAcceptId, 'Accept', 'top');
-                setTippy(lobbyRejectId, 'Reject', 'top');
+                setTippy(lobbyAcceptId, 'Принять', 'top');
+                setTippy(lobbyRejectId, 'Отклонить', 'top');
             }
         }
         lobbyTb.innerHTML = lobbyTr;
@@ -12500,14 +12501,15 @@ class RoomClient {
         }
 
         if (!this.isMobileDevice) {
-            this.setTippy(pin.id, 'Toggle Pin', 'bottom');
-            this.setTippy(muteAvatarAudioBtn.id, 'Mute avatar audio (local only)', 'bottom');
-            this.setTippy(interrupt.id, 'Interrupt avatar speaking', 'bottom');
-            this.setTippy(mic.id, 'Speech to avatar', 'bottom');
-            this.setTippy(shareBtn.id, 'Share avatar to room', 'bottom');
-            chatGPTToggleBtn && this.setTippy(chatGPTToggleBtn.id, 'Toggle ChatGPT interaction', 'bottom');
-            this.setTippy(fs.id, 'Toggle full screen', 'bottom');
-            this.setTippy(ss.id, 'Stop VideoAI session', 'bottom');
+            this.setTippy(pin.id, 'Закрепить или открепить', 'bottom');
+            this.setTippy(muteAvatarAudioBtn.id, 'Выключить звук аватара только у себя', 'bottom');
+            this.setTippy(interrupt.id, 'Прервать речь аватара', 'bottom');
+            this.setTippy(mic.id, 'Говорить с аватаром', 'bottom');
+            this.setTippy(shareBtn.id, 'Показать аватар участникам', 'bottom');
+            chatGPTToggleBtn &&
+                this.setTippy(chatGPTToggleBtn.id, 'Включить или выключить взаимодействие с ChatGPT', 'bottom');
+            this.setTippy(fs.id, 'Включить или выключить полноэкранный режим', 'bottom');
+            this.setTippy(ss.id, 'Завершить сеанс видеоаватара', 'bottom');
         }
 
         handleAspectRatio();

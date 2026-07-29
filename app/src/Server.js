@@ -458,7 +458,7 @@ if (enabled && commands.length > 0 && token) {
 
 // Stats
 const defaultStats = {
-    enabled: true,
+    enabled: false,
     src: 'https://stats.mirotalk.com/script.js',
     id: '41d26670-f275-45bb-af82-3ce91fe57756',
 };
@@ -1236,6 +1236,7 @@ function startServer() {
             phone: result.phone,
             canCreate: result.canCreate,
             isSuperAdmin: result.isSuperAdmin,
+            displayName: phoneStore.getDisplayName(result.phone) || '',
         });
     });
 
