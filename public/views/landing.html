@@ -62,6 +62,7 @@
                                 </a>
                             </div>
                         </div>
+                        <div class="header-theme-host" data-optrf-theme-host aria-label="Настройки темы"></div>
                     </div>
                 </div>
             </header>
@@ -98,9 +99,9 @@
                     </div>
                 </section>
 
-                <section class="cta section">
-                    <div class="container">
-                        <div class="cta-inner section-inner br-12">
+                <section class="cta section dashboard-section">
+                    <div class="container dashboard-container">
+                        <div class="cta-inner section-inner br-12 dashboard-shell">
                             <!-- Гейт: та же форма + Thinking Orbs, что на /phone-auth -->
                             <div id="phoneGate" class="phone-gate phone-gate--orbs" hidden>
                                 <section class="pa-panel pa-panel--embed" id="paPanel" aria-label="Вход по телефону">
@@ -212,7 +213,7 @@
                             </div>
 
                             <!-- Мини-кабинет после авторизации -->
-                            <div id="phoneCabinet" class="phone-cabinet" hidden>
+                            <div id="phoneCabinet" class="phone-cabinet dashboard-account" hidden>
                                 <div class="phone-cabinet-head">
                                     <div class="phone-cabinet-user">
                                         <span class="phone-cabinet-label">Вы вошли как</span>
@@ -273,7 +274,7 @@
                             </div>
 
                             <!-- Создание комнаты — только после авторизации организатора -->
-                            <div id="createRoomPanel" hidden>
+                            <div id="createRoomPanel" class="dashboard-create" hidden>
                                 <h3 id="joinDescription" class="section-title mt-0">
                                     Введите название комнаты.<br />
                                     Например, вот такое:

@@ -152,8 +152,14 @@
             button.focus();
         });
 
-        wrapper.classList.add('optrf-theme-switcher--floating');
-        document.body.appendChild(wrapper);
+        const host = document.querySelector('[data-optrf-theme-host]');
+        if (host) {
+            wrapper.classList.add('optrf-theme-switcher--embedded');
+            host.appendChild(wrapper);
+        } else {
+            wrapper.classList.add('optrf-theme-switcher--floating');
+            document.body.appendChild(wrapper);
+        }
 
         updateControls(getPreference());
     }

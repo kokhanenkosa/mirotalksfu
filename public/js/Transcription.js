@@ -110,7 +110,7 @@ class Transcription {
                 show(transcriptionSpeechStop);
                 setColor(transcriptionSpeechStatus, 'lime');
                 !transcription.isPersistentMode
-                    ? userLog('info', 'Transcription started', 'top-end')
+                    ? userLog('info', 'Расшифровка запущена', 'top-end')
                     : (transcription.isPersistent = true);
             };
 
@@ -143,7 +143,7 @@ class Transcription {
             this.transcription.onerror = function (event) {
                 console.error('Transcription error', event.error);
                 if (!transcription.isPersistent || !transcription.isPersistentMode)
-                    userLog('error', `Transcription error ${event.error}`, 'top-end', 6000);
+                    userLog('error', `Ошибка расшифровки: ${event.error}`, 'top-end', 6000);
             };
 
             this.transcription.onend = function () {
@@ -162,7 +162,7 @@ class Transcription {
                     }, 2000);
                 } else {
                     transcription.isPersistent = false;
-                    userLog('info', 'Transcription stopped', 'top-end');
+                    userLog('info', 'Расшифровка остановлена', 'top-end');
                 }
             };
 
@@ -320,13 +320,13 @@ class Transcription {
 
     togglePinUnpin() {
         if (rc.isChatPinned) {
-            return userLog('info', 'Please unpin the chat that appears to be currently pinned', 'top-end');
+            return userLog('info', 'Сначала открепите чат', 'top-end');
         }
         if (rc.isEditorPinned) {
-            return userLog('info', 'Please unpin the editor that appears to be currently pinned', 'top-end');
+            return userLog('info', 'Сначала открепите редактор', 'top-end');
         }
         if (rc.isBreakoutPinned) {
-            return userLog('info', 'Please unpin the breakout rooms that appears to be currently pinned', 'top-end');
+            return userLog('info', 'Сначала открепите сессионные комнаты', 'top-end');
         }
         this.isPinned ? this.unpinned() : this.pinned();
         rc.sound('click');
@@ -396,7 +396,7 @@ class Transcription {
             document.body.removeChild(a);
             rc.sound('download');
         } else {
-            userLog('info', "There isn't transcriptions to save", 'top-end');
+            userLog('info', 'Нет расшифровок для сохранения', 'top-end');
         }
     }
 
@@ -405,7 +405,7 @@ class Transcription {
             Swal.fire({
                 background: swalBackground,
                 position: 'top',
-                title: 'Clean up all transcripts?',
+                title: 'Очистить все расшифровки?',
                 imageUrl: image.delete,
                 showDenyButton: true,
                 confirmButtonText: `Yes`,
@@ -424,7 +424,7 @@ class Transcription {
                 }
             });
         } else {
-            userLog('info', "There isn't transcriptions to delete", 'top-end');
+            userLog('info', 'Нет расшифровок для удаления', 'top-end');
         }
     }
 
@@ -460,7 +460,7 @@ class Transcription {
             hide(transcriptionFooter);
             rc.msgPopup(
                 'info',
-                `${peer_name} wants to start transcriptions for this session, but your browser does not support it. Please use a Chromium-based browser like Google Chrome, Microsoft Edge, or Brave.`
+                `${peer_name} предлагает включить расшифровку, но ваш браузер её не поддерживает. Используйте браузер на основе Chromium: Google Chrome, Microsoft Edge или Brave.`
             );
             return;
         }
@@ -474,10 +474,10 @@ class Transcription {
             background: swalBackground,
             position: 'center',
             imageUrl: image.transcription,
-            title: 'Start Transcription',
-            text: `${peer_name} wants to start the transcriptions for this session. Would you like to enable them?`,
-            confirmButtonText: `Yes`,
-            denyButtonText: `No`,
+            title: 'Запуск расшифровки',
+            text: `${peer_name} предлагает включить расшифровку этой встречи. Включить?`,
+            confirmButtonText: `Да`,
+            denyButtonText: `Нет`,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {

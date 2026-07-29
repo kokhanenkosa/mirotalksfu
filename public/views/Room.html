@@ -272,10 +272,10 @@
                 <i class="fas fa-clock"></i> <span id="breakoutTimerDisplay">00:00:00</span>
             </span>
             <button id="breakoutHelpBtn" class="breakout-toolbar-help-btn">
-                <i class="fas fa-hand-paper"></i> Ask for Help
+                <i class="fas fa-hand-paper"></i> Позвать на помощь
             </button>
             <button id="breakoutReturnBtn" class="breakout-toolbar-btn">
-                <i class="fas fa-arrow-rotate-left"></i> Return to Main
+                <i class="fas fa-arrow-rotate-left"></i> Вернуться в основную комнату
             </button>
         </div>
 
@@ -354,7 +354,7 @@
                         aria-labelledby="settingsExtraToggle"
                     >
                         <button id="noExtraButtons" class="hidden">
-                            <i class="fas fa-ban red"></i> No extra buttons
+                            <i class="fas fa-ban red"></i> Нет дополнительных кнопок
                         </button>
 
                         <!-- SHARING -->
@@ -362,11 +362,11 @@
                             class="device-menu-header extra-menu-group"
                             data-buttons="shareButton,fileShareExtraButton"
                         >
-                            SHARING
+                            ОБМЕН
                         </div>
                         <button id="shareButton" class="hidden"><i class="fas fa-share-alt"></i> Поделиться комнатой</button>
                         <button id="fileShareExtraButton" class="hidden">
-                            <i class="fas fa-folder-open"></i> File sharing
+                            <i class="fas fa-folder-open"></i> Обмен файлами
                         </button>
 
                         <div class="device-menu-divider extra-menu-divider" data-group="sharing"></div>
@@ -376,16 +376,16 @@
                             class="device-menu-header extra-menu-group"
                             data-buttons="startRecButton,stopRecButton,snapshotRoomButton"
                         >
-                            RECORDING & CAPTURE
+                            ЗАПИСЬ И СНИМКИ
                         </div>
                         <button id="startRecButton" class="hidden">
-                            <i class="fas fa-record-vinyl"></i> Start Recording
+                            <i class="fas fa-record-vinyl"></i> Начать запись
                         </button>
                         <button id="stopRecButton" class="hidden">
-                            <i class="fas fa-record-vinyl cr"></i> Stop Recording
+                            <i class="fas fa-record-vinyl cr"></i> Остановить запись
                         </button>
                         <button id="snapshotRoomButton" class="hidden">
-                            <i class="fas fas fa-camera-retro"></i> Snapshot
+                            <i class="fas fas fa-camera-retro"></i> Снимок
                         </button>
 
                         <div class="device-menu-divider extra-menu-divider" data-group="recording"></div>
@@ -395,29 +395,29 @@
                             class="device-menu-header extra-menu-group"
                             data-buttons="speechRecButton,transcriptionButton,pollButton,editorButton,whiteboardButton,documentPiPButton,emojiRoomButton,breakoutRoomButton"
                         >
-                            TOOLS
+                            ИНСТРУМЕНТЫ
                         </div>
                         <button id="speechRecButton" class="hidden">
-                            <i id="speechRecIcon" class="fas fa-microphone-slash"></i> Voice Commands
+                            <i id="speechRecIcon" class="fas fa-microphone-slash"></i> Голосовые команды
                         </button>
                         <button id="transcriptionButton" class="hidden">
-                            <i class="fas fa-closed-captioning"></i> Transcription
+                            <i class="fas fa-closed-captioning"></i> Расшифровка
                         </button>
                         <button id="pollButton" class="hidden">
-                            <i class="fas fa-square-poll-horizontal"></i> Poll
+                            <i class="fas fa-square-poll-horizontal"></i> Опросы
                         </button>
                         <button id="breakoutRoomButton" class="hidden">
-                            <i class="fas fa-object-ungroup"></i> Breakout Rooms
+                            <i class="fas fa-object-ungroup"></i> Сессионные комнаты
                         </button>
                         <button id="editorButton" class="hidden"><i class="fas fa-pen-to-square"></i> Редактор</button>
                         <button id="whiteboardButton" class="hidden">
-                            <i class="fas fa-chalkboard-teacher"></i> Whiteboard
+                            <i class="fas fa-chalkboard-teacher"></i> Доска
                         </button>
                         <button id="documentPiPButton" class="hidden">
-                            <i class="fas fa-images"></i> Document PiP
+                            <i class="fas fa-images"></i> Документ в отдельном окне
                         </button>
                         <button id="emojiRoomButton" class="hidden">
-                            <i class="fas fa-face-smile"></i> Room Emoji
+                            <i class="fas fa-face-smile"></i> Реакции комнаты
                         </button>
 
                         <div class="device-menu-divider extra-menu-divider" data-group="tools"></div>
@@ -427,21 +427,27 @@
                             class="device-menu-header extra-menu-group"
                             data-buttons="hideMeButton,fullScreenButton,restartICEButton,aboutButton"
                         >
-                            VIEW & SETTINGS
+                            ВИД И НАСТРОЙКИ
                         </div>
                         <button id="hideMeButton" class="hidden">
-                            <i id="hideMeIcon" class="fas fa-user"></i> Hide Me
+                            <i id="hideMeIcon" class="fas fa-user"></i> Скрыть моё видео
                         </button>
                         <button id="fullScreenButton" class="hidden">
-                            <i id="fullScreenIcon" class="fas fa-expand-alt"></i> Full Screen
+                            <i id="fullScreenIcon" class="fas fa-expand-alt"></i> На весь экран
                         </button>
                         <button id="restartICEButton" class="hidden">
-                            <i class="fas fa-satellite-dish"></i> Restart ICE
+                            <i class="fas fa-satellite-dish"></i> Перезапустить соединение
                         </button>
                         <button id="aboutButton" class="hidden"><i class="fas fa-question"></i> О сервисе</button>
                     </div>
                 </div>
             </div>
+            <div
+                id="roomThemeHost"
+                class="room-theme-host"
+                data-optrf-theme-host
+                aria-label="Настройки темы"
+            ></div>
             <div id="exitDropdown">
                 <button id="exitButton" class="hidden"><i class="fa-solid fa-phone-slash red"></i></button>
                 <div id="exitMenu" class="hidden" aria-labelledby="exitButton">
@@ -1255,7 +1261,7 @@
                                 </select>
                                 <audio id="avatarVoicePreview"></audio>
                                 <button id="avatarVideoAIStart" class="btn-custom">
-                                    <i class="fas fa-play"></i> Start Avatar Session
+                                    <i class="fas fa-play"></i> Запустить сеанс аватара
                                 </button>
                                 <hr />
                             </div>
@@ -1804,7 +1810,7 @@
                             <button id="whiteboardPdfFileBtn"><i class="far fa-file-pdf"></i> Добавить PDF</button>
                             <button id="whiteboardTextBtn"><i class="fas fa-spell-check"></i> Добавить текст</button>
                             <button id="whiteboardStickyNoteBtn">
-                                <i class="fas fa-sticky-note"></i> Add sticky note
+                                <i class="fas fa-sticky-note"></i> Добавить заметку
                             </button>
                             <button id="whiteboardLineBtn"><i class="fas fa-slash"></i> Добавить линию</button>
                             <button id="whiteboardRectBtn"><i class="far fa-square"></i> Добавить прямоугольник</button>
@@ -1818,7 +1824,7 @@
                                 >
                                     <path d="M12 5.887l8.468 14.113h-16.936l8.468-14.113zm0-3.887l-12 20h24l-12-20z" />
                                 </svg>
-                                Add triangle
+                                Добавить треугольник
                             </button>
                             <button id="whiteboardCircleBtn"><i class="far fa-circle"></i> Добавить круг</button>
                             <button id="whiteboardSaveBtn"><i class="fas fa-save"></i> Сохранить</button>
@@ -2007,7 +2013,7 @@
                                         </li>
                                         <li>
                                             <button id="chatGhostButton" class="btn-sm">
-                                                <i class="fas fa-circle-half-stroke"></i> Toggle bg
+                                                <i class="fas fa-circle-half-stroke"></i> Переключить фон
                                             </button>
                                         </li>
                                         <li>
@@ -2017,7 +2023,7 @@
                                         </li>
                                         <li>
                                             <button id="chatCleanButton" class="btn-sm">
-                                                <i class="fas fa-trash"></i> Clean messages
+                                                <i class="fas fa-trash"></i> Очистить сообщения
                                             </button>
                                         </li>
                                     </ul>
@@ -2036,7 +2042,7 @@
                             <img alt="Empty chat illustration" class="empty-chat-img" src="../svg/emptyChat.svg" />
                             <h5 class="empty-chat-title">Начните общение</h5>
                             <p class="empty-chat-desc">
-                                There are no messages here yet. Start a conversation by sending a message.
+                                Сообщений пока нет. Отправьте первое сообщение.
                             </p>
                         </div>
 
@@ -2244,12 +2250,12 @@
                                 </li>
                                 <li>
                                     <button id="transcriptionGhostBtn">
-                                        <i class="fas fa-circle-half-stroke"></i>&nbsp;Toggle bg
+                                        <i class="fas fa-circle-half-stroke"></i>&nbsp;Переключить фон
                                     </button>
                                 </li>
                                 <li id="transcriptionAllLi" class="hidden">
                                     <button id="transcriptionAllBtn">
-                                        <i class="fas fa-play"></i>&nbsp;Start for all
+                                        <i class="fas fa-play"></i>&nbsp;Запустить для всех
                                     </button>
                                 </li>
                                 <li>
@@ -2269,7 +2275,7 @@
                         <img alt="Empty chat illustration" class="empty-chat-img" src="../svg/emptyTranscription.svg" />
                         <h5 class="empty-chat-title">Начните расшифровку</h5>
                         <p class="empty-chat-desc">
-                            There are no transcriptions here yet. Start transcription by clicking the "Start" button.
+                            Расшифровок пока нет. Нажмите «Начать», чтобы запустить расшифровку.
                         </p>
                     </div>
                 </main>
@@ -2328,7 +2334,7 @@
                 <div id="breakoutActionsBar" class="breakout-actions-bar hidden">
                     <div class="breakout-actions-row">
                         <button id="breakoutEndAllBtn" class="breakout-end-all-btn hidden">
-                            <i class="fas fa-stop-circle"></i> End All Sessions
+                            <i class="fas fa-stop-circle"></i> Завершить все комнаты
                         </button>
                     </div>
                     <div id="breakoutBroadcastInline" class="breakout-broadcast-inline">
@@ -2357,7 +2363,7 @@
                             class="breakout-auto-assign-btn hidden"
                             title="Распределить участников случайным образом"
                         >
-                            <i class="fas fa-random"></i> Auto-assign
+                            <i class="fas fa-random"></i> Распределить автоматически
                         </button>
                     </div>
                     <input
@@ -2437,7 +2443,7 @@
                 </div>
                 <div class="lobby-join-waiting__status">Ожидание подтверждения</div>
                 <p class="lobby-join-waiting__message">
-                    Asking to join meeting. A presenter will let you in as soon as they are ready.
+                    Запрашиваем вход. Ведущий разрешит подключение, когда будет готов.
                 </p>
                 <div class="lobby-join-waiting__hint">
                     <i class="fas fa-circle-info"></i>
@@ -2491,7 +2497,8 @@
 
         <template id="popupRecordingInfoTemplate">
             <div class="popup-template-copy popup-template-copy--left">
-                <span data-template-text="indicator"></span> <span data-template-text="recType"></span> Recording Info:
+                <span data-template-text="indicator"></span>
+                <span data-template-text="recType"></span> Информация о записи:
                 <div data-template-html="recordingInfo"></div>
                 <div data-template-text="recordingMsg"></div>
             </div>
@@ -2504,8 +2511,7 @@
             <br />
             <p class="qr-room-copy qr-room-copy--accent">Войти с мобильного устройства</p>
             <p class="qr-room-copy qr-room-copy--body">
-                No need for apps, simply capture the QR code with your mobile camera Or Invite someone else to join by
-                sending them the following URL
+                Приложение не требуется: отсканируйте QR-код камерой телефона или отправьте участнику эту ссылку:
             </p>
             <p class="qr-room-copy qr-room-copy--accent" data-template-text="roomUrl"></p>
         </template>
@@ -2549,7 +2555,7 @@ Note</textarea>
 
         <template id="popupUsernameInUseTemplate">
             <div>
-                The Username is already in use. <br />
+                Это имя уже используется. <br />
                 Please try with another one
             </div>
         </template>
@@ -2773,10 +2779,10 @@ Note</textarea>
                         class="form-select text-light bg-dark breakout-countdown-select breakout-countdown-select--end"
                     >
                         <option value="0">Сразу</option>
-                        <option value="10">10 seconds</option>
-                        <option value="30" selected>30 seconds</option>
-                        <option value="60">60 seconds</option>
-                        <option value="120">2 minutes</option>
+                        <option value="10">10 секунд</option>
+                        <option value="30" selected>30 секунд</option>
+                        <option value="60">60 секунд</option>
+                        <option value="120">2 минуты</option>
                     </select>
                 </div>
             </div>

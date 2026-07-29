@@ -84,6 +84,11 @@ body {
     font-family: var(--optrf-font);
 }
 
+/* Атрибут hidden должен иметь приоритет над классами кнопок и панелей. */
+[hidden] {
+    display: none !important;
+}
+
 .body-wrap,
 .pa-body,
 .cr-body,
@@ -306,6 +311,10 @@ html[data-theme='dark'] .logo-for-dark {
     position: fixed;
     top: 14px;
     right: 14px;
+}
+
+.optrf-theme-switcher--embedded {
+    position: relative;
 }
 
 .optrf-theme-option {

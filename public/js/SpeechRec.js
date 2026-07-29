@@ -766,7 +766,7 @@ if (speechRecognition) {
         show(chatSpeechStopButton);
         setColor(chatSpeechStopButton, 'lime');
         setSpeechRecButtonState(true);
-        userLog('info', 'Speech recognition started', 'top-end');
+        userLog('info', 'Распознавание речи запущено', 'top-end');
     };
 
     recognition.onresult = (e) => {
@@ -794,7 +794,7 @@ if (speechRecognition) {
         hide(chatSpeechStopButton);
         setColor(chatSpeechStopButton, 'white');
         setSpeechRecButtonState(false);
-        userLog('info', 'Speech recognition stopped', 'top-end');
+        userLog('info', 'Распознавание речи остановлено', 'top-end');
     };
 
     console.info('Browser supports webkitSpeechRecognition');
@@ -818,7 +818,7 @@ function startSpeech() {
         recognition.start();
     } catch (error) {
         console.error('Error starting speech recognition:', error);
-        userLog('error', 'Failed to start voice recognition', 'top-end');
+        userLog('error', 'Не удалось запустить распознавание речи', 'top-end');
     }
 }
 

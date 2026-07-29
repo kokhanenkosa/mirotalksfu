@@ -568,8 +568,8 @@ class RoomClient {
                     return popupHtmlMessage(
                         null,
                         image.forbidden,
-                        'Join Room',
-                        `Room is full, maximum participants${room?.maxParticipants ? ` (${room.maxParticipants})` : ''} reached!`,
+                        'Войти в комнату',
+                        `Комната заполнена. Достигнут предел участников${room?.maxParticipants ? `: ${room.maxParticipants}` : ''}.`,
                         'center',
                         '/',
                         false
@@ -637,7 +637,7 @@ class RoomClient {
                     openURL('/no-create-access');
                     return;
                 }
-                popupHtmlMessage(null, image.network, 'Join Room', error, 'center', false, true);
+                popupHtmlMessage(null, image.network, 'Войти в комнату', error, 'center', false, true);
             });
     }
 
@@ -1608,7 +1608,7 @@ class RoomClient {
                 },
             }),
             showDenyButton: true,
-            confirmButtonText: `${icons.signIn} Join Room`,
+            confirmButtonText: `${icons.signIn} Войти в комнату`,
             denyButtonText: 'Закрыть',
             customClass: {
                 popup: 'breakout-swal breakout-swal--help',
@@ -1749,7 +1749,7 @@ class RoomClient {
         }
 
         if (banner.action) {
-            banner.action.textContent = actionLabel || 'Join Room';
+            banner.action.textContent = actionLabel || 'Войти в комнату';
             banner.action.style.display = actionLabel ? 'inline-flex' : 'none';
             banner.action.onclick = typeof onAction === 'function' ? () => onAction() : null;
         }
@@ -1798,8 +1798,8 @@ class RoomClient {
     showReconnectAlert(reason) {
         this.renderReconnectBanner({
             title: 'Соединение потеряно',
-            message: `${reason || 'Network issue'}.`,
-            meta: 'Retrying',
+            message: `${reason || 'Проблема с сетью'}.`,
+            meta: 'Повторное подключение',
             icon: 'fa-solid fa-plug',
             state: 'reconnecting',
             showSpinner: true,
@@ -1809,12 +1809,12 @@ class RoomClient {
     showMaxAttemptsAlert() {
         this.renderReconnectBanner({
             title: 'Не удалось восстановить соединение',
-            message: 'Connection could not be restored.',
+            message: 'Не удалось восстановить соединение.',
             meta: '',
             icon: 'fa-solid fa-triangle-exclamation',
             state: 'failed',
             showSpinner: false,
-            actionLabel: 'Join Room',
+            actionLabel: 'Войти в комнату',
             onAction: () => this.refreshBrowser(),
         });
     }
@@ -1877,8 +1877,8 @@ class RoomClient {
 
         this.renderReconnectBanner({
             title: 'Восстановление соединения',
-            message: `Attempt ${attempt} of ${this.maxReconnectAttempts}.`,
-            meta: `Retry in ${seconds}s`,
+            message: `Попытка ${attempt} из ${this.maxReconnectAttempts}.`,
+            meta: `Повтор через ${seconds} сек.`,
             icon: 'fa-solid fa-rotate-right',
             state: 'reconnecting',
             showSpinner: true,
@@ -1898,8 +1898,8 @@ class RoomClient {
 
         this.renderReconnectBanner({
             title: 'Соединение восстановлено',
-            message: 'Connection restored.',
-            meta: 'Reloading',
+            message: 'Соединение восстановлено.',
+            meta: 'Перезагрузка',
             icon: 'fa-solid fa-wifi',
             state: 'restored',
             showSpinner: false,
@@ -3180,10 +3180,10 @@ class RoomClient {
                 myDropdownDiv.className = 'navbar-dropdown';
                 myDropdownContent.className = 'navbar-dropdown-content';
 
-                myDropdownContent.appendChild(this.createDropdownItem(mv, 'Mirror', myDropdownContent));
+                myDropdownContent.appendChild(this.createDropdownItem(mv, 'Зеркальное видео', myDropdownContent));
                 BUTTONS.producerVideo.fullScreenButton &&
                     this.isVideoFullScreenSupported &&
-                    myDropdownContent.appendChild(this.createDropdownItem(fs, 'Full Screen', myDropdownContent));
+                    myDropdownContent.appendChild(this.createDropdownItem(fs, 'На весь экран', myDropdownContent));
 
                 myDropdownDiv.appendChild(myDropdownBtn);
                 document.body.appendChild(myDropdownContent);
@@ -3843,20 +3843,22 @@ class RoomClient {
                 pv.value = 100;
 
                 // Build dropdown items
-                eVc.appendChild(this.createDropdownItem(mv, 'Mirror', eVc));
+                eVc.appendChild(this.createDropdownItem(mv, 'Зеркальное видео', eVc));
                 BUTTONS.consumerVideo.fullScreenButton &&
                     this.isVideoFullScreenSupported &&
-                    eVc.appendChild(this.createDropdownItem(fs, 'Full Screen', eVc));
+                    eVc.appendChild(this.createDropdownItem(fs, 'На весь экран', eVc));
                 BUTTONS.consumerVideo.sendMessageButton &&
-                    eVc.appendChild(this.createDropdownItem(sm, 'Private Message', eVc));
+                    eVc.appendChild(this.createDropdownItem(sm, 'Личное сообщение', eVc));
                 BUTTONS.consumerVideo.geolocationButton &&
-                    eVc.appendChild(this.createDropdownItem(gl, 'Geo Location', eVc));
-                BUTTONS.consumerVideo.sendFileButton && eVc.appendChild(this.createDropdownItem(sf, 'Send File', eVc));
+                    eVc.appendChild(this.createDropdownItem(gl, 'Геолокация', eVc));
+                BUTTONS.consumerVideo.sendFileButton &&
+                    eVc.appendChild(this.createDropdownItem(sf, 'Отправить файл', eVc));
                 BUTTONS.consumerVideo.sendVideoButton &&
-                    eVc.appendChild(this.createDropdownItem(sv, 'Send Video/Audio', eVc));
-                BUTTONS.consumerVideo.banButton && eVc.appendChild(this.createDropdownItem(ban, 'Ban', eVc, 'red'));
+                    eVc.appendChild(this.createDropdownItem(sv, 'Отправить видео или аудио', eVc));
+                BUTTONS.consumerVideo.banButton &&
+                    eVc.appendChild(this.createDropdownItem(ban, 'Заблокировать', eVc, 'red'));
                 BUTTONS.consumerVideo.ejectButton &&
-                    eVc.appendChild(this.createDropdownItem(ko, 'Kick Out', eVc, 'red'));
+                    eVc.appendChild(this.createDropdownItem(ko, 'Удалить из комнаты', eVc, 'red'));
 
                 eDiv.appendChild(eBtn);
                 document.body.appendChild(eVc);
@@ -5446,7 +5448,9 @@ class RoomClient {
                     zoom *= scaleFactor;
                     zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
                     videoPlayer.style.transformOrigin = `${cursorX}px ${cursorY}px`;
-                    videoPlayer.style.transform = `scale(${zoom})`;
+                    // Не перезаписываем transform: класс .mirror использует rotateY(180deg).
+                    // Независимое свойство scale сохраняет текущее отражение при масштабировании.
+                    videoPlayer.style.scale = String(zoom);
                     videoPlayer.style.cursor = zoom === 1 ? 'pointer' : zoomDirection;
                 });
 
@@ -5454,7 +5458,7 @@ class RoomClient {
                     videoPlayer.style.cursor = 'pointer';
                     if (videoPeerId === this.peer_id) {
                         zoom = 1;
-                        videoPlayer.style.transform = '';
+                        videoPlayer.style.scale = '';
                         videoPlayer.style.transformOrigin = 'center';
                     }
                 });
@@ -7948,7 +7952,7 @@ class RoomClient {
         editorRoom.classList.add('editor-private-mode');
         this.userLog(
             'info',
-            `${icons.editor} Private Note mode: your edits are NOT shared and NOT saved`,
+            `${icons.editor} Личные заметки: изменения не отправляются другим и не сохраняются автоматически`,
             'top-end',
             6000
         );
@@ -8849,9 +8853,9 @@ class RoomClient {
 
     async openFilePickerModal({ title = 'Share file', accept = '*', confirmButtonText = 'Send', imageUrl } = {}) {
         const acceptedFileTypes = this.formatAcceptedFileTypes(accept);
-        const helperText = `Accepted: ${acceptedFileTypes}`;
-        const emptyStateTitle = 'Drag and drop a file';
-        const emptyStateSubtitle = 'or click to browse from your device';
+        const helperText = `Допустимые форматы: ${acceptedFileTypes}`;
+        const emptyStateTitle = 'Перетащите файл сюда';
+        const emptyStateSubtitle = 'или нажмите, чтобы выбрать файл на устройстве';
         let selectedFile = null;
 
         const result = await Swal.fire({
@@ -8922,9 +8926,9 @@ class RoomClient {
                     preview.hidden = false;
                     dropzone.classList.add('has-file');
                     dropzone.classList.remove('is-dragover');
-                    dropzoneTitle.textContent = 'File ready';
-                    dropzoneSubtitle.textContent = 'Drop another file here or browse to replace it';
-                    browseBtn.textContent = 'Browse another file';
+                    dropzoneTitle.textContent = 'Файл готов к отправке';
+                    dropzoneSubtitle.textContent = 'Перетащите другой файл или выберите его на устройстве';
+                    browseBtn.textContent = 'Выбрать другой файл';
                     Swal.resetValidationMessage();
                     confirmButton.disabled = false;
                 };
@@ -11152,8 +11156,8 @@ class RoomClient {
                         this.peerMediaStartConfirm(
                             mediaType.audio,
                             image.unmute,
-                            'Enable Microphone',
-                            'Allow the presenter to enable your microphone?'
+                            'Включить микрофон',
+                            'Разрешить ведущему включить ваш микрофон?'
                         );
                     }
                     break;
@@ -11173,8 +11177,8 @@ class RoomClient {
                         this.peerMediaStartConfirm(
                             mediaType.video,
                             image.unhide,
-                            'Enable Camera',
-                            'Allow the presenter to enable your camera?'
+                            'Включить камеру',
+                            'Разрешить ведущему включить вашу камеру?'
                         );
                     }
                     break;
@@ -11196,8 +11200,8 @@ class RoomClient {
                         this.peerMediaStartConfirm(
                             mediaType.screen,
                             image.start,
-                            'Start Screen share',
-                            'Allow the presenter to start your screen share?'
+                            'Начать демонстрацию экрана',
+                            'Разрешить ведущему начать демонстрацию вашего экрана?'
                         );
                     }
                     break;
@@ -11560,10 +11564,10 @@ class RoomClient {
             const truncatedTitle = isSensitiveChat ? `${title.substring(0, 10)}*****` : title;
             const categoryHTML = category ? `<span class="chat-header-category">${category}</span>` : '';
             const statusText =
-                category === 'AI ASSISTANT'
-                    ? 'Assistant replies are visible only to you'
+                category === 'ИИ-АССИСТЕНТ'
+                    ? 'Ответы ассистента видны только вам'
                     : peer_id === 'all'
-                      ? `Everyone in room ${participants}`
+                      ? `Все участники комнаты: ${participants}`
                       : `${status}`;
             return `
                 <a data-toggle="modal" data-target="#view_info">
@@ -11609,7 +11613,7 @@ class RoomClient {
                     return userLog('warning', 'The moderator does not allow you to chat with ChatGPT', 'top-end', 6000);
                 }
                 isChatGPTOn = true;
-                chatAbout.innerHTML = generateChatAboutHTML(image.chatgpt, 'ChatGPT', 'online', '', 'AI ASSISTANT');
+                chatAbout.innerHTML = generateChatAboutHTML(image.chatgpt, 'ChatGPT', 'в сети', '', 'ИИ-АССИСТЕНТ');
                 this.getId('chatGPTMessages').style.display = 'block';
                 break;
             case 'DeepSeek':
@@ -11622,7 +11626,7 @@ class RoomClient {
                     );
                 }
                 isDeepSeekOn = true;
-                chatAbout.innerHTML = generateChatAboutHTML(image.deepSeek, 'DeepSeek', 'online', '', 'AI ASSISTANT');
+                chatAbout.innerHTML = generateChatAboutHTML(image.deepSeek, 'DeepSeek', 'в сети', '', 'ИИ-АССИСТЕНТ');
                 this.getId('deepSeekMessages').style.display = 'block';
                 break;
             case 'all':
@@ -13399,7 +13403,7 @@ class RoomClient {
                 : `<p style="background:transparent; color:rgb(8, 189, 89);">${rtmp}</p>`,
             showDenyButton: false,
             showCancelButton: false,
-            confirmButtonText: isCustomDestination ? 'OK' : 'Copy URL',
+            confirmButtonText: isCustomDestination ? 'ОК' : 'Копировать ссылку',
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {

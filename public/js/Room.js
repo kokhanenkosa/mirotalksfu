@@ -1465,11 +1465,11 @@ function showMobileAudioGuidance() {
             <div class="mic-guidance ios">
                 <p class="title">
                     <i class="fas fa-info-circle"></i>
-                    iOS Audio Routing
+                    Маршрутизация звука iOS
                 </p>
                 <p class="text">
-                    iOS automatically routes audio to connected Bluetooth or external devices.
-                    Connect your preferred microphone <strong>before</strong> joining.
+                    iOS автоматически направляет звук на подключённые Bluetooth-устройства.
+                    Подключите нужный микрофон <strong>до</strong> входа.
                 </p>
             </div>
         `
@@ -1477,10 +1477,10 @@ function showMobileAudioGuidance() {
             <div class="mic-guidance mobile">
                 <p class="title">
                     <i class="fas fa-mobile-alt"></i>
-                    External Microphones
+                    Внешние микрофоны
                 </p>
                 <p class="text">
-                    External microphones may require device reconnection to activate.
+                    Для включения внешнего микрофона может потребоваться переподключение устройства.
                 </p>
             </div>
         `;
@@ -2041,7 +2041,7 @@ async function updateMyPeerAvatarByUrl() {
 
             // Self-hosted avatars
             const localLabel = document.createElement('p');
-            localLabel.textContent = 'Pick an avatar:';
+            localLabel.textContent = 'Выберите аватар:';
             localLabel.style.cssText = 'color:#aaa;font-size:12px;margin:10px 0 6px;text-align:center;';
 
             const localGrid = document.createElement('div');
@@ -2056,7 +2056,7 @@ async function updateMyPeerAvatarByUrl() {
 
             // DiceBear random avatars
             const randomAvatarLabel = document.createElement('p');
-            randomAvatarLabel.textContent = 'Or pick a random avatar:';
+            randomAvatarLabel.textContent = 'Или выберите случайный аватар:';
             randomAvatarLabel.style.cssText = 'color:#aaa;font-size:12px;margin:10px 0 6px;text-align:center;';
 
             const randomAvatarGrid = document.createElement('div');
@@ -3920,7 +3920,7 @@ function handleRoomEmojiPicker() {
     header.className = 'room-emoji-header';
 
     const title = document.createElement('span');
-    title.textContent = 'Emoji Picker';
+    title.textContent = 'Выбор эмодзи';
     title.className = 'room-emoji-title';
 
     const closeBtn = document.createElement('button');
@@ -7642,7 +7642,7 @@ async function deleteAllBreakoutRooms() {
     if (inactiveRooms.length === 0) {
         return rc.userLog(
             'warning',
-            'No inactive breakout rooms available to delete. Active breakout rooms must be ended first.',
+            'Нет неактивных комнат для удаления. Сначала завершите активные комнаты.',
             'top-end',
             5000
         );
@@ -7652,7 +7652,7 @@ async function deleteAllBreakoutRooms() {
     const confirmed = await Swal.fire({
         background: swalBackground,
         position: 'top',
-        title: deletingAllRooms ? 'Delete All Breakout Rooms?' : 'Delete Inactive Breakout Rooms?',
+        title: deletingAllRooms ? 'Удалить все сессионные комнаты?' : 'Удалить неактивные сессионные комнаты?',
         html: `
             <div class="popup-template-copy popup-template-copy--left">
                 <b>${deletingAllRooms ? 'This will remove every breakout room.' : `This will remove ${inactiveRooms.length} inactive breakout room${inactiveRooms.length !== 1 ? 's' : ''}.`}</b><br /><br />
@@ -7700,7 +7700,7 @@ async function removeBreakoutRoom(index) {
     if (info && info.peers > 0) {
         return rc.userLog(
             'warning',
-            `Cannot remove room with ${info.peers} active peer(s). Wait for them to return or broadcast a message first.`,
+            `Нельзя удалить комнату с активными участниками: ${info.peers}. Сначала верните их в основную комнату.`,
             'top-end',
             5000
         );
@@ -7776,11 +7776,11 @@ async function refreshBreakoutPanel() {
                 cardClass: `breakout-room-card${activeClass}`,
                 nameId,
                 nameOnClick: `renameBreakoutRoom(${idx})`,
-                nameTitle: 'Click to rename',
+                nameTitle: 'Нажмите, чтобы переименовать',
                 countId,
                 durationId,
                 durationOnClick: `editBreakoutDuration(${idx})`,
-                durationTitle: 'Click to change duration',
+                durationTitle: 'Нажмите, чтобы изменить длительность',
                 joinOnClick: `presenterJoinBreakoutRoom('${room.id}')`,
                 messageOnClick: `broadcastToBreakoutRooms('${room.id}')`,
                 removeOnClick: `removeBreakoutRoom(${idx})`,
@@ -7967,7 +7967,7 @@ async function launchBreakoutRooms() {
             },
         }),
         showDenyButton: true,
-        confirmButtonText: '<i class="fas fa-rocket"></i> Launch',
+        confirmButtonText: '<i class="fas fa-rocket"></i> Запустить',
         denyButtonText: 'Отмена',
         customClass: {
             popup: 'breakout-swal breakout-swal--launch',
@@ -8204,7 +8204,7 @@ async function endAllBreakoutSessions() {
             },
         }),
         showDenyButton: true,
-        confirmButtonText: '<i class="fas fa-door-open"></i> End All',
+        confirmButtonText: '<i class="fas fa-door-open"></i> Завершить все',
         denyButtonText: 'Отмена',
         customClass: {
             popup: 'breakout-swal breakout-swal--end',
