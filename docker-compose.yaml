@@ -11,123 +11,129 @@
 # Firewall: UDP+TCP 40000-40100
 
 services:
-  mirotalksfu:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: optrf-mirotalksfu:local
-    restart: unless-stopped
-    environment:
-      # Coolify magic: домен → контейнерный порт 3010
-      - SERVICE_URL_MIROTALKSFU_3010
+    mirotalksfu:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: optrf-mirotalksfu:local
+        restart: unless-stopped
+        environment:
+            # Coolify magic: домен → контейнерный порт 3010
+            - SERVICE_URL_MIROTALKSFU_3010
 
-      - SERVER_HOST_URL=${SERVER_HOST_URL}
-      - NODE_ENV=production
-      - TRUST_PROXY=true
-      - SERVER_LISTEN_IP=0.0.0.0
-      - SERVER_LISTEN_PORT=3010
+            - SERVER_HOST_URL=${SERVER_HOST_URL}
+            - NODE_ENV=production
+            - TRUST_PROXY=true
+            - SERVER_LISTEN_IP=0.0.0.0
+            - SERVER_LISTEN_PORT=3010
 
-      - SFU_ANNOUNCED_IP=${SFU_ANNOUNCED_IP}
-      - SFU_LISTEN_IP=0.0.0.0
-      - SFU_MIN_PORT=${SFU_MIN_PORT:-40000}
-      - SFU_MAX_PORT=${SFU_MAX_PORT:-40100}
-      - SFU_NUM_WORKERS=${SFU_NUM_WORKERS:-4}
-      - SFU_SERVER=${SFU_SERVER:-true}
+            - SFU_ANNOUNCED_IP=${SFU_ANNOUNCED_IP}
+            - SFU_LISTEN_IP=0.0.0.0
+            - SFU_MIN_PORT=${SFU_MIN_PORT:-40000}
+            - SFU_MAX_PORT=${SFU_MAX_PORT:-40100}
+            - SFU_NUM_WORKERS=${SFU_NUM_WORKERS:-4}
+            - SFU_SERVER=${SFU_SERVER:-true}
 
-      - UI_LANGUAGE=${UI_LANGUAGE:-ru}
-      - APP_NAME=${APP_NAME:-OPTRF}
-      # APP_TITLE/APP_DESCRIPTION намеренно не пробрасываем — залипали старые строки MiroTalk
-      - JOIN_DESCRIPTION=${JOIN_DESCRIPTION:-}
-      - JOIN_BUTTON_LABEL=${JOIN_BUTTON_LABEL:-}
-      - CUSTOMIZE_BUTTON_LABEL=${CUSTOMIZE_BUTTON_LABEL:-}
-      - JOIN_LAST_LABEL=${JOIN_LAST_LABEL:-}
-      - NEW_ROOM_TITLE=${NEW_ROOM_TITLE:-}
-      - NEW_ROOM_DESC=${NEW_ROOM_DESC:-}
-      - SITE_TITLE=${SITE_TITLE:-}
-      - SITE_ICON_PATH=${SITE_ICON_PATH:-../images/logo-no-background.svg}
-      - APPLE_TOUCH_ICON_PATH=${APPLE_TOUCH_ICON_PATH:-../images/logo-no-background.svg}
-      - META_DESCRIPTION=${META_DESCRIPTION:-}
-      - OG_SITE_NAME=${OG_SITE_NAME:-}
-      - OG_TITLE=${OG_TITLE:-}
-      - OG_DESCRIPTION=${OG_DESCRIPTION:-}
-      - COPYRIGHT_TEXT=${COPYRIGHT_TEXT:-}
+            - UI_LANGUAGE=${UI_LANGUAGE:-ru}
+            - APP_NAME=${APP_NAME:-OPTRF}
+            # APP_TITLE/APP_DESCRIPTION намеренно не пробрасываем — залипали старые строки MiroTalk
+            - JOIN_DESCRIPTION=${JOIN_DESCRIPTION:-}
+            - JOIN_BUTTON_LABEL=${JOIN_BUTTON_LABEL:-}
+            - CUSTOMIZE_BUTTON_LABEL=${CUSTOMIZE_BUTTON_LABEL:-}
+            - JOIN_LAST_LABEL=${JOIN_LAST_LABEL:-}
+            - NEW_ROOM_TITLE=${NEW_ROOM_TITLE:-}
+            - NEW_ROOM_DESC=${NEW_ROOM_DESC:-}
+            - SITE_TITLE=${SITE_TITLE:-}
+            - SITE_ICON_PATH=${SITE_ICON_PATH:-../images/logo-no-background.svg}
+            - APPLE_TOUCH_ICON_PATH=${APPLE_TOUCH_ICON_PATH:-../images/logo-no-background.svg}
+            - META_DESCRIPTION=${META_DESCRIPTION:-}
+            - OG_SITE_NAME=${OG_SITE_NAME:-}
+            - OG_TITLE=${OG_TITLE:-}
+            - OG_DESCRIPTION=${OG_DESCRIPTION:-}
+            - COPYRIGHT_TEXT=${COPYRIGHT_TEXT:-}
 
-      - SHOW_TOP_SPONSORS=false
-      - SHOW_TEAMS=false
-      - SHOW_POWERED_BY=false
-      - SHOW_SPONSORS=false
-      - SHOW_PAST_SPONSORS=false
-      - SHOW_ADVERTISERS=false
-      - SHOW_SUPPORT_US=false
-      - SHOW_FEATURES=false
-      - SHOW_TRY_EASIER=false
-      - SHOW_FOOTER=true
+            - SHOW_TOP_SPONSORS=false
+            - SHOW_TEAMS=false
+            - SHOW_POWERED_BY=false
+            - SHOW_SPONSORS=false
+            - SHOW_PAST_SPONSORS=false
+            - SHOW_ADVERTISERS=false
+            - SHOW_SUPPORT_US=false
+            - SHOW_FEATURES=false
+            - SHOW_TRY_EASIER=false
+            - SHOW_FOOTER=true
 
-      - JWT_SECRET=${SERVICE_PASSWORD_64_JWT}
-      - API_KEY_SECRET=${SERVICE_PASSWORD_64_API}
-      - JWT_EXPIRATION=${JWT_EXPIRATION:-1h}
+            - JWT_SECRET=${SERVICE_PASSWORD_64_JWT}
+            - API_KEY_SECRET=${SERVICE_PASSWORD_64_API}
+            - JWT_EXPIRATION=${JWT_EXPIRATION:-1h}
 
-      - HOST_PROTECTED=${HOST_PROTECTED:-false}
-      - HOST_USER_AUTH=${HOST_USER_AUTH:-false}
-      - HOST_USERS=${HOST_USERS:-}
+            - HOST_PROTECTED=${HOST_PROTECTED:-false}
+            - HOST_USER_AUTH=${HOST_USER_AUTH:-false}
+            - HOST_USERS=${HOST_USERS:-}
 
-      - PHONE_AUTH_ENABLED=${PHONE_AUTH_ENABLED:-true}
-      - PHONE_AUTH_JWT_EXP=${PHONE_AUTH_JWT_EXP:-7d}
-      - PHONE_CREATORS=${PHONE_CREATORS:-}
-      - PHONE_SUPERADMINS=${PHONE_SUPERADMINS:-}
-      - PHONE_STORE_PATH=${PHONE_STORE_PATH:-/src/app/data/phone-store.json}
-      - TELEGRAM_GATEWAY_TOKEN=${TELEGRAM_GATEWAY_TOKEN:-}
-      - TELEGRAM_GATEWAY_API_URL=${TELEGRAM_GATEWAY_API_URL:-https://gatewayapi.telegram.org/}
-      - PROXY_URL=${PROXY_URL:-}
-      - HTTPS_PROXY=${HTTPS_PROXY:-}
-      - HTTP_PROXY=${HTTP_PROXY:-}
-      - SMSC_LOGIN=${SMSC_LOGIN:-}
-      - SMSC_PASSWORD=${SMSC_PASSWORD:-}
-      - SMSC_SENDER=${SMSC_SENDER:-}
-      - SMSC_MESSAGE_TEMPLATE=${SMSC_MESSAGE_TEMPLATE:-}
+            - PHONE_AUTH_ENABLED=${PHONE_AUTH_ENABLED:-true}
+            - PHONE_AUTH_JWT_EXP=${PHONE_AUTH_JWT_EXP:-7d}
+            - PHONE_CREATORS=${PHONE_CREATORS:-}
+            - PHONE_SUPERADMINS=${PHONE_SUPERADMINS:-}
+            - DATABASE_URL=${DATABASE_URL}
+            - DATABASE_SSL=${DATABASE_SSL:-false}
+            - DATABASE_POOL_MAX=${DATABASE_POOL_MAX:-10}
+            - DATABASE_CONNECT_TIMEOUT_MS=${DATABASE_CONNECT_TIMEOUT_MS:-10000}
+            - DATABASE_IDLE_TIMEOUT_MS=${DATABASE_IDLE_TIMEOUT_MS:-30000}
+            # Временно сохраняем JSON-хранилище и volume для одноразового импорта в PostgreSQL
+            - PHONE_STORE_PATH=${PHONE_STORE_PATH:-/src/app/data/phone-store.json}
+            - TELEGRAM_GATEWAY_TOKEN=${TELEGRAM_GATEWAY_TOKEN:-}
+            - TELEGRAM_GATEWAY_API_URL=${TELEGRAM_GATEWAY_API_URL:-https://gatewayapi.telegram.org/}
+            - PROXY_URL=${PROXY_URL:-}
+            - HTTPS_PROXY=${HTTPS_PROXY:-}
+            - HTTP_PROXY=${HTTP_PROXY:-}
+            - SMSC_LOGIN=${SMSC_LOGIN:-}
+            - SMSC_PASSWORD=${SMSC_PASSWORD:-}
+            - SMSC_SENDER=${SMSC_SENDER:-}
+            - SMSC_MESSAGE_TEMPLATE=${SMSC_MESSAGE_TEMPLATE:-}
 
-      - RECORDING_ENABLED=${RECORDING_ENABLED:-false}
-      - RTMP_ENABLED=${RTMP_ENABLED:-false}
-      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+            - RECORDING_ENABLED=${RECORDING_ENABLED:-false}
+            - RTMP_ENABLED=${RTMP_ENABLED:-false}
+            - CORS_ORIGIN=${CORS_ORIGIN:-*}
 
-      - ENABLE_CHAT_GPT=${ENABLE_CHAT_GPT:-false}
-      - ENABLE_DEEP_SEEK=${ENABLE_DEEP_SEEK:-false}
-      - CHATGPT_ENABLED=${CHATGPT_ENABLED:-false}
-      - DEEP_SEEK_ENABLED=${DEEP_SEEK_ENABLED:-false}
-      - VIDEOAI_ENABLED=${VIDEOAI_ENABLED:-false}
+            - ENABLE_CHAT_GPT=${ENABLE_CHAT_GPT:-false}
+            - ENABLE_DEEP_SEEK=${ENABLE_DEEP_SEEK:-false}
+            - CHATGPT_ENABLED=${CHATGPT_ENABLED:-false}
+            - DEEP_SEEK_ENABLED=${DEEP_SEEK_ENABLED:-false}
+            - VIDEOAI_ENABLED=${VIDEOAI_ENABLED:-false}
 
-      - SHOW_TRANSCRIPTION=${SHOW_TRANSCRIPTION:-false}
-      - SHOW_SPEECH_REC_BUTTON=${SHOW_SPEECH_REC_BUTTON:-false}
-      - SHOW_CHAT_SPEECH=${SHOW_CHAT_SPEECH:-false}
-      - SHOW_CHAT_MARKDOWN=${SHOW_CHAT_MARKDOWN:-false}
-      - STATS_ENABLED=false
+            - SHOW_TRANSCRIPTION=${SHOW_TRANSCRIPTION:-false}
+            - SHOW_SPEECH_REC_BUTTON=${SHOW_SPEECH_REC_BUTTON:-false}
+            - SHOW_CHAT_SPEECH=${SHOW_CHAT_SPEECH:-false}
+            - SHOW_CHAT_MARKDOWN=${SHOW_CHAT_MARKDOWN:-false}
+            - STATS_ENABLED=false
 
-    expose:
-      - '3010'
+        expose:
+            - '3010'
 
-    ports:
-      - '${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}:${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}/udp'
-      - '${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}:${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}/tcp'
+        ports:
+            - '${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}:${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}/udp'
+            - '${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}:${SFU_MIN_PORT:-40000}-${SFU_MAX_PORT:-40100}/tcp'
 
-    volumes:
-      - mirotalksfu-rec:/src/app/rec
-      - mirotalksfu-rtmp:/src/app/rtmp
-      - mirotalksfu-phone-data:/src/app/data
+        volumes:
+            - mirotalksfu-rec:/src/app/rec
+            - mirotalksfu-rtmp:/src/app/rtmp
+            - mirotalksfu-phone-data:/src/app/data
 
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "require('net').createConnection(3010,'127.0.0.1').on('connect',function(){this.end();process.exit(0)}).on('error',function(){process.exit(1)})",
-        ]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'node',
+                    '-e',
+                    "require('net').createConnection(3010,'127.0.0.1').on('connect',function(){this.end();process.exit(0)}).on('error',function(){process.exit(1)})",
+                ]
+            interval: 30s
+            timeout: 5s
+            retries: 5
+            start_period: 60s
 
 volumes:
-  mirotalksfu-rec:
-  mirotalksfu-rtmp:
-  mirotalksfu-phone-data:
+    mirotalksfu-rec:
+    mirotalksfu-rtmp:
+    mirotalksfu-phone-data:

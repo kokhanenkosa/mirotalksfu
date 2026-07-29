@@ -36,33 +36,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const stripCyrillic = (value) =>
         String(value || '').replace(/[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]/g, '');
 
-    /**
-     * Имя профиля хранится на сервере по номеру телефона.
-     * localStorage/sessionStorage — быстрый fallback до ответа /phone/me.
-     */
-    const applySavedDisplayName = (name) => {
-        const displayName = String(name || '').trim();
-        if (!nameEl || !displayName || nameEl.value.trim()) return;
-        nameEl.value = displayName;
-        nameEl.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-
-    applySavedDisplayName(
-        window.sessionStorage.phone_display_name || window.localStorage.peer_name || ''
-    );
-
     fetch('/phone/me', { credentials: 'same-origin' })
         .then((res) => res.json())
         .then((data) => {
-            if (!data?.authenticated || !data.displayName) return;
+            if (!data?.authenticated) return;
             // Серверный профиль — источник истины.
-            if (nameEl) nameEl.value = '';
-            applySavedDisplayName(data.displayName);
-            window.localStorage.peer_name = data.displayName;
-            window.sessionStorage.phone_display_name = data.displayName;
+            if (nameEl) nameEl.value = data.displayName || '';
+            if (data.displayName) {
+                window.localStorage.peer_name = data.displayName;
+                window.sessionStorage.phone_display_name = data.displayName;
+            } else {
+                window.localStorage.removeItem('peer_name');
+                window.sessionStorage.removeItem('phone_display_name');
+            }
         })
         .catch(() => {
-            // Локальный fallback уже применён выше.
+            // Без серверного профиля поле остаётся пустым.
         });
 
     if (roomEl) {
@@ -328,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
         setError('');
         setStatus('');
@@ -336,8 +325,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const joinUrl = buildJoinUrl();
             const displayName = safe(nameEl?.value);
             if (displayName) {
-                window.localStorage.peer_name = displayName;
-                window.sessionStorage.phone_display_name = displayName;
+                const profileResponse = await fetch('/phone/profile', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ displayName }),
+                });
+                const profile = await profileResponse.json().catch(() => ({}));
+                if (!profileResponse.ok || !profile.ok) {
+                    throw new Error(profile.error || 'Не удалось сохранить имя');
+                }
+                window.localStorage.peer_name = profile.displayName;
+                window.sessionStorage.phone_display_name = profile.displayName;
             }
             window.location.href = joinUrl.toString();
         } catch (err) {

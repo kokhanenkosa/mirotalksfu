@@ -1,8 +1,16 @@
 'use strict';
 
 (() => {
-    const state = { data: null };
+    const state = {
+        data: null,
+        pendingRoleUpdates: new Set(),
+    };
     const byId = (id) => document.getElementById(id);
+    const roles = [
+        { value: 'participant', label: 'Участник' },
+        { value: 'creator', label: 'Организатор' },
+        { value: 'super_admin', label: 'Супер-администратор' },
+    ];
 
     function formatDate(value) {
         if (!value) return '—';
@@ -32,6 +40,76 @@
         element.className = `admin-badge${accent ? ' admin-badge--accent' : ''}`;
         element.textContent = text;
         parent.appendChild(element);
+    }
+
+    function getUserRole(user) {
+        if (roles.some(({ value }) => value === user.role)) return user.role;
+        if (user.isSuperAdmin) return 'super_admin';
+        if (user.canCreate) return 'creator';
+        return 'participant';
+    }
+
+    function replaceUser(updatedUser, phone) {
+        const users = state.data?.users;
+        if (!Array.isArray(users)) return;
+        const index = users.findIndex((user) => user.phone === phone);
+        if (index !== -1) users[index] = { ...users[index], ...updatedUser };
+    }
+
+    async function updateUserRole(user, role, controls) {
+        const { select, button, status } = controls;
+        const currentRole = getUserRole(user);
+        if (role === currentRole || state.pendingRoleUpdates.size) return;
+
+        const usersSearch = byId('usersSearch');
+        const refresh = byId('adminRefresh');
+        state.pendingRoleUpdates.add(user.phone);
+        document.querySelectorAll('.admin-role-select, .admin-role-save').forEach((control) => {
+            control.disabled = true;
+        });
+        usersSearch.disabled = true;
+        refresh.disabled = true;
+        status.className = 'admin-role-status';
+        status.textContent = 'Сохранение…';
+
+        try {
+            const response = await fetch(`/phone/admin/users/${encodeURIComponent(user.phone)}/role`, {
+                method: 'PATCH',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ role }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.status === 401) {
+                window.location.href = '/phone-auth?next=%2Fsuper-admin';
+                return;
+            }
+            if (!response.ok || !data.ok || !data.user) {
+                throw new Error(data.error || 'Не удалось изменить роль');
+            }
+
+            replaceUser(data.user, user.phone);
+            renderUsers();
+            const adminStatus = byId('adminStatus');
+            adminStatus.className = 'admin-status admin-success';
+            adminStatus.textContent = `Роль пользователя ${user.phone} обновлена`;
+        } catch (error) {
+            select.value = currentRole;
+            status.className = 'admin-role-status admin-role-status--error';
+            status.textContent = error.message || 'Ошибка изменения роли';
+        } finally {
+            state.pendingRoleUpdates.delete(user.phone);
+            usersSearch.disabled = false;
+            refresh.disabled = false;
+            document.querySelectorAll('.admin-role-select').forEach((roleSelect) => {
+                roleSelect.disabled = false;
+            });
+            document.querySelectorAll('.admin-role-save').forEach((roleButton) => {
+                roleButton.disabled = roleButton.previousElementSibling.value === roleButton.dataset.currentRole;
+            });
+        }
     }
 
     function renderActiveRooms() {
@@ -102,10 +180,45 @@
             const row = document.createElement('tr');
             cell(row, user.phone, 'admin-phone');
             cell(row, user.displayName || 'Без имени');
-            const role = cell(row, '');
-            if (user.isSuperAdmin) badge(role, 'супер-админ', true);
-            else if (user.canCreate) badge(role, 'организатор', true);
-            else badge(role, 'участник');
+            const roleCell = cell(row, '', 'admin-role-cell');
+            const roleControls = document.createElement('div');
+            roleControls.className = 'admin-role-controls';
+            const select = document.createElement('select');
+            select.className = 'admin-role-select';
+            select.setAttribute('aria-label', `Роль пользователя ${user.phone}`);
+            roles.forEach(({ value, label }) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = label;
+                select.appendChild(option);
+            });
+            const currentRole = getUserRole(user);
+            select.value = currentRole;
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'admin-button admin-role-save';
+            button.textContent = 'Сохранить';
+            button.dataset.currentRole = currentRole;
+            button.disabled = true;
+
+            const roleStatus = document.createElement('span');
+            roleStatus.className = 'admin-role-status';
+            roleStatus.setAttribute('aria-live', 'polite');
+            select.addEventListener('change', () => {
+                button.disabled = select.value === currentRole;
+                roleStatus.textContent = '';
+                roleStatus.className = 'admin-role-status';
+            });
+            button.addEventListener('click', () => {
+                updateUserRole(user, select.value, {
+                    select,
+                    button,
+                    status: roleStatus,
+                });
+            });
+            roleControls.append(select, button);
+            roleCell.append(roleControls, roleStatus);
             cell(row, formatDate(user.firstSeenAt));
             cell(row, formatDate(user.lastSeenAt));
             cell(row, Number(user.loginCount) || 0);
@@ -158,6 +271,7 @@
     }
 
     async function load() {
+        if (state.pendingRoleUpdates.size) return;
         const refresh = byId('adminRefresh');
         refresh.disabled = true;
         try {
@@ -173,6 +287,7 @@
             if (!response.ok || !data.ok) throw new Error(data.error || 'Не удалось загрузить данные');
             state.data = data;
             render();
+            byId('adminStatus').className = 'admin-status';
         } catch (error) {
             const status = byId('adminStatus');
             status.className = 'admin-status admin-error';

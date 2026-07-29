@@ -64,6 +64,15 @@
     border-color: var(--optrf-accent);
 }
 
+.admin-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.admin-button:disabled:hover {
+    border-color: var(--optrf-border);
+}
+
 .admin-button--accent {
     color: #fff;
     background: var(--optrf-accent);
@@ -187,6 +196,63 @@
     color: var(--optrf-muted);
 }
 
+.admin-role-cell {
+    min-width: 260px;
+}
+
+.admin-role-controls {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.admin-role-select {
+    min-width: 155px;
+    min-height: 38px;
+    padding: 7px 30px 7px 10px;
+    color: var(--optrf-text);
+    background: var(--optrf-input);
+    border: 1px solid var(--optrf-border);
+    border-radius: var(--optrf-radius-sm);
+    font: 500 13px/1.2 var(--optrf-font);
+}
+
+.admin-role-select:focus {
+    border-color: var(--optrf-accent);
+    outline: 2px solid var(--optrf-accent-soft);
+    outline-offset: 1px;
+}
+
+.admin-role-select:disabled {
+    opacity: 0.7;
+}
+
+.admin-role-save {
+    white-space: nowrap;
+}
+
+.admin-role-status {
+    display: block;
+    min-height: 15px;
+    margin-top: 5px;
+    color: var(--optrf-muted);
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+.admin-role-status:empty {
+    min-height: 0;
+    margin-top: 0;
+}
+
+.admin-role-status--error {
+    color: var(--optrf-danger);
+}
+
+.admin-success {
+    color: var(--optrf-accent);
+}
+
 .admin-badge {
     display: inline-flex;
     margin: 1px 4px 1px 0;
@@ -228,6 +294,20 @@
         order: 3;
         width: 100%;
     }
+
+    .admin-role-cell {
+        min-width: 220px;
+    }
+
+    .admin-role-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .admin-role-select,
+    .admin-role-save {
+        width: 100%;
+    }
 }
 
 @media (max-width: 560px) {
@@ -243,5 +323,13 @@
     .admin-search {
         width: 100%;
         margin-left: 0;
+    }
+
+    .admin-header-actions {
+        width: 100%;
+    }
+
+    .admin-header-actions .admin-button {
+        flex: 1;
     }
 }

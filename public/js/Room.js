@@ -1309,10 +1309,7 @@ async function whoAreYou() {
         return;
     }
 
-    let default_name =
-        window.sessionStorage.phone_display_name ||
-        window.localStorage.peer_name ||
-        '';
+    let default_name = '';
     if (getCookie(room_id + '_name')) {
         default_name = getCookie(room_id + '_name');
     }
@@ -1322,10 +1319,13 @@ async function whoAreYou() {
         if (phoneProfile?.authenticated) {
             window.sessionStorage.phone_auth = window.sessionStorage.phone_auth || 'cookie';
             window.sessionStorage.phone_number = phoneProfile.phone || '';
+            default_name = phoneProfile.displayName || '';
             if (phoneProfile.displayName) {
-                default_name = phoneProfile.displayName;
                 window.sessionStorage.phone_display_name = phoneProfile.displayName;
                 window.localStorage.peer_name = phoneProfile.displayName;
+            } else {
+                window.sessionStorage.removeItem('phone_display_name');
+                window.localStorage.removeItem('peer_name');
             }
         }
     } catch (error) {
@@ -1411,7 +1411,7 @@ async function whoAreYou() {
         didOpen: () => {
             showMobileAudioGuidance();
         },
-        inputValidator: (name) => {
+        inputValidator: async (name) => {
             if (isVideoAllowed && !isInitVideoLoaded) {
                 return 'Подождите, пока камера будет готова...';
             }
@@ -1420,17 +1420,26 @@ async function whoAreYou() {
             if (name.length > 32) return 'Имя должно быть не длиннее 32 символов';
             name = filterXSS(name);
             if (isHtml(name)) return 'Недопустимые символы в имени';
-            if (!getCookie(room_id + '_name')) {
-                window.localStorage.peer_name = name;
-            }
             if (window.sessionStorage.phone_auth) {
-                window.sessionStorage.phone_display_name = name;
-                fetch('/phone/profile', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ displayName: name }),
-                }).catch(() => {});
+                try {
+                    const response = await fetch('/phone/profile', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ displayName: name }),
+                    });
+                    const profile = await response.json().catch(() => ({}));
+                    if (!response.ok || !profile.ok) {
+                        return profile.error || 'Не удалось сохранить имя';
+                    }
+                    name = profile.displayName;
+                    window.sessionStorage.phone_display_name = name;
+                    window.localStorage.peer_name = name;
+                } catch {
+                    return 'Не удалось сохранить имя: проверьте соединение';
+                }
+            } else if (!getCookie(room_id + '_name')) {
+                window.localStorage.peer_name = name;
             }
             setCookie(room_id + '_name', name, 30);
             peer_name = name;

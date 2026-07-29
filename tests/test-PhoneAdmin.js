@@ -4,7 +4,9 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { DataType, newDb } = require('pg-mem');
 const PhoneAuth = require('../app/src/PhoneAuth');
+const PhoneDatabase = require('../app/src/PhoneDatabase');
 const PhoneStore = require('../app/src/PhoneStore');
 const Room = require('../app/src/Room');
 
@@ -28,29 +30,113 @@ describe('test-PhoneAdmin', () => {
         assert.strictEqual(revoked.canCreate, false);
     });
 
-    it('keeps login metadata, all users and global room history', () => {
+    it('uses the centralized role provider instead of JWT role claims', () => {
+        const roles = new Map([['+79001112233', 'super_admin']]);
+        const auth = new PhoneAuth({
+            enabled: true,
+            jwtKey: 'test-secret',
+            roleProvider: {
+                canCreate: (phone) => ['creator', 'super_admin'].includes(roles.get(phone)),
+                isSuperAdmin: (phone) => roles.get(phone) === 'super_admin',
+            },
+        });
+
+        const session = auth.signSession('+79001112233');
+        assert.strictEqual(auth.verifyToken(session.token).isSuperAdmin, true);
+
+        roles.set('+79001112233', 'participant');
+        const revoked = auth.verifyToken(session.token);
+        assert.strictEqual(revoked.isSuperAdmin, false);
+        assert.strictEqual(revoked.canCreate, false);
+    });
+
+    it('migrates JSON and keeps users, roles and room history in PostgreSQL', async () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'phone-admin-'));
         const filePath = path.join(dir, 'store.json');
+        const memory = newDb({ noAstCoverageCheck: true });
+        memory.public.registerFunction({
+            name: 'pg_advisory_lock',
+            args: [DataType.integer],
+            returns: DataType.bool,
+            implementation: () => true,
+        });
+        memory.public.registerFunction({
+            name: 'pg_advisory_unlock',
+            args: [DataType.integer],
+            returns: DataType.bool,
+            implementation: () => true,
+        });
+        const adapter = memory.adapters.createPg();
+        const pool = new adapter.Pool();
+        const database = new PhoneDatabase({
+            pool,
+            connectionString: 'postgres://test',
+            migrationsPath: path.join(__dirname, '../app/migrations'),
+        });
 
         try {
-            const store = new PhoneStore({ filePath });
-            store.recordLogin('+79001112233', { ip: '127.0.0.1', userAgent: 'test' });
-            store.setDisplayName('+79001112233', 'Администратор');
-            store.recordLogin('+79001112233', { ip: '127.0.0.2', userAgent: 'test-2' });
-            store.recordRoomCreated('+79001112233', 'room-one', 'session-one');
-            store.recordRoomEnded('+79001112233', 'room-one');
+            fs.writeFileSync(
+                filePath,
+                JSON.stringify({
+                    profiles: {
+                        '+79001112233': {
+                            displayName: 'Старое имя',
+                            firstSeenAt: '2026-01-01T00:00:00.000Z',
+                            lastSeenAt: '2026-01-02T00:00:00.000Z',
+                            loginCount: 2,
+                        },
+                    },
+                    rooms: [],
+                })
+            );
+            await database.initialize();
+            const store = new PhoneStore({ database, filePath });
+            await store.initialize({ superAdmins: ['+79001112233'] });
+            await store.recordLogin('+79001112233', { ip: '127.0.0.1', userAgent: 'test' });
+            await store.setDisplayName('+79001112233', 'Администратор');
+            await store.recordLogin('+79001112233', { ip: '127.0.0.2', userAgent: 'test-2' });
+            await store.recordRoomCreated('+79001112233', 'room-one', 'session-one');
+            await store.recordRoomEnded('+79001112233', 'room-one');
 
-            const [user] = store.getAllUsers();
+            const [user] = await store.getAllUsers();
             assert.strictEqual(user.displayName, 'Администратор');
-            assert.strictEqual(user.loginCount, 2);
+            assert.strictEqual(user.loginCount, 4);
             assert.strictEqual(user.roomsCreated, 1);
             assert.strictEqual(user.lastIp, '127.0.0.2');
+            assert.strictEqual(user.role, 'super_admin');
+            assert.strictEqual(store.isSuperAdmin(user.phone), true);
 
-            const [room] = store.getAllRooms();
+            const [room] = await store.getAllRooms();
             assert.strictEqual(room.roomId, 'room-one');
             assert.strictEqual(room.createdByPhone, '+79001112233');
             assert.ok(room.endedAt);
+
+            await assert.rejects(() => store.setRole('+79001112233', 'participant'), /последнего супер-администратора/);
+
+            await store.recordLogin('+79002223344');
+            await store.setRole('+79002223344', 'super_admin');
+            const demoted = await store.setRole('+79001112233', 'creator');
+            assert.strictEqual(demoted.ok, true);
+            assert.strictEqual(store.canCreate('+79001112233'), true);
+
+            await store.recordRoomCreated('+79001112233', 'room-after-restart', 'session-after-restart');
+
+            // Повторная инициализация не импортирует JSON и роли второй раз,
+            // а незакрытые комнаты прошлого процесса помечает завершёнными.
+            await store.initialize({ superAdmins: ['+79001112233'] });
+            const users = await store.getAllUsers();
+            assert.strictEqual(users.length, 2);
+            assert.strictEqual(store.getRole('+79001112233'), 'creator');
+            const restartedRoom = (await store.getAllRooms()).find(
+                (item) => item.sessionId === 'session-after-restart'
+            );
+            assert.ok(restartedRoom.endedAt);
+
+            await database.initialize();
+            const migrations = await database.query('SELECT COUNT(*)::integer AS count FROM optrf_schema_migrations');
+            assert.strictEqual(Number(migrations.rows[0].count), 1);
         } finally {
+            await database.close();
             fs.rmSync(dir, { recursive: true, force: true });
         }
     });

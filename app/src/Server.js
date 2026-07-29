@@ -97,6 +97,7 @@ const Room = require('./Room');
 const Peer = require('./Peer');
 const ServerApi = require('./ServerApi');
 const PhoneAuth = require('./PhoneAuth');
+const PhoneDatabase = require('./PhoneDatabase');
 const PhoneStore = require('./PhoneStore');
 const Logger = require('./Logger');
 const Validator = require('./Validator');
@@ -298,7 +299,7 @@ const options = {
 
 const corsOptions = {
     origin: config.server?.cors?.origin || '*',
-    methods: config.server?.cors?.methods || ['GET', 'POST'],
+    methods: config.server?.cors?.methods || ['GET', 'POST', 'PATCH'],
 };
 
 const server = httpolyglot.createServer(options, app);
@@ -328,29 +329,32 @@ const phoneAuth = new PhoneAuth({
     log: (...args) => log.info(...args),
 });
 
-const phoneStore = new PhoneStore({
+const phoneDatabase = new PhoneDatabase({
     log: (...args) => log.info(...args),
 });
+const phoneStore = new PhoneStore({
+    database: phoneDatabase,
+    log: (...args) => log.info(...args),
+});
+let phoneRoleRefreshTimer = null;
 
-if (phoneAuth.isEnabled()) {
-    log.info('Phone auth enabled', {
-        creators: phoneAuth.creators.size,
-        superAdmins: phoneAuth.superAdmins.size,
-        proxy: Boolean(process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY),
-        smsc: Boolean(phoneAuthCfg?.smsc?.login),
-        store: phoneStore.filePath,
-    });
+const pendingPhoneStoreWrites = new Set();
+function queuePhoneStoreWrite(promise) {
+    pendingPhoneStoreWrites.add(promise);
+    promise.then(
+        () => pendingPhoneStoreWrites.delete(promise),
+        () => pendingPhoneStoreWrites.delete(promise)
+    );
+    return promise;
 }
 
 /** Удалить комнату из roomList и закрыть запись в истории создателя */
 function removeRoomFromList(roomId) {
     const room = roomList.get(roomId);
     if (room?.createdByPhone) {
-        try {
-            phoneStore.recordRoomEnded(room.createdByPhone, roomId);
-        } catch (err) {
-            log.warn('PhoneStore recordRoomEnded failed', err.message);
-        }
+        queuePhoneStoreWrite(phoneStore.recordRoomEnded(room.createdByPhone, roomId)).catch((err) =>
+            log.warn('PhoneStore recordRoomEnded failed', err.message)
+        );
     }
     roomList.delete(roomId);
 }
@@ -572,8 +576,8 @@ function requirePhoneSuperAdmin(req, res, next) {
     return next();
 }
 
-function getSuperAdminOverview() {
-    const users = phoneStore.getAllUsers().map((user) => ({
+async function getSuperAdminOverview() {
+    const users = (await phoneStore.getAllUsers()).map((user) => ({
         ...user,
         canCreate: phoneAuth.canCreate(user.phone),
         isSuperAdmin: phoneAuth.isSuperAdmin(user.phone),
@@ -616,7 +620,7 @@ function getSuperAdminOverview() {
     }
 
     activeRooms.sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
-    const history = phoneStore.getAllRooms().map((room) => ({
+    const history = (await phoneStore.getAllRooms()).map((room) => ({
         ...room,
         createdByName: profiles.get(room.createdByPhone)?.displayName || '',
         isActive:
@@ -676,7 +680,10 @@ if (!announcedAddress && IP === '0.0.0.0') {
                 if (ip) {
                     announcedAddress = ip;
                     updateAnnouncedAddress(ip);
-                    startServer();
+                    startServer().catch((startErr) => {
+                        log.error('Server startup failed', startErr);
+                        process.exit(1);
+                    });
                     return;
                 }
             } catch (err) {
@@ -691,7 +698,10 @@ if (!announcedAddress && IP === '0.0.0.0') {
         process.exit(1);
     });
 } else {
-    startServer();
+    startServer().catch((startErr) => {
+        log.error('Server startup failed', startErr);
+        process.exit(1);
+    });
 }
 
 function fetchPublicIp(serviceUrl) {
@@ -757,7 +767,29 @@ function OIDCAuth(req, res, next) {
     }
 }
 
-function startServer() {
+async function startServer() {
+    await phoneDatabase.initialize();
+    await phoneStore.initialize({
+        creators: [...phoneAuth.creators],
+        superAdmins: [...phoneAuth.superAdmins],
+    });
+    phoneAuth.setRoleProvider(phoneStore);
+    phoneRoleRefreshTimer = setInterval(
+        () => phoneStore.refreshRoleCache().catch((err) => log.warn('Phone role cache refresh failed', err.message)),
+        30000
+    );
+    phoneRoleRefreshTimer.unref?.();
+
+    if (phoneAuth.isEnabled()) {
+        log.info('Phone auth enabled', {
+            creators: [...phoneStore.roleCache.values()].filter((role) => role === 'creator').length,
+            superAdmins: [...phoneStore.roleCache.values()].filter((role) => role === 'super_admin').length,
+            proxy: Boolean(process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY),
+            smsc: Boolean(phoneAuthCfg?.smsc?.login),
+            store: 'PostgreSQL',
+        });
+    }
+
     // Start the app
     app.set('trust proxy', trustProxy); // Enables trust for proxy headers (e.g., X-Forwarded-For) based on the trustProxy setting
     app.use(helmet.noSniff()); // Enable content type sniffing prevention
@@ -1216,7 +1248,7 @@ function startServer() {
         return res.status(result.ok ? 200 : 400).json(result);
     });
 
-    app.post('/phone/verify', phoneVerifyLimiter, (req, res) => {
+    app.post('/phone/verify', phoneVerifyLimiter, async (req, res) => {
         if (!phoneAuth.isEnabled()) {
             return res.status(404).json({ ok: false, error: 'Авторизация по телефону отключена' });
         }
@@ -1225,7 +1257,7 @@ function startServer() {
         if (!result.ok) {
             return res.status(400).json(result);
         }
-        phoneStore.recordLogin(result.phone, {
+        await phoneStore.recordLogin(result.phone, {
             ip: req.ip || req.socket?.remoteAddress || '',
             userAgent: req.headers['user-agent'] || '',
         });
@@ -1236,11 +1268,11 @@ function startServer() {
             phone: result.phone,
             canCreate: result.canCreate,
             isSuperAdmin: result.isSuperAdmin,
-            displayName: phoneStore.getDisplayName(result.phone) || '',
+            displayName: (await phoneStore.getDisplayName(result.phone)) || '',
         });
     });
 
-    app.get('/phone/me', (req, res) => {
+    app.get('/phone/me', async (req, res) => {
         if (!phoneAuth.isEnabled()) {
             return res.json({ ok: true, enabled: false, authenticated: false });
         }
@@ -1248,8 +1280,9 @@ function startServer() {
         if (!session) {
             return res.json({ ok: true, enabled: true, authenticated: false });
         }
-        if (!phoneStore.getProfile(session.phone)?.firstSeenAt) {
-            phoneStore.recordLogin(session.phone, {
+        const profile = await phoneStore.getProfile(session.phone);
+        if (!profile?.firstSeenAt) {
+            await phoneStore.recordLogin(session.phone, {
                 ip: req.ip || req.socket?.remoteAddress || '',
                 userAgent: req.headers['user-agent'] || '',
             });
@@ -1261,11 +1294,11 @@ function startServer() {
             phone: session.phone,
             canCreate: session.canCreate,
             isSuperAdmin: session.isSuperAdmin,
-            displayName: phoneStore.getDisplayName(session.phone) || '',
+            displayName: (await phoneStore.getDisplayName(session.phone)) || '',
         });
     });
 
-    app.post('/phone/profile', (req, res) => {
+    app.post('/phone/profile', async (req, res) => {
         if (!phoneAuth.isEnabled()) {
             return res.status(404).json({ ok: false, error: 'Авторизация по телефону отключена' });
         }
@@ -1274,11 +1307,11 @@ function startServer() {
             return res.status(401).json({ ok: false, error: 'Требуется авторизация' });
         }
         const body = checkXSS(req.body) || {};
-        const result = phoneStore.setDisplayName(session.phone, body.displayName);
+        const result = await phoneStore.setDisplayName(session.phone, body.displayName);
         return res.status(result.ok ? 200 : 400).json(result);
     });
 
-    app.get('/phone/rooms', (req, res) => {
+    app.get('/phone/rooms', async (req, res) => {
         if (!phoneAuth.isEnabled()) {
             return res.status(404).json({ ok: false, error: 'Авторизация по телефону отключена' });
         }
@@ -1305,7 +1338,7 @@ function startServer() {
         }
         active.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
-        const history = phoneStore.getHistory(session.phone).map((h) => ({
+        const history = (await phoneStore.getHistory(session.phone)).map((h) => ({
             ...h,
             isActive: roomList.has(h.roomId) && roomList.get(h.roomId)?.createdByPhone === session.phone,
         }));
@@ -1326,8 +1359,21 @@ function startServer() {
         return res.sendFile(views.superAdmin);
     });
 
-    app.get('/phone/admin/overview', requirePhoneSuperAdmin, (req, res) => {
-        return res.json(getSuperAdminOverview());
+    app.get('/phone/admin/overview', requirePhoneSuperAdmin, async (req, res) => {
+        return res.json(await getSuperAdminOverview());
+    });
+
+    app.patch('/phone/admin/users/:phone/role', requirePhoneSuperAdmin, async (req, res) => {
+        const phone = phoneAuth.normalizePhone(req.params?.phone);
+        const { role } = checkXSS(req.body) || {};
+        if (!phone) return res.status(400).json({ ok: false, error: 'Некорректный номер телефона' });
+        try {
+            const result = await phoneStore.setRole(phone, String(role || ''));
+            return res.status(result.ok ? 200 : 400).json(result);
+        } catch (err) {
+            const status = err.code === 'LAST_SUPER_ADMIN' ? 409 : 500;
+            return res.status(status).json({ ok: false, error: err.message || 'Не удалось изменить роль' });
+        }
     });
 
     app.get('/phone/admin/observe/:roomId', requirePhoneSuperAdmin, (req, res) => {
@@ -2243,7 +2289,7 @@ function startServer() {
     });
 
     // request end meeting room endpoint
-    app.delete(restApi.basePath + '/meeting/:room', (req, res) => {
+    app.delete(restApi.basePath + '/meeting/:room', async (req, res) => {
         try {
             // Check if endpoint allowed
             if (restApi.allowed && !restApi.allowed.meetingEnd) {
@@ -2268,7 +2314,7 @@ function startServer() {
             const creatorPhone = roomList.get(room)?.createdByPhone || '';
             const result = api.endMeeting(roomList, room, redirect);
             if (result.success && creatorPhone) {
-                phoneStore.recordRoomEnded(creatorPhone, room);
+                await phoneStore.recordRoomEnded(creatorPhone, room);
             }
             const status = result.success ? 200 : 404;
             res.status(status).json(result);
@@ -2676,7 +2722,7 @@ function startServer() {
                     log.warn('[createRoom] - Phone auth required', { room_id });
                     return callback({ error: 'phone auth required' });
                 }
-                // Создавать новую комнату можно только из PHONE_CREATORS;
+                // Создавать новую комнату могут пользователи с ролью creator/super_admin;
                 // если комната уже есть — любой подтверждённый номер может «createRoom»→join.
                 if (!roomList.has(room_id) && !phoneSession.canCreate) {
                     log.warn('[createRoom] - Phone not allowed to create rooms', {
@@ -2709,7 +2755,7 @@ function startServer() {
                 if (creatorPhone) {
                     room.createdByPhone = creatorPhone;
                     try {
-                        phoneStore.recordRoomCreated(creatorPhone, socket.room_id, room.sessionId);
+                        await phoneStore.recordRoomCreated(creatorPhone, socket.room_id, room.sessionId);
                     } catch (err) {
                         log.warn('PhoneStore recordRoomCreated failed', err.message);
                     }
@@ -5968,6 +6014,12 @@ async function gracefulShutdown(signal) {
             log.debug('Closing ngrok tunnel...');
             await ngrok.kill();
         }
+
+        if (pendingPhoneStoreWrites.size) {
+            await Promise.allSettled([...pendingPhoneStoreWrites]);
+        }
+        if (phoneRoleRefreshTimer) clearInterval(phoneRoleRefreshTimer);
+        await phoneDatabase.close();
 
         log.info('Graceful shutdown completed successfully');
         process.exit(0);

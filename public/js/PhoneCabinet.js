@@ -241,7 +241,7 @@
         window.sessionStorage.phone_is_superadmin = data.isSuperAdmin ? '1' : '0';
         show(superAdminBtn, Boolean(data.isSuperAdmin));
 
-        const displayName = data.displayName || window.localStorage.peer_name || '';
+        const displayName = data.displayName || '';
         if (displayNameEl) displayNameEl.value = displayName;
         if (displayNameTextEl) displayNameTextEl.textContent = displayName || 'Не указано';
         displayNameBeforeEdit = displayName;
@@ -249,6 +249,9 @@
         if (displayName) {
             window.localStorage.peer_name = displayName;
             window.sessionStorage.phone_display_name = displayName;
+        } else {
+            window.localStorage.removeItem('peer_name');
+            window.sessionStorage.removeItem('phone_display_name');
         }
 
         if (data.canCreate) {

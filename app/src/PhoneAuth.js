@@ -17,6 +17,7 @@ class PhoneAuth {
      * @param {string} opts.jwtExp
      * @param {string[]} opts.creators - E.164 phones that may create rooms
      * @param {string[]} opts.superAdmins - E.164 phones with full administrative access
+     * @param {{canCreate: Function, isSuperAdmin: Function}} [opts.roleProvider] - centralized role cache
      * @param {object} opts.smsc - { login, password, sender, messageTemplate }
      * @param {Function} [opts.log]
      */
@@ -26,6 +27,7 @@ class PhoneAuth {
         this.jwtExp = opts.jwtExp || '7d';
         this.creators = new Set((opts.creators || []).map((p) => formatPhoneE164(p)).filter(Boolean));
         this.superAdmins = new Set((opts.superAdmins || []).map((p) => formatPhoneE164(p)).filter(Boolean));
+        this.roleProvider = opts.roleProvider || null;
         this.smsc = opts.smsc || {};
         this.log = typeof opts.log === 'function' ? opts.log : () => {};
         /** @type {Map<string, { code: string, expiresAt: number, lastSentAt: number }>} */
@@ -39,12 +41,20 @@ class PhoneAuth {
     canCreate(phone) {
         const formatted = formatPhoneE164(phone);
         if (!formatted) return false;
+        if (this.roleProvider?.canCreate) return Boolean(this.roleProvider.canCreate(formatted));
         return this.isSuperAdmin(formatted) || this.creators.has(formatted);
     }
 
     isSuperAdmin(phone) {
         const formatted = formatPhoneE164(phone);
+        if (formatted && this.roleProvider?.isSuperAdmin) {
+            return Boolean(this.roleProvider.isSuperAdmin(formatted));
+        }
         return Boolean(formatted && this.superAdmins.has(formatted));
+    }
+
+    setRoleProvider(provider) {
+        this.roleProvider = provider || null;
     }
 
     normalizePhone(phone) {

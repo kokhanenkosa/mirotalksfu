@@ -101,6 +101,15 @@ body {
     pointer-events: none !important;
 }
 
+.site-header::before {
+    pointer-events: none !important;
+}
+
+.is-phone-authenticated .site-header::before {
+    content: none !important;
+    display: none !important;
+}
+
 .hero-figure-box-01,
 .hero-figure-box-02,
 .hero-figure-box-03,
