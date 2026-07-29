@@ -36,8 +36,7 @@ services:
 
       - UI_LANGUAGE=${UI_LANGUAGE:-ru}
       - APP_NAME=${APP_NAME:-OPTRF}
-      - APP_TITLE=${APP_TITLE:-}
-      - APP_DESCRIPTION=${APP_DESCRIPTION:-}
+      # APP_TITLE/APP_DESCRIPTION намеренно не пробрасываем — залипали старые строки MiroTalk
       - JOIN_DESCRIPTION=${JOIN_DESCRIPTION:-}
       - JOIN_BUTTON_LABEL=${JOIN_BUTTON_LABEL:-}
       - CUSTOMIZE_BUTTON_LABEL=${CUSTOMIZE_BUTTON_LABEL:-}

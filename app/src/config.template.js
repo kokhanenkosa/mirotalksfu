@@ -1165,11 +1165,9 @@ module.exports = {
             app: {
                 language: process.env.UI_LANGUAGE || 'ru',
                 name: process.env.APP_NAME || 'ОПТ РФ',
-                title:
-                    process.env.APP_TITLE ||
-                    'ОПТ РФ<br />Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
+                // Не берём APP_TITLE/APP_DESCRIPTION из env — в Coolify часто залипают старые MiroTalk-строки
+                title: 'ОПТ РФ<br />Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
                 description:
-                    process.env.APP_DESCRIPTION ||
                     'Начните видеозвонок в один клик. Без установки программ и плагинов — сразу к разговору, чату и демонстрации экрана.',
                 joinDescription:
                     process.env.JOIN_DESCRIPTION || 'Введите название комнаты.<br />Например, вот такое:',

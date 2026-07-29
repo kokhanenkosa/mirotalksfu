@@ -23,6 +23,8 @@
     const params = new URLSearchParams(window.location.search);
     const nextUrl = params.get('next') || '/';
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // На лендинге форма встроена в #phoneGate — без редиректа после успеха
+    const embedded = Boolean(document.getElementById('phoneGate') && phoneInput);
 
     function showError(msg) {
         if (!msg) {
@@ -101,17 +103,18 @@
 
     function setCopy(step) {
         if (step === 'code') {
-            paTitle.textContent = 'Введите код';
-            paSub.textContent = 'Мы отправили 6‑значный код в Telegram или по SMS.';
+            if (paTitle) paTitle.textContent = 'Введите код';
+            if (paSub) paSub.textContent = 'Мы отправили 6‑значный код в Telegram или по SMS.';
             window.ThinkingOrbs?.update(paIcon, { state: 'solving' });
         } else if (step === 'success') {
-            paTitle.textContent = 'Номер подтверждён';
-            paSub.textContent = '';
+            if (paTitle) paTitle.textContent = 'Номер подтверждён';
+            if (paSub) paSub.textContent = '';
             window.ThinkingOrbs?.update(paIcon, { state: 'shaping', paused: true });
         } else {
-            paTitle.textContent = 'Подтвердите номер';
-            paSub.textContent =
-                'Чтобы создать комнату или войти на встречу, нужен код из Telegram или SMS.';
+            if (paTitle) paTitle.textContent = 'Подтвердите номер';
+            if (paSub)
+                paSub.textContent =
+                    'Чтобы создать комнату или войти на встречу, нужен код из Telegram или SMS.';
             window.ThinkingOrbs?.update(paIcon, { state: 'composing', paused: false });
         }
     }
@@ -211,12 +214,13 @@
                 (p) => safeNext === p || safeNext.startsWith(p + '?')
             );
 
-            if (!data.canCreate && wantsCreate) {
+            if (!data.canCreate && wantsCreate && !embedded) {
                 paStep2?.classList.add('is-done');
                 switchStep(stepCode, stepSuccess, 'success');
-                paTitle.textContent = 'Нет доступа к созданию комнат';
-                paSub.textContent =
-                    'Номер подтверждён, но создавать встречи могут только организаторы. Попросите администратора добавить ваш номер.';
+                if (paTitle) paTitle.textContent = 'Нет доступа к созданию комнат';
+                if (paSub)
+                    paSub.textContent =
+                        'Номер подтверждён, но создавать встречи могут только организаторы. Попросите администратора добавить ваш номер.';
                 window.setTimeout(() => {
                     window.location.href = '/no-create-access';
                 }, reduceMotion ? 400 : 1600);
@@ -225,6 +229,14 @@
 
             paStep2?.classList.add('is-done');
             switchStep(stepCode, stepSuccess, 'success');
+
+            if (embedded) {
+                window.setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('phone-auth:success', { detail: data }));
+                }, reduceMotion ? 120 : 700);
+                return;
+            }
+
             window.setTimeout(
                 () => {
                     window.location.href = safeNext;
@@ -272,22 +284,24 @@
         otpBoxes?.querySelectorAll('span').forEach((s) => s.classList.remove('is-active'));
     });
 
-    fetch('/phone/me', { credentials: 'same-origin' })
-        .then((r) => r.json())
-        .then((data) => {
-            if (data?.ok && data.authenticated) {
-                const safeNext = nextUrl.startsWith('/') ? nextUrl : '/';
-                const wantsCreate = ['/customizeRoom', '/newroom'].some(
-                    (p) => safeNext === p || safeNext.startsWith(p + '?')
-                );
-                if (!data.canCreate && wantsCreate) {
-                    window.location.href = '/no-create-access';
-                    return;
+    if (!embedded) {
+        fetch('/phone/me', { credentials: 'same-origin' })
+            .then((r) => r.json())
+            .then((data) => {
+                if (data?.ok && data.authenticated) {
+                    const safeNext = nextUrl.startsWith('/') ? nextUrl : '/';
+                    const wantsCreate = ['/customizeRoom', '/newroom'].some(
+                        (p) => safeNext === p || safeNext.startsWith(p + '?')
+                    );
+                    if (!data.canCreate && wantsCreate) {
+                        window.location.href = '/no-create-access';
+                        return;
+                    }
+                    window.location.href = safeNext;
                 }
-                window.location.href = safeNext;
-            }
-        })
-        .catch(() => {});
+            })
+            .catch(() => {});
+    }
 
-    phoneInput?.focus();
+    if (!embedded) phoneInput?.focus();
 })();

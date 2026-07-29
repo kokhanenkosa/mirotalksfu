@@ -9,9 +9,17 @@ if (!document.querySelector('script[src$="/js/RussianUI.js"], script[src$="../js
 }
 
 // v3 — сброс старого английского кэша MiroTalk
-const brandDataKey = 'brandData_optrf_v3';
+const brandDataKey = 'brandData_optrf_v4';
+
+/** Жёстко фиксируем hero-тексты — env/Coolify не должен их перетирать */
+const OPTRF_HERO = {
+    title: 'ОПТ РФ<br />Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
+    description:
+        'Начните видеозвонок в один клик. Без установки программ и плагинов — сразу к разговору, чату и демонстрации экрана.',
+};
 try {
     window.sessionStorage.removeItem('brandData');
+    window.sessionStorage.removeItem('brandData_optrf_v3');
 } catch (e) {
     /* ignore */
 }
@@ -60,9 +68,8 @@ let BRAND = {
     app: {
         language: 'ru',
         name: 'ОПТ РФ',
-        title: 'ОПТ РФ<br />Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
-        description:
-            'Начните видеозвонок в один клик. Без установки программ и плагинов — сразу к разговору, чату и демонстрации экрана.',
+        title: OPTRF_HERO.title,
+        description: OPTRF_HERO.description,
         joinDescription: 'Введите название комнаты.<br />Например, вот такое:',
         joinButtonLabel: 'Создать комнату',
         customizeButtonLabel: 'Настроить комнату',
@@ -208,6 +215,10 @@ async function getBrand() {
 // BRAND configurations
 function setBrand(data) {
     BRAND = mergeBrand(BRAND, data);
+    // Серверный /brand из Coolify часто тащит старые APP_TITLE/DESCRIPTION — возвращаем наши
+    if (!BRAND.app) BRAND.app = {};
+    BRAND.app.title = OPTRF_HERO.title;
+    BRAND.app.description = OPTRF_HERO.description;
     console.log('Set Brand done');
 }
 

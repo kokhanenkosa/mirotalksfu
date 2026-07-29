@@ -26,6 +26,7 @@
         <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=IBM+Plex+Sans:400,600&subset=cyrillic" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
         <link rel="stylesheet" type="text/css" href="../css/landing.css" />
+        <link rel="stylesheet" type="text/css" href="../css/phoneAuth.css" />
         <link rel="stylesheet" type="text/css" href="../css/optrf-brand.css" />
 
         <script defer src="../js/Widget.js"></script>
@@ -68,8 +69,7 @@
                         <div class="hero-inner">
                             <div class="hero-copy">
                                 <h1 id="appTitle" class="hero-title mt-0">
-                                    ОПТ РФ<br />Платформа онлайн-обучения.<br />
-                                    Учитесь. Общайтесь. Вместе.
+                                    ОПТ РФ<br />Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.
                                 </h1>
                                 <p id="appDescription" class="hero-paragraph">
                                     Начните видеозвонок в один клик. Без установки программ и плагинов — сразу к
@@ -98,63 +98,117 @@
                 <section class="cta section">
                     <div class="container">
                         <div class="cta-inner section-inner br-12">
-                            <!-- Гейт: поля авторизации сразу на лендинге -->
-                            <div id="phoneGate" class="phone-gate" hidden>
-                                <h3 class="section-title mt-0">Войдите по номеру телефона</h3>
-                                <p class="phone-gate-text">
-                                    Чтобы создавать комнаты и сохранять имя для встреч, подтвердите номер через
-                                    Telegram или SMS.
-                                </p>
-
-                                <div id="gateStepPhone" class="phone-gate-form">
-                                    <label class="phone-gate-label" for="gatePhoneInput">Номер телефона</label>
-                                    <div class="phone-gate-field">
-                                        <span class="phone-gate-prefix">+7</span>
-                                        <input
-                                            id="gatePhoneInput"
-                                            class="phone-gate-input"
-                                            type="tel"
-                                            inputmode="tel"
-                                            placeholder="900 123-45-67"
-                                            autocomplete="tel-national"
-                                            maxlength="16"
-                                        />
+                            <!-- Гейт: та же форма + Thinking Orbs, что на /phone-auth -->
+                            <div id="phoneGate" class="phone-gate phone-gate--orbs" hidden>
+                                <section class="pa-panel pa-panel--embed" id="paPanel" aria-label="Вход по телефону">
+                                    <div class="pa-steps" aria-hidden="true">
+                                        <span class="pa-step is-active" data-step="1"></span>
+                                        <span class="pa-step-line" id="paStepLine"></span>
+                                        <span class="pa-step" data-step="2" id="paStep2"></span>
                                     </div>
-                                    <button id="gateSendCodeBtn" class="button button-primary button-block" type="button">
-                                        Получить код
-                                    </button>
-                                </div>
 
-                                <div id="gateStepCode" class="phone-gate-form" hidden>
-                                    <p id="gateCodeHint" class="phone-gate-hint"></p>
-                                    <label class="phone-gate-label" for="gateCodeInput">Код из Telegram или SMS</label>
-                                    <input
-                                        id="gateCodeInput"
-                                        class="phone-gate-input phone-gate-input--code"
-                                        type="text"
-                                        inputmode="numeric"
-                                        autocomplete="one-time-code"
-                                        maxlength="6"
-                                        placeholder="••••••"
-                                    />
-                                    <button
-                                        id="gateVerifyCodeBtn"
-                                        class="button button-primary button-block"
-                                        type="button"
-                                    >
-                                        Подтвердить
-                                    </button>
-                                    <div class="phone-gate-actions">
-                                        <button id="gateResendBtn" class="phone-gate-link" type="button">
-                                            Отправить ещё раз
-                                        </button>
-                                        <button id="gateChangePhoneBtn" class="phone-gate-link" type="button">
-                                            Другой номер
-                                        </button>
+                                    <div class="pa-icon-wrap pa-icon-wrap--lg" id="paIconWrap">
+                                        <div class="pa-icon-ring"></div>
+                                        <div
+                                            class="pa-icon pa-orb-host pa-orb-host--lg"
+                                            id="paIcon"
+                                            data-thinking-orb
+                                            data-orb-state="composing"
+                                            data-orb-size="64"
+                                            data-orb-display="128"
+                                            data-orb-theme="light"
+                                        ></div>
                                     </div>
-                                </div>
 
-                                <p id="gateAuthError" class="phone-gate-error" role="alert" hidden></p>
+                                    <h1 class="pa-title" id="paTitle">Подтвердите номер</h1>
+                                    <p class="pa-sub" id="paSub">
+                                        Чтобы создать комнату или войти на встречу, нужен код из Telegram или SMS.
+                                    </p>
+
+                                    <div class="pa-stage">
+                                        <div class="pa-step-view is-active" id="stepPhone">
+                                            <label class="pa-label" for="phoneInput">Номер телефона</label>
+                                            <div class="pa-field">
+                                                <span class="pa-field-prefix">+7</span>
+                                                <input
+                                                    id="phoneInput"
+                                                    class="pa-input"
+                                                    type="tel"
+                                                    inputmode="tel"
+                                                    placeholder="900 123-45-67"
+                                                    autocomplete="tel-national"
+                                                    maxlength="16"
+                                                    required
+                                                />
+                                            </div>
+                                            <button id="sendCodeBtn" class="pa-btn" type="button">
+                                                <span class="pa-btn-label">Получить код</span>
+                                                <span
+                                                    class="pa-btn-orb"
+                                                    data-thinking-orb
+                                                    data-orb-state="composing"
+                                                    data-orb-size="20"
+                                                    data-orb-theme="dark"
+                                                    aria-hidden="true"
+                                                ></span>
+                                            </button>
+                                        </div>
+
+                                        <div class="pa-step-view" id="stepCode" hidden>
+                                            <p class="pa-hint" id="codeHint"></p>
+                                            <label class="pa-label" for="codeInput">Код подтверждения</label>
+                                            <div class="pa-code-wrap">
+                                                <div class="pa-otp" id="otpBoxes" aria-hidden="true">
+                                                    <span></span><span></span><span></span><span></span
+                                                    ><span></span><span></span>
+                                                </div>
+                                                <input
+                                                    id="codeInput"
+                                                    class="pa-input-code"
+                                                    type="text"
+                                                    inputmode="numeric"
+                                                    autocomplete="one-time-code"
+                                                    maxlength="6"
+                                                    required
+                                                    aria-label="Код подтверждения"
+                                                />
+                                            </div>
+                                            <button id="verifyCodeBtn" class="pa-btn" type="button">
+                                                <span class="pa-btn-label">Войти</span>
+                                                <span
+                                                    class="pa-btn-orb"
+                                                    data-thinking-orb
+                                                    data-orb-state="solving"
+                                                    data-orb-size="20"
+                                                    data-orb-theme="dark"
+                                                    aria-hidden="true"
+                                                ></span>
+                                            </button>
+                                            <div class="pa-actions">
+                                                <button id="resendBtn" class="pa-link" type="button">
+                                                    Отправить ещё раз
+                                                </button>
+                                                <button id="changePhoneBtn" class="pa-link" type="button">
+                                                    Другой номер
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="pa-step-view pa-success" id="stepSuccess" hidden>
+                                            <div class="pa-check" aria-hidden="true">
+                                                <svg viewBox="0 0 52 52">
+                                                    <circle cx="26" cy="26" r="24" fill="none" />
+                                                    <path fill="none" d="M14 27.5l7.5 7.5L38 17" />
+                                                </svg>
+                                            </div>
+                                            <p class="pa-success-text">Готово. Открываем кабинет…</p>
+                                        </div>
+                                    </div>
+
+                                    <div id="phoneAuthError" class="pa-error" role="alert" aria-live="polite" hidden>
+                                        <span id="phoneAuthErrorText"></span>
+                                    </div>
+                                </section>
                             </div>
 
                             <!-- Мини-кабинет после авторизации -->
@@ -469,6 +523,8 @@
         <script defer src="../js/Utils.js"></script>
         <script defer src="../js/RoomNameGen.js"></script>
         <script defer src="../js/Common.js"></script>
+        <script defer src="../js/ThinkingOrbs.js"></script>
+        <script defer src="../js/PhoneAuth.js"></script>
         <script defer src="../js/PhoneCabinet.js"></script>
         <script defer src="../js/Landing.js"></script>
         <script defer src="../js/ScheduleMeeting.js"></script>

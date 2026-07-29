@@ -520,126 +520,34 @@ a:hover {
     display: none !important;
 }
 
-/* —— Phone cabinet / gate on landing —— */
+/* —— Phone cabinet / gate on landing (форма из phoneAuth + Thinking Orbs) —— */
 .phone-gate {
-    text-align: left;
-    max-width: 26rem;
+    width: 100%;
+    max-width: 28rem;
     margin: 0 auto;
     padding: 0.25rem 0;
 }
 
-.phone-gate .section-title {
-    text-align: center;
-    margin-bottom: 0.5rem !important;
-}
-
-.phone-gate-text {
-    color: var(--optrf-muted);
-    margin: 0 0 1.25rem;
-    line-height: 1.5;
-    text-align: center;
-}
-
-.phone-gate-form {
+.phone-gate--orbs .pa-panel--embed {
     width: 100%;
-}
-
-.phone-gate-label {
-    display: block;
-    margin-bottom: 0.4rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--optrf-muted);
-}
-
-.phone-gate-field {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.85rem;
-    border: 1px solid #d9d9d9;
-    border-radius: var(--optrf-radius);
-    background: #fff;
-}
-
-.phone-gate-field:focus-within {
-    border-color: var(--optrf-blue);
-    box-shadow: 0 0 0 3px rgba(0, 168, 232, 0.2);
-}
-
-.phone-gate-prefix {
-    padding: 0 0 0 0.85rem;
-    font-weight: 600;
-    color: var(--optrf-dark);
-}
-
-.phone-gate-input {
-    width: 100%;
-    border: 0;
-    outline: 0;
+    max-width: none;
+    margin: 0 auto;
+    padding: 8px 4px 0;
+    /* карточка уже у .cta-inner — панель без второй рамки */
     background: transparent;
-    padding: 0.85rem;
-    font: inherit;
-    font-size: 1.05rem;
-    color: var(--optrf-dark);
-}
-
-.phone-gate-input--code {
-    margin-bottom: 0.85rem;
-    border: 1px solid #d9d9d9;
-    border-radius: var(--optrf-radius);
-    background: #fff;
-    letter-spacing: 0.35em;
-    text-align: center;
-    font-weight: 600;
-}
-
-.phone-gate-input--code:focus {
-    border-color: var(--optrf-blue);
-    box-shadow: 0 0 0 3px rgba(0, 168, 232, 0.2);
-}
-
-.phone-gate-hint {
-    margin: 0 0 0.85rem;
-    padding: 0.7rem 0.85rem;
-    border-radius: var(--optrf-radius);
-    background: rgba(0, 168, 232, 0.1);
-    color: #0f5f80;
-    font-size: 0.9rem;
-    line-height: 1.4;
-}
-
-.phone-gate-actions {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-}
-
-.phone-gate-link {
     border: 0;
-    background: none;
-    padding: 0;
-    color: var(--optrf-blue);
-    font: inherit;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    animation: none;
 }
 
-.phone-gate-link:hover {
-    color: var(--optrf-blue-hover);
-    text-decoration: underline;
+.phone-gate--orbs .pa-icon-wrap--lg {
+    margin-top: 0.25rem;
 }
 
-.phone-gate-error {
-    margin: 0.85rem 0 0;
-    color: #b42318;
-    font-size: 0.9rem;
-    text-align: center;
-}
-
-.phone-gate .button-block {
-    width: 100%;
+.phone-gate--orbs .pa-stage {
+    min-height: 170px;
 }
 
 .phone-cabinet {
