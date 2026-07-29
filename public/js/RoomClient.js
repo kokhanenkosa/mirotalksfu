@@ -259,6 +259,7 @@ class RoomClient {
         this.peer_info = peer_info;
         this.peer_avatar = peer_info.peer_avatar;
         this.isObserver = peer_info.peer_observer === true;
+        this.locallyMutedPeers = new Set();
 
         // Device type
         this.isDesktopDevice = peer_info.is_desktop_device;
@@ -3750,7 +3751,7 @@ class RoomClient {
     }
 
     async handleConsumer(id, type, stream, peer_name, peer_info) {
-        let elem, vb, d, p, i, cm, au, pip, fs, ts, sf, sm, sv, gl, ban, ko, pb, pm, pv, pn, ha, mv, dw;
+        let elem, vb, d, p, i, cm, au, lm, pip, fs, ts, sf, sm, sv, gl, ban, ko, pb, pm, pv, pn, ha, mv, dw;
 
         let eDiv, eBtn, eVc; // expand buttons
 
@@ -3813,6 +3814,10 @@ class RoomClient {
                 sv = this.createButton(id + '___' + remotePeerId + '___sendVideo', html.sendVideo);
                 cm = this.createButton(id + '___' + remotePeerId + '___video', html.videoOn);
                 au = this.createButton(remotePeerId + '__audio', remotePeerAudio ? html.audioOn : html.audioOff);
+                if (!remoteIsScreen) {
+                    lm = this.createButton(remotePeerId + '__localMute', 'fas fa-volume-xmark');
+                    lm.setAttribute('aria-label', 'Не слышать участника');
+                }
                 gl = this.createButton(id + '___' + remotePeerId + '___geoLocation', html.geolocation);
                 ban = this.createButton(id + '___' + remotePeerId + '___ban', html.ban);
                 ko = this.createButton(id + '___' + remotePeerId + '___kickOut', html.kickOut);
@@ -3847,6 +3852,11 @@ class RoomClient {
                 BUTTONS.consumerVideo.fullScreenButton &&
                     this.isVideoFullScreenSupported &&
                     eVc.appendChild(this.createDropdownItem(fs, 'На весь экран', eVc));
+                let localMuteItem = null;
+                if (lm) {
+                    localMuteItem = this.createDropdownItem(lm, 'Не слышать участника', eVc);
+                    eVc.appendChild(localMuteItem);
+                }
                 BUTTONS.consumerVideo.sendMessageButton &&
                     eVc.appendChild(this.createDropdownItem(sm, 'Личное сообщение', eVc));
                 BUTTONS.consumerVideo.geolocationButton &&
@@ -3910,6 +3920,7 @@ class RoomClient {
                 this.handleSV(sv.id, peer_name);
                 BUTTONS.consumerVideo.muteVideoButton && this.handleCM(cm.id);
                 BUTTONS.consumerVideo.muteAudioButton && this.handleAU(au.id);
+                if (lm) this.handleLocalPeerMute(remotePeerId, lm.id, localMuteItem?.querySelector('span'));
                 this.handleCV(id + '___' + pv.id);
                 this.handleGL(gl.id);
                 this.handleBAN(ban.id);
@@ -3942,6 +3953,7 @@ class RoomClient {
                     this.setTippy(ts.id, 'Снимок', 'bottom');
                     this.setTippy(cm.id, 'Скрыть', 'bottom');
                     this.setTippy(au.id, 'Выключить звук', 'bottom');
+                    if (lm) this.setTippy(lm.id, 'Не слышать только у себя', 'bottom');
                     this.setTippy(pv.id, '🔊 Громкость', 'bottom');
                 }
 
@@ -3966,6 +3978,7 @@ class RoomClient {
                 elem.setAttribute('volumeBar', remotePeerId + '___pVolume');
                 elem.autoplay = true;
                 elem.volume = 1.0;
+                elem.muted = this.locallyMutedPeers.has(remotePeerId);
 
                 if (!this.hasAudioTrack(stream)) {
                     elem.muted = true;
@@ -4081,7 +4094,7 @@ class RoomClient {
 
     setVideoOff(peer_info, remotePeer = false) {
         //console.log('setVideoOff', peer_info);
-        let d, vb, i, h, au, sf, sm, sv, gl, ban, ko, p, pm, pb, pv, st, ri;
+        let d, vb, i, h, au, lm, sf, sm, sv, gl, ban, ko, p, pm, pb, pv, st, ri;
 
         const { peer_id, peer_name, peer_avatar, peer_audio, peer_presenter } = peer_info;
 
@@ -4096,6 +4109,10 @@ class RoomClient {
         vb.className = 'videoMenuBar hidden';
 
         au = this.createButton(peer_id + '__audio', peer_audio ? html.audioOn : html.audioOff);
+        if (remotePeer) {
+            lm = this.createButton(peer_id + '__localMute', 'fas fa-volume-xmark');
+            lm.setAttribute('aria-label', 'Не слышать участника');
+        }
 
         pv = document.createElement('input');
         pv.id = peer_id + '___pVolume';
@@ -4154,6 +4171,7 @@ class RoomClient {
         }
         BUTTONS.videoOff.audioVolumeInput && vb.appendChild(pv);
 
+        if (lm) vb.appendChild(lm);
         vb.appendChild(au);
         if (!remotePeer) vb.appendChild(st);
 
@@ -4181,6 +4199,10 @@ class RoomClient {
 
         this.videoMediaContainer.appendChild(d);
         BUTTONS.videoOff.muteAudioButton && this.handleAU(au.id);
+        if (lm) {
+            this.handleLocalPeerMute(peer_id, lm.id);
+            if (!this.isMobileDevice) this.setTippy(lm.id, 'Не слышать только у себя', 'bottom');
+        }
 
         if (remotePeer) {
             this.handleCV('remotePeer___' + pv.id);
@@ -10785,6 +10807,37 @@ class RoomClient {
     // ####################################################
     // HANDLE AUDIO
     // ###################################################
+
+    handleLocalPeerMute(peerId, buttonId, labelElement = null) {
+        const button = this.getId(buttonId);
+        if (!button) return;
+
+        const applyState = () => {
+            const isMuted = this.locallyMutedPeers.has(peerId);
+            const audioElementId = this.audioConsumers.get(peerId + '___pVolume');
+            const audioElement = this.getId(audioElementId);
+
+            if (audioElement) audioElement.muted = isMuted;
+
+            button.className = isMuted ? 'fas fa-volume-high' : 'fas fa-volume-xmark';
+            button.style.color = isMuted ? 'red' : '';
+
+            const actionLabel = isMuted ? 'Слышать участника' : 'Не слышать участника';
+            button.setAttribute('aria-label', actionLabel);
+            button.setAttribute('title', actionLabel);
+            if (labelElement) labelElement.textContent = actionLabel;
+        };
+
+        applyState();
+        button.addEventListener('click', () => {
+            if (this.locallyMutedPeers.has(peerId)) {
+                this.locallyMutedPeers.delete(peerId);
+            } else {
+                this.locallyMutedPeers.add(peerId);
+            }
+            applyState();
+        });
+    }
 
     handleAU(uid) {
         const words = uid.split('__');

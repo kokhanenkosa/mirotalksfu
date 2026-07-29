@@ -38,31 +38,45 @@ body {
     background-color: var(--cr-bg-color);
     color: var(--cr-text);
     position: relative;
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+
+.cr-container {
+    width: min(1128px, calc(100% - 40px));
+    margin: 0 auto;
+}
+
+.cr-header {
+    position: relative;
+    z-index: 20;
+    padding: 10px 0;
+    background: var(--optrf-surface);
+    border-bottom: 1px solid var(--optrf-border);
+}
+
+.cr-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 42px;
 }
 
 .cr-home {
-    position: fixed;
-    top: 14px;
-    left: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
-    border-radius: 14px;
-    border: 1px solid var(--optrf-border);
-    background: var(--optrf-surface-2);
-    backdrop-filter: blur(10px);
-    z-index: 10;
+    padding: 0;
+    border: 0;
+    background: transparent;
     text-decoration: none;
     transition:
-        background 160ms ease,
-        border-color 160ms ease,
+        opacity 160ms ease,
         transform 120ms ease;
 }
 
 .cr-home:hover {
-    background: var(--optrf-surface-3);
-    border-color: var(--optrf-accent);
+    opacity: 0.82;
 }
 
 .cr-home:active {
@@ -76,6 +90,16 @@ body {
 
 .cr-home img {
     display: block;
+    width: auto;
+    height: 32px;
+}
+
+.cr-theme-host {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 38px;
+    min-height: 38px;
 }
 
 /* Subtle ambient overlay (kept separate so Dark Reader has less to "interpret") */
@@ -90,19 +114,16 @@ body::before {
 }
 
 .cr-page {
-    min-height: 100vh;
-    padding: 32px 16px;
-    display: grid;
-    place-items: center;
+    padding: 36px 0 48px;
 }
 
 .cr-card {
-    width: min(520px, 100%);
+    width: 100%;
     background: var(--cr-card-bg);
     border: 1px solid var(--cr-card-border);
     border-radius: 18px;
     box-shadow: var(--cr-shadow);
-    padding: 28px 22px;
+    padding: clamp(24px, 4vw, 44px);
     backdrop-filter: blur(10px);
 }
 
@@ -126,7 +147,52 @@ body::before {
 
 .cr-form {
     display: grid;
-    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+        'room password'
+        'name avatar'
+        'token duration'
+        'toggles toggles'
+        'share share'
+        'error error'
+        'submit submit';
+    gap: 20px 24px;
+}
+
+.cr-field:has(#room) {
+    grid-area: room;
+}
+
+.cr-field:has(#roomPassword) {
+    grid-area: password;
+}
+
+.cr-field:has(#name) {
+    grid-area: name;
+}
+
+.cr-field:has(#avatar) {
+    grid-area: avatar;
+}
+
+.cr-field:has(#token) {
+    grid-area: token;
+}
+
+.cr-field:has(#duration) {
+    grid-area: duration;
+}
+
+.cr-field:has(#crPreviewUrl) {
+    grid-area: share;
+}
+
+.cr-form > .cr-error {
+    grid-area: error;
+}
+
+.cr-form > .cr-submit {
+    grid-area: submit;
 }
 
 .cr-field {
@@ -207,8 +273,9 @@ body::before {
 }
 
 .cr-toggle-grid {
+    grid-area: toggles;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
     margin-top: 4px;
 }
@@ -411,7 +478,7 @@ body::before {
     padding: 10px;
     border-radius: 14px;
     border: 1px solid var(--cr-input-border);
-    background: var(--cr-input-bg);
+    background: #fff;
     display: grid;
     place-items: center;
 }
@@ -424,11 +491,76 @@ body::before {
     border-radius: 14px;
 }
 
+.cr-field:has(#crPreviewUrl) {
+    grid-template-columns: minmax(0, 1fr) 220px;
+    grid-template-areas:
+        'label label'
+        'preview qr'
+        'status qr';
+    align-items: start;
+    column-gap: 24px;
+}
+
+.cr-field:has(#crPreviewUrl) > .cr-label {
+    grid-area: label;
+}
+
+.cr-field:has(#crPreviewUrl) > .cr-preview-row {
+    grid-area: preview;
+}
+
+.cr-field:has(#crPreviewUrl) > .cr-qr-wrap {
+    grid-area: qr;
+    margin-top: 0;
+}
+
+.cr-field:has(#crPreviewUrl) > #crStatus {
+    grid-area: status;
+}
+
 .cr-qr-hint {
     text-align: center;
 }
 
+@media (max-width: 760px) {
+    .cr-form {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            'room'
+            'password'
+            'name'
+            'avatar'
+            'token'
+            'duration'
+            'toggles'
+            'share'
+            'error'
+            'submit';
+    }
+
+    .cr-toggle-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cr-field:has(#crPreviewUrl) {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            'label'
+            'preview'
+            'qr'
+            'status';
+    }
+}
+
 @media (max-width: 520px) {
+    .cr-container {
+        width: min(100% - 24px, 1128px);
+    }
+
+    .cr-page {
+        padding: 18px 0 28px;
+    }
+
     .cr-card {
         padding: 24px 18px;
         border-radius: 16px;

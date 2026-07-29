@@ -28,14 +28,20 @@
         <script src="https://cdn.jsdelivr.net/npm/xss/dist/xss.min.js"></script>
     </head>
     <body>
-        <a class="cr-home" href="/" aria-label="На главную" title="На главную">
-            <img src="../images/logo-on-dark.svg" alt="OPTRF" width="120" height="32" />
-        </a>
+        <header class="cr-header">
+            <div class="cr-container cr-header-inner">
+                <a class="cr-home" href="/" aria-label="На главную" title="На главную">
+                    <img src="../images/logo-on-dark.svg" alt="OPTRF" width="120" height="32" />
+                </a>
+                <div class="cr-theme-host" data-optrf-theme-host></div>
+            </div>
+        </header>
         <main class="cr-page">
-            <section class="cr-card" aria-label="Вход в комнату">
-                <h1 class="cr-title">Настройка входа в комнату</h1>
+            <div class="cr-container">
+                <section class="cr-card" aria-label="Вход в комнату">
+                    <h1 class="cr-title">Настройка входа в комнату</h1>
 
-                <form id="customizeRoomForm" class="cr-form" autocomplete="off">
+                    <form id="customizeRoomForm" class="cr-form" autocomplete="off">
                     <div class="cr-field">
                         <label class="cr-label" for="room">Комната</label>
                         <div class="cr-input-wrap">
@@ -211,9 +217,10 @@
 
                     <p id="crError" class="cr-error" hidden></p>
 
-                    <button class="cr-submit" type="submit">Войти в комнату</button>
-                </form>
-            </section>
+                        <button class="cr-submit" type="submit">Войти в комнату</button>
+                    </form>
+                </section>
+            </div>
         </main>
 
         <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>

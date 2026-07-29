@@ -191,34 +191,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let qrCode = null;
 
-    const getThemeColor = (name, fallback) => {
-        try {
-            const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-            return value || fallback;
-        } catch {
-            return fallback;
-        }
-    };
-
     const ensureQrCode = () => {
         if (!qrEl) return null;
         if (qrCode) return qrCode;
         if (typeof window.QRCode !== 'function') return null;
-
-        // Prefer a standard dark-on-light QR for best scanning reliability.
-        const colorDark = getThemeColor('--cr-bg-color', '#000000');
-        const colorLight = getThemeColor('--cr-text', '#ffffff');
 
         const correctLevel = window.QRCode.CorrectLevel?.M;
 
         const options = {
             width: 180,
             height: 180,
-            colorDark,
-            colorLight,
+            // QR всегда контрастный: CSS-переменные с var(...) qrcodejs не умеет разрешать.
+            colorDark: '#111827',
+            colorLight: '#ffffff',
         };
 
-        if (correctLevel) {
+        if (correctLevel !== undefined) {
             options.correctLevel = correctLevel;
         }
 
@@ -234,12 +222,14 @@ document.addEventListener('DOMContentLoaded', () => {
             shareBtn.disabled = !hasValidUrl;
         }
 
-        if (qrWrapEl) {
-            qrWrapEl.hidden = !hasValidUrl;
+        if (!hasValidUrl) {
+            if (qrWrapEl) qrWrapEl.hidden = true;
+            return;
         }
-
-        if (!hasValidUrl) return;
         const qr = ensureQrCode();
+        if (qrWrapEl) {
+            qrWrapEl.hidden = !qr;
+        }
         if (!qr) return;
 
         try {
