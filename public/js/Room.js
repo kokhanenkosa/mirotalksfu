@@ -6427,7 +6427,7 @@ function getParticipantsList(peers) {
                 buttonId: 'muteAllParticipantsButton',
                 onClick: `rc.peerAction('me','${socket.id}','mute',true,true)`,
                 iconHtml: _PEER.audioOff,
-                label: 'Mute all participants',
+                label: 'Выключить микрофоны у всех',
             })
         );
         menuItems += renderParticipantMenuItem(
@@ -6435,7 +6435,7 @@ function getParticipantsList(peers) {
                 buttonId: 'hideAllParticipantsButton',
                 onClick: `rc.peerAction('me','${socket.id}','hide',true,true)`,
                 iconHtml: _PEER.videoOff,
-                label: 'Hide all participants',
+                label: 'Выключить камеры у всех',
             })
         );
         menuItems += renderParticipantMenuItem(
@@ -6443,7 +6443,7 @@ function getParticipantsList(peers) {
                 buttonId: 'stopAllParticipantsButton',
                 onClick: `rc.peerAction('me','${socket.id}','stop',true,true)`,
                 iconHtml: _PEER.screenOff,
-                label: 'Stop all screens sharing',
+                label: 'Остановить демонстрацию у всех',
             })
         );
 
@@ -6454,7 +6454,7 @@ function getParticipantsList(peers) {
                     buttonId: 'sendAllButton',
                     onClick: `rc.selectFileToShare('${socket.id}', true)`,
                     iconHtml: _PEER.sendFile,
-                    label: 'Share file to all',
+                    label: 'Отправить файл всем',
                 })
             );
         }
@@ -6465,7 +6465,7 @@ function getParticipantsList(peers) {
                 buttonId: 'sendVideoToAll',
                 onClick: `rc.shareVideo('all');`,
                 iconHtml: _PEER.sendVideo,
-                label: 'Share audio/video to all',
+                label: 'Показать аудио/видео всем',
             })
         );
 
@@ -6476,7 +6476,7 @@ function getParticipantsList(peers) {
                     buttonId: 'ejectAllButton',
                     onClick: `rc.peerAction('me','${socket.id}','eject',true,true)`,
                     iconHtml: _PEER.ejectPeer,
-                    label: 'Eject all participants',
+                    label: 'Удалить всех участников',
                 })
             );
         }
@@ -6547,7 +6547,7 @@ function getParticipantsList(peers) {
                         buttonId: `${peer_id}___pAudioMute`,
                         onClick: `rc.peerAction('me',this.id,'mute')`,
                         iconHtml: _PEER.audioOn,
-                        label: 'Toggle audio',
+                        label: 'Выключить / включить микрофон',
                     })
                 );
                 menuItems += renderParticipantMenuItem(
@@ -6555,7 +6555,7 @@ function getParticipantsList(peers) {
                         buttonId: `${peer_id}___pVideoHide`,
                         onClick: `rc.peerAction('me',this.id,'hide')`,
                         iconHtml: _PEER.videoOn,
-                        label: 'Toggle video',
+                        label: 'Выключить / включить камеру',
                     })
                 );
                 menuItems += renderParticipantMenuItem(
@@ -6563,7 +6563,7 @@ function getParticipantsList(peers) {
                         buttonId: `${peer_id}___pScreenStop`,
                         onClick: `rc.peerAction('me',this.id,'stop')`,
                         iconHtml: _PEER.screenOn,
-                        label: 'Toggle screen',
+                        label: 'Остановить демонстрацию экрана',
                     })
                 );
 
@@ -6574,7 +6574,7 @@ function getParticipantsList(peers) {
                             buttonId: `${peer_id}___shareFile`,
                             onClick: `rc.selectFileToShare('${peer_id}', false, ${JSON.stringify(peer_name)})`,
                             iconHtml: peer_sendFile,
-                            label: 'Share file',
+                            label: 'Отправить файл',
                         })
                     );
                 }
@@ -6585,7 +6585,7 @@ function getParticipantsList(peers) {
                         buttonId: `${peer_id}___sendVideoTo`,
                         onClick: `rc.shareVideo('${peer_id}', ${JSON.stringify(peer_name)});`,
                         iconHtml: _PEER.sendVideo,
-                        label: 'Share audio/video',
+                        label: 'Показать аудио / видео',
                     })
                 );
 
@@ -6596,7 +6596,7 @@ function getParticipantsList(peers) {
                             buttonId: `${peer_id}___geoLocation`,
                             onClick: `rc.askPeerGeoLocation(this.id)`,
                             iconHtml: peer_geoLocation,
-                            label: 'Get geolocation',
+                            label: 'Запросить геолокацию',
                         })
                     );
                 }
@@ -6607,7 +6607,7 @@ function getParticipantsList(peers) {
                             buttonId: `${peer_id}___pBan`,
                             onClick: `rc.peerAction('me',this.id,'ban')`,
                             iconHtml: peer_ban,
-                            label: 'Ban participant',
+                            label: 'Заблокировать участника',
                         })
                     );
                 }
@@ -6618,7 +6618,7 @@ function getParticipantsList(peers) {
                             buttonId: `${peer_id}___pEject`,
                             onClick: `rc.peerAction('me',this.id,'eject')`,
                             iconHtml: peer_eject,
-                            label: 'Eject participant',
+                            label: 'Удалить из комнаты',
                         })
                     );
                 }
@@ -6654,7 +6654,7 @@ function getParticipantsList(peers) {
                     avatarSrc: avatarImg,
                     name: peer_name_limited,
                     nameSuffix: ` <span id="${peer_id}-unread-count" class="unread-count hidden"></span>`,
-                    statusHtml: renderParticipantStatus('Private messages'),
+                    statusHtml: renderParticipantStatus('Личные сообщения'),
                     dropdownHtml,
                     buttonsHtml: renderParticipantButtons(buttons),
                 });
@@ -6673,7 +6673,7 @@ function getParticipantsList(peers) {
                                 buttonId: `${peer_id}___shareFile`,
                                 onClick: `rc.selectFileToShare('${peer_id}', false, ${JSON.stringify(peer_name)})`,
                                 iconHtml: peer_sendFile,
-                                label: 'Share file',
+                                label: 'Отправить файл',
                             })
                         );
                     }
@@ -6684,7 +6684,7 @@ function getParticipantsList(peers) {
                             buttonId: `${peer_id}___sendVideoTo`,
                             onClick: `rc.shareVideo('${peer_id}', ${JSON.stringify(peer_name)});`,
                             iconHtml: _PEER.sendVideo,
-                            label: 'Share Audio/Video',
+                            label: 'Показать аудио / видео',
                         })
                     );
 
@@ -6721,7 +6721,7 @@ function getParticipantsList(peers) {
                     avatarSrc: avatarImg,
                     name: peer_name_limited,
                     nameSuffix: ` <span id="${peer_id}-unread-count" class="unread-count hidden"></span>`,
-                    statusHtml: renderParticipantStatus('Private messages'),
+                    statusHtml: renderParticipantStatus('Личные сообщения'),
                     dropdownHtml,
                     buttonsHtml: renderParticipantButtons(buttons),
                 });

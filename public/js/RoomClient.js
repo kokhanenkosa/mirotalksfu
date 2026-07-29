@@ -1219,8 +1219,8 @@ class RoomClient {
         popupHtmlMessage(
             null,
             image.network,
-            `${transportType} Transport`,
-            'Unable to reconnect. Please check your network.',
+            'Соединение разорвано',
+            'Не удалось восстановить соединение. Проверьте сеть и обновите страницу.',
             'center',
             false,
             true
@@ -3581,9 +3581,24 @@ class RoomClient {
                 this.removeConsumer(consumer.id, consumer.kind);
             });
         } catch (error) {
-            console.error('Error in consume', error);
+            console.error('Error in consume', { type, peer_name, producer_id, error });
 
-            popupHtmlMessage(null, image.network, 'Consume', error, 'center', false, false);
+            const mediaLabel =
+                type === 'screenType' || type === 'screen'
+                    ? 'демонстрацию экрана'
+                    : type === 'audioType' || type === 'audio'
+                      ? 'аудио'
+                      : 'видео';
+            const who = peer_name ? `участника «${filterXSS(String(peer_name))}»` : 'участника';
+            popupHtmlMessage(
+                null,
+                image.network,
+                'Не удалось получить поток',
+                `Не удалось принять ${mediaLabel} от ${who}. Обычно это временный сбой сети или кодеков — обновите страницу или перезайдите во встречу.`,
+                'center',
+                false,
+                false
+            );
         }
     }
 
@@ -8892,7 +8907,7 @@ class RoomClient {
             .join(', ');
     }
 
-    async openFilePickerModal({ title = 'Share file', accept = '*', confirmButtonText = 'Send', imageUrl } = {}) {
+    async openFilePickerModal({ title = 'Отправить файл', accept = '*', confirmButtonText = 'Отправить', imageUrl } = {}) {
         const acceptedFileTypes = this.formatAcceptedFileTypes(accept);
         const helperText = `Допустимые форматы: ${acceptedFileTypes}`;
         const emptyStateTitle = 'Перетащите файл сюда';
@@ -11363,11 +11378,21 @@ class RoomClient {
     }
 
     peerActionProgress(tt, msg, time, action = 'na') {
+        const titles = {
+            ban: 'Блокировка',
+            eject: 'Удаление',
+            mute: 'Микрофон',
+            unmute: 'Микрофон',
+            hide: 'Камера',
+            unhide: 'Камера',
+            stop: 'Демонстрация экрана',
+            start: 'Демонстрация экрана',
+        };
         Swal.fire({
             allowOutsideClick: false,
             background: swalBackground,
             icon: action == 'eject' ? 'warning' : 'success',
-            title: tt,
+            title: titles[tt] || titles[action] || tt,
             html: msg,
             timer: time,
             timerProgressBar: true,
@@ -11422,17 +11447,17 @@ class RoomClient {
                         }
                     })
                     .then(() => {
-                        if (banConfirmed) this.peerActionProgress(action, 'In progress, wait...', 6000, 'refresh');
+                        if (banConfirmed) this.peerActionProgress(action, 'Выполняется, подождите...', 6000, 'refresh');
                     });
                 break;
             case 'eject':
                 let ejectConfirmed = false;
-                let whoEject = data.broadcast ? 'All participants except yourself?' : 'current participant?';
+                let whoEject = data.broadcast ? 'всех, кроме вас?' : 'этого участника?';
                 Swal.fire({
                     background: swalBackground,
                     position: 'center',
                     imageUrl: data.broadcast ? image.users : image.user,
-                    title: 'Удалить из комнаты: ' + whoEject,
+                    title: 'Удалить из комнаты ' + whoEject,
                     input: 'text',
                     inputPlaceholder: 'Причина удаления',
                     showDenyButton: true,
@@ -11464,7 +11489,7 @@ class RoomClient {
                         }
                     })
                     .then(() => {
-                        if (ejectConfirmed) this.peerActionProgress(action, 'In progress, wait...', 6000, 'refresh');
+                        if (ejectConfirmed) this.peerActionProgress(action, 'Выполняется, подождите...', 6000, 'refresh');
                     });
                 break;
             case 'mute':
@@ -11474,41 +11499,41 @@ class RoomClient {
             case 'stop':
             case 'start':
                 let muteHideStopConfirmed = false;
-                let who = data.broadcast ? 'everyone except yourself?' : 'current participant?';
+                let who = data.broadcast ? 'у всех, кроме вас?' : 'у этого участника?';
                 let imageUrl, title, text;
                 switch (action) {
                     case 'mute':
                         imageUrl = image.mute;
-                        title = 'Mute ' + who;
+                        title = 'Выключить микрофон ' + who;
                         text =
-                            'Once muted, only the presenter will be able to unmute participants, but participants can unmute themselves at any time';
+                            'После выключения включить микрофон сможет только ведущий, но участник может включить его сам в любой момент.';
                         break;
                     case 'unmute':
                         imageUrl = image.unmute;
-                        title = 'Unmute ' + who;
-                        text = 'A pop-up message will appear to prompt and allow this action.';
+                        title = 'Включить микрофон ' + who;
+                        text = 'Участнику придёт запрос — он сможет подтвердить действие.';
                         break;
                     case 'hide':
-                        title = 'Hide ' + who;
+                        title = 'Выключить камеру ' + who;
                         imageUrl = image.hide;
                         text =
-                            'Once hidden, only the presenter will be able to unhide participants, but participants can unhide themselves at any time';
+                            'После выключения включить камеру сможет только ведущий, но участник может включить её сам в любой момент.';
                         break;
                     case 'unhide':
-                        title = 'Unhide ' + who;
+                        title = 'Включить камеру ' + who;
                         imageUrl = image.unhide;
-                        text = 'A pop-up message will appear to prompt and allow this action.';
+                        text = 'Участнику придёт запрос — он сможет подтвердить действие.';
                         break;
                     case 'stop':
                         imageUrl = image.stop;
-                        title = 'Stop screen share to the ' + who;
+                        title = 'Остановить демонстрацию экрана ' + who;
                         text =
-                            "Once stopped, only the presenter will be able to start the participants' screens, but participants can start their screens themselves at any time";
+                            'После остановки снова запустить демонстрацию сможет только ведущий, но участник может начать её сам в любой момент.';
                         break;
                     case 'start':
                         imageUrl = image.start;
-                        title = 'Start screen share to the ' + who;
-                        text = 'A pop-up message will appear to prompt and allow this action.';
+                        title = 'Запросить демонстрацию экрана ' + who;
+                        text = 'Участнику придёт запрос — он сможет подтвердить действие.';
                         break;
                     default:
                         break;
@@ -11555,7 +11580,7 @@ class RoomClient {
                     })
                     .then(() => {
                         if (muteHideStopConfirmed)
-                            this.peerActionProgress(action, 'In progress, wait...', 2000, 'refresh');
+                            this.peerActionProgress(action, 'Выполняется, подождите...', 2000, 'refresh');
                     });
                 break;
             default:
@@ -11568,13 +11593,17 @@ class RoomClient {
         console.log('peerGuestNotAllowed', action);
         switch (action) {
             case 'audio':
-                this.userLog('warning', 'Only the presenter can mute/unmute participants', 'top-end');
+                this.userLog('warning', 'Только ведущий может включать и выключать микрофоны участников', 'top-end');
                 break;
             case 'video':
-                this.userLog('warning', 'Only the presenter can hide/show participants', 'top-end');
+                this.userLog('warning', 'Только ведущий может включать и выключать камеры участников', 'top-end');
                 break;
             case 'screen':
-                this.userLog('warning', 'Only the presenter can start/stop the screen of participants', 'top-end');
+                this.userLog(
+                    'warning',
+                    'Только ведущий может управлять демонстрацией экрана участников',
+                    'top-end'
+                );
                 break;
             default:
                 break;
