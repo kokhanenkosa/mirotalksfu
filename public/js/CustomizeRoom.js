@@ -3,8 +3,8 @@
 /**
  * Custom Room page: build /join URL from form settings.
  *
- * Query params used by client.js:
- * - room, roomPassword, name, avatar, audio, video, screen, chat, hide, notify, duration, token
+ * Query params used by Room.js:
+ * - room, roomPassword, name, avatar, audio, video, screen, chat, hide, notify, duration, token, lectorium
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatEl = document.getElementById('chat');
     const hideEl = document.getElementById('hide');
     const notifyEl = document.getElementById('notify');
+    const modeLectoriumEl = document.getElementById('modeLectorium');
 
     const stripCyrillic = (value) =>
         String(value || '').replace(/[\u0400-\u04FF\u0500-\u052F\u2DE0-\u2DFF\uA640-\uA69F]/g, '');
@@ -158,6 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
         url.searchParams.set('chat', boolToFlag(!!chatEl?.checked));
         url.searchParams.set('hide', boolToFlag(!!hideEl?.checked));
         url.searchParams.set('notify', boolToFlag(!!notifyEl?.checked));
+        url.searchParams.set('lectorium', boolToFlag(!!modeLectoriumEl?.checked));
 
         url.searchParams.set('duration', duration);
 
@@ -279,6 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const inputs = [roomEl, nameEl, avatarEl, tokenEl, audioEl, videoEl, screenEl, chatEl, hideEl, notifyEl];
     inputs.push(roomPasswordEl, durationEl);
+    inputs.push(document.getElementById('modeCall'), modeLectoriumEl);
     inputs.forEach((el) => {
         if (!el) return;
         el.addEventListener('input', updatePreview);

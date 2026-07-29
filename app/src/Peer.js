@@ -95,6 +95,9 @@ module.exports = class Peer {
                 this.peer_info.peer_avatar = data.status;
                 this.peer_avatar = data.status;
                 break;
+            case 'camBubble':
+                this.peer_info.peer_cam_bubble = Boolean(data.status);
+                break;
             default:
                 break;
         }

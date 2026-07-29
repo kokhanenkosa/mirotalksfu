@@ -179,11 +179,27 @@ function handleRules(isPresenter) {
         // Auto detected rules for presenter
         // ##################################
 
-        // Room broadcasting
-        isBroadcastingEnabled = localStorageSettings.broadcasting;
+        // Room broadcasting / Лекторий
+        if (isLectoriumEnabled) {
+            isBroadcastingEnabled = true;
+            localStorageSettings.broadcasting = true;
+            lS.setSettings(localStorageSettings);
+        } else {
+            isBroadcastingEnabled = localStorageSettings.broadcasting;
+        }
         switchBroadcasting.checked = isBroadcastingEnabled;
+        if (switchBroadcasting) {
+            switchBroadcasting.disabled = Boolean(isLectoriumEnabled);
+        }
         rc.roomAction('broadcasting', true, false);
-        if (isBroadcastingEnabled) rc.toggleRoomBroadcasting();
+        if (isLectoriumEnabled) {
+            rc.roomAction('lectorium', true, false);
+            if (typeof show === 'function' && typeof lectoriumModeRow !== 'undefined') {
+                show(lectoriumModeRow);
+            }
+        } else if (isBroadcastingEnabled) {
+            rc.toggleRoomBroadcasting();
+        }
         // Room lobby
         isLobbyEnabled = localStorageSettings.lobby;
         switchLobby.checked = isLobbyEnabled;

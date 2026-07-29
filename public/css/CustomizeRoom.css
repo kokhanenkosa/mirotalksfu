@@ -152,6 +152,7 @@ body::before {
         'room password'
         'name avatar'
         'token duration'
+        'mode mode'
         'toggles toggles'
         'share share'
         'error error'
@@ -270,6 +271,73 @@ body::before {
 .cr-input-action:focus-visible {
     outline: 3px solid var(--optrf-accent-soft);
     outline-offset: 2px;
+}
+
+.cr-mode {
+    grid-area: mode;
+    margin: 8px 0 4px;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+
+.cr-mode .cr-label {
+    margin-bottom: 10px;
+}
+
+.cr-mode-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--cr-card-border);
+    background: var(--optrf-surface-2);
+    cursor: pointer;
+    transition:
+        border-color 160ms ease,
+        background 160ms ease;
+}
+
+.cr-mode-option:last-child {
+    margin-bottom: 0;
+}
+
+.cr-mode-option:hover,
+.cr-mode-option:focus-within {
+    border-color: var(--cr-card-border-strong);
+    background: var(--optrf-surface-3);
+}
+
+.cr-mode-option:has(input:checked) {
+    border-color: var(--cr-accent-green);
+    background: color-mix(in srgb, var(--optrf-accent-soft) 55%, var(--optrf-surface-2));
+}
+
+.cr-mode-option input {
+    margin-top: 4px;
+    accent-color: var(--cr-accent-green);
+    flex: 0 0 auto;
+}
+
+.cr-mode-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.cr-mode-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--cr-text);
+}
+
+.cr-mode-desc {
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--cr-text-muted);
 }
 
 .cr-toggle-grid {
@@ -532,6 +600,7 @@ body::before {
             'avatar'
             'token'
             'duration'
+            'mode'
             'toggles'
             'share'
             'error'

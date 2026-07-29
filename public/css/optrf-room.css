@@ -258,14 +258,27 @@ html[data-theme] #mySettings table {
 }
 
 html[data-theme] #mySettings select,
-html[data-theme] #mySettings input,
+html[data-theme] #mySettings input:not([type='checkbox']):not([type='radio']):not(.form-check-input),
 html[data-theme] #mySettings textarea,
-html[data-theme] .modal-content input,
+html[data-theme] .modal-content input:not([type='checkbox']):not([type='radio']):not(.form-check-input),
 html[data-theme] .modal-content select,
 html[data-theme] .modal-content textarea {
     color: var(--optrf-text) !important;
     background: var(--optrf-input) !important;
     border-color: var(--optrf-border) !important;
+}
+
+html[data-theme] #mySettings .form-check-input,
+html[data-theme] .modal-content .form-check-input {
+    background-color: #6b7280 !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e") !important;
+    border-color: transparent !important;
+}
+
+html[data-theme] #mySettings .form-check-input:checked,
+html[data-theme] .modal-content .form-check-input:checked {
+    background-color: var(--optrf-accent) !important;
+    border-color: var(--optrf-accent) !important;
 }
 
 html[data-theme] #mySettings .tablinks {

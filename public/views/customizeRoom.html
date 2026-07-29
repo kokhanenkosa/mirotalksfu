@@ -122,6 +122,27 @@
                         <p class="cr-hint">Требуется, если включена защита ведущего или авторизация пользователей.</p>
                     </div>
 
+                    <fieldset class="cr-mode" aria-label="Режим комнаты">
+                        <legend class="cr-label">Режим комнаты</legend>
+                        <label class="cr-mode-option" for="modeCall">
+                            <input id="modeCall" name="roomMode" type="radio" value="call" checked />
+                            <span class="cr-mode-body">
+                                <span class="cr-mode-title">Созвон</span>
+                                <span class="cr-mode-desc">Все участники видны плитками на сцене — как обычная встреча.</span>
+                            </span>
+                        </label>
+                        <label class="cr-mode-option" for="modeLectorium">
+                            <input id="modeLectorium" name="roomMode" type="radio" value="lectorium" />
+                            <span class="cr-mode-body">
+                                <span class="cr-mode-title">Лекторий</span>
+                                <span class="cr-mode-desc"
+                                    >На сцене только ведущий. Слушатели без плиток — только в списке чата и
+                                    участников.</span
+                                >
+                            </span>
+                        </label>
+                    </fieldset>
+
                     <div class="cr-toggle-grid" aria-label="Параметры входа">
                         <label class="cr-toggle" for="audio">
                             <span class="cr-toggle-text">Аудио</span>

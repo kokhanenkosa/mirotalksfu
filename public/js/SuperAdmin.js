@@ -151,7 +151,8 @@
             if (room.locked) badge(flags, 'закрыта');
             if (room.lobby) badge(flags, 'лобби');
             if (room.recording) badge(flags, 'запись');
-            if (room.broadcasting) badge(flags, 'трансляция');
+            if (room.lectorium) badge(flags, 'лекторий');
+            else if (room.broadcasting) badge(flags, 'трансляция');
             if (room.observersCount) badge(flags, `${room.observersCount} набл.`);
 
             const actions = cell(row, '');

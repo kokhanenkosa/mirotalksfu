@@ -616,6 +616,7 @@ async function getSuperAdminOverview() {
             lobby: Boolean(room?.isLobbyEnabled?.()),
             recording: peers.some((peer) => peer.recording),
             broadcasting: Boolean(room?.isBroadcasting?.()),
+            lectorium: Boolean(room?.isLectorium?.()),
         });
     }
 
@@ -2715,7 +2716,7 @@ async function startServer() {
             }
         });
 
-        socket.on('createRoom', async ({ room_id, phone_token }, callback) => {
+        socket.on('createRoom', async ({ room_id, phone_token, lectorium }, callback) => {
             // Security: reject invalid room ids (XSS / path traversal / empty).
             if (!Validator.isValidRoomName(room_id)) {
                 log.warn('[createRoom] - Invalid room name', { room_id });
@@ -2754,9 +2755,12 @@ async function startServer() {
             if (roomList.has(socket.room_id)) {
                 callback({ error: 'already exists' });
             } else {
-                log.debug('Created room', { room_id: socket.room_id });
+                log.debug('Created room', { room_id: socket.room_id, lectorium: Boolean(lectorium) });
                 const worker = await getMediasoupWorker();
                 const room = new Room(socket.room_id, worker, io);
+                if (lectorium) {
+                    room.setIsLectorium(true);
+                }
                 const creatorPhone = socket.phone_session?.phone || null;
                 if (creatorPhone) {
                     room.createdByPhone = creatorPhone;
@@ -2767,7 +2771,7 @@ async function startServer() {
                     }
                 }
                 roomList.set(socket.room_id, room);
-                callback({ room_id: socket.room_id });
+                callback({ room_id: socket.room_id, lectorium: room.isLectorium() });
             }
         });
 
@@ -3639,7 +3643,17 @@ async function startServer() {
             switch (data.action) {
                 case 'broadcasting':
                     if (!isPresenter) return;
-                    room.setIsBroadcasting(data.room_broadcasting);
+                    // В лектории broadcasting нельзя выключить — иначе появятся плитки слушателей.
+                    if (room.isLectorium()) {
+                        room.setIsBroadcasting(true);
+                    } else {
+                        room.setIsBroadcasting(data.room_broadcasting);
+                    }
+                    room.broadCast(socket.id, 'roomAction', data.action);
+                    break;
+                case 'lectorium':
+                    if (!isPresenter) return;
+                    room.setIsLectorium(Boolean(data.room_lectorium));
                     room.broadCast(socket.id, 'roomAction', data.action);
                     break;
                 case 'lock':
@@ -3699,6 +3713,7 @@ async function startServer() {
             }
             log.debug('Room status', {
                 broadcasting: room.isBroadcasting(),
+                lectorium: room.isLectorium(),
                 locked: room.isLocked(),
                 lobby: room.isLobbyEnabled(),
                 hostOnlyRecording: room.isHostOnlyRecording(),
@@ -5625,9 +5640,11 @@ async function startServer() {
             const room = roomList.get(roomId);
             const peerCount = (room && room.getVisiblePeersCount()) || 0;
             const broadcasting = (room && room.isBroadcasting()) || false;
+            const lectorium = (room && room.isLectorium()) || false;
             return {
                 room: roomId,
                 broadcasting: broadcasting,
+                lectorium: lectorium,
                 peers: peerCount,
             };
         });

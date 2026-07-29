@@ -31,6 +31,8 @@ module.exports = class Room {
         this.activeSpeakerObserver = null;
         // ##########################
         this._isBroadcasting = false;
+        // Лекторий: на сцене только ведущий, слушатели — в списке чата/участников.
+        this._isLectorium = false;
         // ##########################
         this._isLocked = false;
         this._isLobbyEnabled = false;
@@ -109,6 +111,7 @@ module.exports = class Room {
             id: this.id,
             sessionId: this.sessionId,
             broadcasting: this._isBroadcasting,
+            lectorium: this._isLectorium,
             recording: this.recording,
             config: {
                 isLocked: this._isLocked,
@@ -1100,6 +1103,9 @@ module.exports = class Room {
     isBroadcasting() {
         return this._isBroadcasting;
     }
+    isLectorium() {
+        return this._isLectorium;
+    }
     getPassword() {
         return this._roomPassword;
     }
@@ -1121,6 +1127,13 @@ module.exports = class Room {
     // SET
     setIsBroadcasting(status) {
         this._isBroadcasting = status;
+    }
+    setIsLectorium(status) {
+        this._isLectorium = Boolean(status);
+        if (this._isLectorium) {
+            // Лекторий всегда one-to-many: слушатели не занимают сцену.
+            this._isBroadcasting = true;
+        }
     }
     setLocked(status, password) {
         this._isLocked = status;

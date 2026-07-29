@@ -171,7 +171,7 @@ label,
     color: var(--optrf-text-2);
 }
 
-input,
+input:not([type='checkbox']):not([type='radio']):not(.form-check-input),
 textarea,
 select,
 .form-input,
@@ -185,18 +185,56 @@ select,
     font-family: var(--optrf-font) !important;
 }
 
-input::placeholder,
+input:not([type='checkbox']):not([type='radio']):not(.form-check-input)::placeholder,
 textarea::placeholder {
     color: var(--optrf-muted) !important;
 }
 
-input:focus,
+input:not([type='checkbox']):not([type='radio']):not(.form-check-input):focus,
 textarea:focus,
 select:focus,
 .form-input:focus,
 .pa-field:focus-within {
     border-color: var(--optrf-accent) !important;
     box-shadow: 0 0 0 3px var(--optrf-accent-soft) !important;
+}
+
+/* Bootstrap switches: не затирать background-image кружка глобальным background */
+.form-check-input {
+    cursor: pointer;
+    width: 2.5em;
+    height: 1.35em;
+    margin-top: 0.15em;
+    background-color: #6b7280 !important;
+    border: 1px solid transparent !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e") !important;
+    background-position: left center !important;
+    background-repeat: no-repeat !important;
+    background-size: contain !important;
+    box-shadow: none !important;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.form-switch .form-check-input {
+    width: 2.75em;
+    border-radius: 2em !important;
+}
+
+.form-check-input:checked {
+    background-color: var(--optrf-accent) !important;
+    border-color: var(--optrf-accent) !important;
+    background-position: right center !important;
+}
+
+.form-check-input:focus {
+    border-color: var(--optrf-accent) !important;
+    box-shadow: 0 0 0 3px var(--optrf-accent-soft) !important;
+}
+
+.form-check-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 /* Подсвечивается вся телефонная строка, а не вложенный input. */

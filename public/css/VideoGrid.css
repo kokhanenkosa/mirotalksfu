@@ -384,6 +384,56 @@
     transition: box-shadow 0.3s ease;
 }
 
+/* Камера лектора кружком поверх демонстрации экрана */
+.Camera.has-cam-bubble {
+    position: relative;
+}
+
+.Camera.cam-bubble-source-hidden {
+    display: none !important;
+}
+
+.cam-bubble {
+    position: absolute;
+    right: clamp(10px, 2.2vw, 22px);
+    bottom: clamp(10px, 2.2vw, 22px);
+    width: min(22%, 168px);
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    overflow: hidden;
+    z-index: 6;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    background: #111;
+    pointer-events: none;
+}
+
+.cam-bubble video {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+    transform: none !important;
+    cursor: default;
+}
+
+#camBubbleButton.is-active {
+    color: #fff;
+    background: var(--optrf-accent, #00a8e8);
+}
+
+@media screen and (max-width: 700px) {
+    .cam-bubble {
+        width: min(30%, 120px);
+        right: 8px;
+        bottom: 8px;
+        border-width: 2px;
+    }
+}
+
 .videoDefault {
     position: absolute;
     width: 100%;

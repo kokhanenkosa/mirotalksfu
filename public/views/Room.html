@@ -326,6 +326,16 @@
             <button id="swapCameraButton" class="hidden"><i class="fas fa-camera-rotate"></i></button>
             <button id="startScreenButton" class="hidden"><i class="fas fa-desktop"></i></button>
             <button id="stopScreenButton" class="orange hidden"><i class="fas fa-stop-circle"></i></button>
+            <button
+                id="camBubbleButton"
+                class="hidden"
+                type="button"
+                aria-label="Камера поверх экрана"
+                aria-pressed="false"
+                title="Камера поверх экрана"
+            >
+                <i class="fas fa-circle-user"></i>
+            </button>
             <button id="raiseHandButton" class="hidden"><i class="fas fa-hand-paper"></i></button>
             <button id="lowerHandButton" class="hidden"><i id="lowerHandIcon" class="fas fa-hand-paper"></i></button>
             <button id="chatButton" class="hidden" aria-label="Чат" aria-pressed="false">
@@ -549,6 +559,14 @@
                         </button>
                         <hr />
                         <table class="settingsTable">
+                            <tr id="lectoriumModeRow" class="hidden">
+                                <td colspan="2">
+                                    <div class="title">
+                                        <i class="fas fa-chalkboard-user"></i>
+                                        <p>Режим: Лекторий — слушатели только в списке чата</p>
+                                    </div>
+                                </td>
+                            </tr>
                             <tr id="broadcastingButton" class="hidden">
                                 <td>
                                     <div class="title">
@@ -699,15 +717,15 @@
                             <p>Качество видео:</p>
                         </div>
                         <select id="videoQuality" class="form-select text-light bg-dark">
-                            <option value="default">рџЋҐ&nbsp;Default</option>
-                            <option value="qvga">рџЋҐ&nbsp;QVGA</option>
-                            <option value="vga">рџЋҐ&nbsp;VGA</option>
-                            <option value="hd">рџЋҐ&nbsp;HD</option>
-                            <option value="fhd">рџЋҐ&nbsp;FULL HD</option>
-                            <option value="2k">рџЋҐ&nbsp;2k</option>
-                            <option value="4k">рџЋҐ&nbsp;4K</option>
-                            <option value="6k">рџЋҐ&nbsp;6k</option>
-                            <option value="8k">рџЋҐ&nbsp;8K</option>
+                            <option value="default">По умолчанию (720p)</option>
+                            <option value="qvga">QVGA (320p)</option>
+                            <option value="vga">VGA (480p)</option>
+                            <option value="hd" selected>HD (720p)</option>
+                            <option value="fhd">Full HD (1080p)</option>
+                            <option value="2k">2K</option>
+                            <option value="4k">4K</option>
+                            <option value="6k">6K</option>
+                            <option value="8k">8K</option>
                         </select>
                         <br />
                         <div id="ScreenQualityDiv" class="hidden">
@@ -716,13 +734,13 @@
                                 <p>Качество демонстрации:</p>
                             </div>
                             <select id="screenQuality" class="form-select text-light bg-dark">
-                                <option value="default">рџ–Ґ&nbsp;Default</option>
-                                <option value="hd">рџ–Ґ&nbsp;HD</option>
-                                <option value="fhd">рџ–Ґ&nbsp;FULL HD</option>
-                                <option value="2k">рџ–Ґ&nbsp;2k</option>
-                                <option value="4k">рџ–Ґ&nbsp;4K</option>
-                                <option value="6k">рџ–Ґ&nbsp;6k</option>
-                                <option value="8k">рџ–Ґ&nbsp;8K</option>
+                                <option value="default">По умолчанию (1080p)</option>
+                                <option value="hd">HD (720p)</option>
+                                <option value="fhd" selected>Full HD (1080p)</option>
+                                <option value="2k">2K</option>
+                                <option value="4k">4K</option>
+                                <option value="6k">6K</option>
+                                <option value="8k">8K</option>
                             </select>
                         </div>
                         <br />
@@ -732,9 +750,9 @@
                                 <p id="screenOptimizationLabel">Оптимизация демонстрации:</p>
                             </div>
                             <select id="screenOptimization" class="form-select text-light bg-dark">
-                                <option value="default">рџ–Ґ&nbsp;None</option>
-                                <option value="detail">рџ–Ґ&nbsp;Detail</option>
-                                <option value="motion">рџ–Ґ&nbsp;Motion</option>
+                                <option value="default">Обычная</option>
+                                <option value="detail" selected>Текст / детали</option>
+                                <option value="motion">Движение / видео</option>
                             </select>
                         </div>
                         <hr />

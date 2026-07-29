@@ -547,6 +547,7 @@ class RoomClient {
             await this.socket.request('createRoom', {
                 room_id,
                 phone_token,
+                lectorium: Boolean(isLectoriumEnabled),
             });
         } catch (err) {
             console.log('Create room:', err);
@@ -694,7 +695,7 @@ class RoomClient {
         // Request existing data producers from other peers
         this.socket.emit('getDataProducers');
 
-        if (isBroadcastingEnabled) {
+        if (isBroadcastingEnabled || isLectoriumEnabled) {
             isPresenter ? await this.startLocalMedia() : this.handleRoomBroadcasting();
         } else {
             await this.startLocalMedia();
@@ -752,8 +753,21 @@ class RoomClient {
             handleRules(isPresenter);
 
             // ###################################################################################################
-            isBroadcastingEnabled = isPresenter && !room.broadcasting ? isBroadcastingEnabled : room.broadcasting;
+            if (room.lectorium) {
+                isLectoriumEnabled = true;
+                isBroadcastingEnabled = true;
+                if (typeof switchBroadcasting !== 'undefined' && switchBroadcasting) {
+                    switchBroadcasting.checked = true;
+                    switchBroadcasting.disabled = true;
+                }
+                if (typeof show === 'function' && typeof lectoriumModeRow !== 'undefined' && lectoriumModeRow) {
+                    show(lectoriumModeRow);
+                }
+            } else {
+                isBroadcastingEnabled = isPresenter && !room.broadcasting ? isBroadcastingEnabled : room.broadcasting;
+            }
             console.log('07.1 ----> ROOM BROADCASTING', isBroadcastingEnabled);
+            console.log('07.1 ----> ROOM LECTORIUM', isLectoriumEnabled);
             // ###################################################################################################
 
             if (BUTTONS.settings.tabRecording) {
@@ -880,9 +894,7 @@ class RoomClient {
                 continue;
             }
 
-            const canSetVideoOff = !isBroadcastingEnabled || (isBroadcastingEnabled && peer_presenter);
-
-            if (!peer_video && canSetVideoOff) {
+            if (!peer_video && shouldShowPeerVideoTile(peer_presenter)) {
                 console.log('Detected peer video off ' + peer_name);
                 this.setVideoOff(peer_info, true);
             }
@@ -1351,7 +1363,7 @@ class RoomClient {
     };
 
     handleSetVideoOff = (data) => {
-        if (!isBroadcastingEnabled || (isBroadcastingEnabled && data.peer_presenter)) {
+        if (shouldShowPeerVideoTile(data.peer_presenter)) {
             console.log('SocketOn setVideoOff', {
                 peer_name: data.peer_name,
                 peer_presenter: data.peer_presenter,
@@ -1414,6 +1426,12 @@ class RoomClient {
                 // Skip own producers to prevent echo from self-consumption
                 if (peer_info.peer_id === this.peer_id) {
                     console.warn('Skipping own producer to prevent echo', { producer_id, type });
+                    continue;
+                }
+                // Лекторий / трансляция: видео/экран слушателей на сцену не берём (они только в чате).
+                const isVideoOrScreen = type === mediaType.video || type === mediaType.screen;
+                if (isVideoOrScreen && !shouldShowPeerVideoTile(peer_info?.peer_presenter)) {
+                    console.log('Skip non-presenter media tile', { peer_name, type, lectorium: isLectoriumEnabled });
                     continue;
                 }
                 await this.consume(producer_id, peer_name, peer_info, type);
@@ -1485,6 +1503,11 @@ class RoomClient {
     handleUpdatePeerInfo = (data) => {
         console.log('SocketOn Peer info update:', data);
         this.updatePeerInfo(data.peer_name, data.peer_id, data.type, data.status, false, data.peer_presenter);
+        if (data.type === 'camBubble') {
+            const peer = this.peers?.get?.(data.peer_id);
+            if (peer?.peer_info) peer.peer_info.peer_cam_bubble = Boolean(data.status);
+            this.refreshCamBubble(data.peer_id);
+        }
     };
 
     handleFileInfoData = (data) => {
@@ -2398,10 +2421,20 @@ class RoomClient {
                 case mediaType.video:
                     this.setIsVideo(true);
                     this.event(_EVENTS.startVideo);
+                    this.refreshCamBubble(this.peer_id);
                     break;
                 case mediaType.screen:
                     this.setIsScreen(true);
                     this.event(_EVENTS.startScreen);
+                    // В лектории при демо экрана + камере — сразу кружок камеры поверх экрана.
+                    if (
+                        (isLectoriumEnabled || this.peer_info?.peer_cam_bubble) &&
+                        this.producerLabel.has(mediaType.video)
+                    ) {
+                        this.setCamBubbleEnabled(true);
+                    } else {
+                        this.refreshCamBubble(this.peer_id);
+                    }
                     break;
                 default:
                     break;
@@ -2950,7 +2983,7 @@ class RoomClient {
                 console.log('SCREEN ENCODING: VP9 or AV1 with SVC');
                 encodings = [
                     {
-                        maxBitrate: 5000000,
+                        maxBitrate: 8000000,
                         scalabilityMode: this.sharingScalabilityMode || 'L3T3',
                         dtx: true,
                     },
@@ -2960,7 +2993,7 @@ class RoomClient {
                 encodings = [
                     {
                         scaleResolutionDownBy: 1,
-                        maxBitrate: 5000000,
+                        maxBitrate: 8000000,
                         scalabilityMode: this.sharingScalabilityMode || 'L1T3',
                         dtx: true,
                     },
@@ -3118,6 +3151,8 @@ class RoomClient {
                 d = document.createElement('div');
                 d.className = 'Camera';
                 d.id = id + '__video';
+                d.dataset.peerId = this.peer_id;
+                d.dataset.mediaKind = isScreen ? 'screen' : 'video';
 
                 elem = document.createElement('video');
                 elem.setAttribute('id', id);
@@ -3284,6 +3319,7 @@ class RoomClient {
 
                 handleAspectRatio();
                 console.log('[addProducer] Video-element-count', this.videoMediaContainer.childElementCount);
+                this.refreshCamBubble(this.peer_id);
                 break;
             case mediaType.audio:
                 elem = document.createElement('audio');
@@ -3440,10 +3476,12 @@ class RoomClient {
             case mediaType.video:
                 this.setIsVideo(false);
                 this.event(_EVENTS.stopVideo);
+                this.clearCamBubble(this.peer_id);
                 break;
             case mediaType.screen:
                 this.setIsScreen(false);
                 this.event(_EVENTS.stopScreen);
+                this.clearCamBubble(this.peer_id);
                 if (this.producerLabel.has(mediaType.audioTab)) {
                     this.closeProducer(mediaType.audioTab, event);
                 }
@@ -3798,11 +3836,23 @@ class RoomClient {
         switch (type) {
             case mediaType.video:
             case mediaType.screen:
+                if (!shouldShowPeerVideoTile(remotePeerPresenter)) {
+                    console.log('Skip consumer tile for non-presenter', { peer_name, type });
+                    try {
+                        consumer.close();
+                    } catch {
+                        /* ignore */
+                    }
+                    this.consumers.delete(id);
+                    return;
+                }
                 this.removeVideoOff(remotePeerId);
 
                 d = document.createElement('div');
                 d.className = 'Camera';
                 d.id = id + '__video';
+                d.dataset.peerId = remotePeerId;
+                d.dataset.mediaKind = remoteIsScreen ? 'screen' : 'video';
 
                 elem = document.createElement('video');
                 elem.setAttribute('id', id);
@@ -4001,6 +4051,7 @@ class RoomClient {
                 handleAspectRatio();
                 console.log('[addConsumer] Video-element-count', this.videoMediaContainer.childElementCount);
 
+                this.refreshCamBubble(remotePeerId);
                 this.sound('joined');
                 break;
             case mediaType.audio:
@@ -4060,6 +4111,7 @@ class RoomClient {
         if (consumer_kind === 'video') {
             const d = this.getId(consumer_id + '__video');
             const vb = this.getId(consumer_id + '__vb');
+            const bubblePeerId = d?.dataset?.peerId;
 
             if (d) {
                 // Destroy drawing overlay if present
@@ -4094,6 +4146,8 @@ class RoomClient {
                     });
                 }
             }
+
+            if (bubblePeerId) this.clearCamBubble(bubblePeerId);
 
             handleAspectRatio();
             console.log(
@@ -4130,6 +4184,10 @@ class RoomClient {
         let d, vb, i, h, au, lm, sf, sm, sv, gl, ban, ko, p, pm, pb, pv, st, ri;
 
         const { peer_id, peer_name, peer_avatar, peer_audio, peer_presenter } = peer_info;
+        if (remotePeer && !shouldShowPeerVideoTile(peer_presenter)) {
+            this.removeVideoOff(peer_id);
+            return;
+        }
         if (remotePeer) this.remotePeerPresenter.set(peer_id, !!peer_presenter);
 
         this.removeVideoOff(peer_id);
@@ -9705,6 +9763,7 @@ class RoomClient {
     roomAction(action, emit = true, popup = true) {
         const data = {
             room_broadcasting: isBroadcastingEnabled,
+            room_lectorium: isLectoriumEnabled,
             room_id: this.room_id,
             peer_id: this.peer_id,
             peer_name: this.peer_name,
@@ -9715,6 +9774,10 @@ class RoomClient {
         if (emit) {
             switch (action) {
                 case 'broadcasting':
+                    this.socket.emit('roomAction', data);
+                    if (popup) this.roomStatus(action);
+                    break;
+                case 'lectorium':
                     this.socket.emit('roomAction', data);
                     if (popup) this.roomStatus(action);
                     break;
@@ -9797,7 +9860,20 @@ class RoomClient {
     roomStatus(action) {
         switch (action) {
             case 'broadcasting':
-                this.userLog('info', `${icons.room} BROADCASTING ${isBroadcastingEnabled ? 'On' : 'Off'}`, 'top-end');
+                this.userLog(
+                    'info',
+                    `${icons.room} Трансляция ${isBroadcastingEnabled ? 'вкл.' : 'выкл.'}`,
+                    'top-end'
+                );
+                break;
+            case 'lectorium':
+                isLectoriumEnabled = true;
+                isBroadcastingEnabled = true;
+                if (typeof switchBroadcasting !== 'undefined' && switchBroadcasting) {
+                    switchBroadcasting.checked = true;
+                    switchBroadcasting.disabled = true;
+                }
+                this.userLog('info', `${icons.room} Режим «Лекторий»`, 'top-end');
                 break;
             case 'lock':
                 if (!isPresenter) return;
@@ -12062,6 +12138,9 @@ class RoomClient {
                 case 'screen':
                     this.setIsScreen(status);
                     break;
+                case 'camBubble':
+                    this.peer_info.peer_cam_bubble = Boolean(status);
+                    break;
                 case 'hand':
                     this.peer_info.peer_hand = status;
                     const peer_hand = this.getPeerHandBtn(peer_id);
@@ -12101,6 +12180,8 @@ class RoomClient {
                     break;
                 case 'screen':
                     break;
+                case 'camBubble':
+                    break;
                 case 'hand':
                     const peer_hand = this.getPeerHandBtn(peer_id);
                     if (status) {
@@ -12124,6 +12205,147 @@ class RoomClient {
             }
         }
         if (isParticipantsListOpen) getRoomParticipants();
+    }
+
+    // ####################################################
+    // CAM BUBBLE — камера кружком поверх демонстрации экрана
+    // ####################################################
+
+    isCamBubbleActiveForPeer(peerId) {
+        if (peerId === this.peer_id) return Boolean(this.peer_info?.peer_cam_bubble);
+        const peer = this.peers?.get?.(peerId);
+        return Boolean(peer?.peer_info?.peer_cam_bubble);
+    }
+
+    getPeerMediaTile(peerId, mediaKind) {
+        const tiles = document.querySelectorAll(`.Camera[data-media-kind="${mediaKind}"]`);
+        for (const tile of tiles) {
+            if (tile.dataset.peerId === peerId) return tile;
+        }
+        return null;
+    }
+
+    clearCamBubble(peerId) {
+        const screenTile = this.getPeerMediaTile(peerId, 'screen');
+        const videoTile = this.getPeerMediaTile(peerId, 'video');
+        if (screenTile) {
+            screenTile.classList.remove('has-cam-bubble');
+            screenTile.querySelectorAll('.cam-bubble').forEach((el) => el.remove());
+        }
+        if (videoTile) {
+            videoTile.classList.remove('cam-bubble-source-hidden');
+            videoTile.style.display = '';
+        }
+        try {
+            handleAspectRatio();
+        } catch {
+            /* ignore */
+        }
+        this.syncCamBubbleButton();
+    }
+
+    applyCamBubble(peerId) {
+        const screenTile = this.getPeerMediaTile(peerId, 'screen');
+        const videoTile = this.getPeerMediaTile(peerId, 'video');
+        if (!screenTile || !videoTile) return false;
+
+        const sourceVideo = videoTile.querySelector('video');
+        if (!sourceVideo?.srcObject) return false;
+
+        let bubble = screenTile.querySelector('.cam-bubble');
+        if (!bubble) {
+            bubble = document.createElement('div');
+            bubble.className = 'cam-bubble';
+            bubble.setAttribute('aria-hidden', 'true');
+            screenTile.appendChild(bubble);
+        }
+
+        let bubbleVideo = bubble.querySelector('video');
+        if (!bubbleVideo) {
+            bubbleVideo = document.createElement('video');
+            bubbleVideo.autoplay = true;
+            bubbleVideo.playsInline = true;
+            bubbleVideo.muted = true;
+            bubbleVideo.disablePictureInPicture = true;
+            bubble.appendChild(bubbleVideo);
+        }
+
+        if (bubbleVideo.srcObject !== sourceVideo.srcObject) {
+            bubbleVideo.srcObject = sourceVideo.srcObject;
+        }
+        bubbleVideo.play?.().catch(() => {});
+
+        // Зеркало только для своей камеры (как обычно в вебкам-превью).
+        bubbleVideo.classList.toggle('mirror', peerId === this.peer_id && sourceVideo.classList.contains('mirror'));
+
+        screenTile.classList.add('has-cam-bubble');
+        videoTile.classList.add('cam-bubble-source-hidden');
+        videoTile.style.display = 'none';
+
+        try {
+            handleAspectRatio();
+        } catch {
+            /* ignore */
+        }
+        this.syncCamBubbleButton();
+        return true;
+    }
+
+    refreshCamBubble(peerId) {
+        if (!peerId) return;
+        if (this.isCamBubbleActiveForPeer(peerId)) {
+            this.applyCamBubble(peerId);
+        } else {
+            this.clearCamBubble(peerId);
+        }
+    }
+
+    async setCamBubbleEnabled(enabled) {
+        const on = Boolean(enabled);
+        if (on) {
+            if (!this.producerLabel.has(mediaType.screen)) {
+                this.userLog('warning', 'Сначала включите демонстрацию экрана', 'top-end', 5000);
+                return false;
+            }
+            if (!this.producerLabel.has(mediaType.video)) {
+                try {
+                    await this.produce(mediaType.video, videoSelect?.value);
+                } catch (err) {
+                    console.error('Cam bubble: failed to start camera', err);
+                    this.userLog('warning', 'Не удалось включить камеру для кружка', 'top-end', 6000);
+                    return false;
+                }
+            }
+        }
+
+        this.peer_info.peer_cam_bubble = on;
+        this.updatePeerInfo(this.peer_name, this.peer_id, 'camBubble', on, true);
+        this.refreshCamBubble(this.peer_id);
+        this.syncCamBubbleButton();
+        this.userLog(
+            'info',
+            on ? 'Камера поверх экрана включена' : 'Камера поверх экрана выключена',
+            'top-end',
+            3500
+        );
+        return on;
+    }
+
+    syncCamBubbleButton() {
+        const btn = typeof camBubbleButton !== 'undefined' ? camBubbleButton : this.getId('camBubbleButton');
+        if (!btn) return;
+        const screenOn = this.producerLabel?.has?.(mediaType.screen);
+        const canUse = Boolean(isPresenter) && Boolean(screenOn);
+        if (canUse) {
+            if (typeof show === 'function') show(btn);
+            else btn.classList.remove('hidden');
+        } else {
+            if (typeof hide === 'function') hide(btn);
+            else btn.classList.add('hidden');
+        }
+        const active = Boolean(this.peer_info?.peer_cam_bubble) && screenOn;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     }
 
     checkPeerInfoStatus(peer_info) {

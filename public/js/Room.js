@@ -289,7 +289,14 @@ let isKeepButtonsVisible = false;
 let isChatPinEnabled = true;
 let isShortcutsEnabled = false;
 let isBroadcastingEnabled = false;
+let isLectoriumEnabled = getLectoriumActive();
 let isLobbyEnabled = false;
+if (isLectoriumEnabled) {
+    // Создатель зашёл с ?lectorium=1 — сразу one-to-many, без плиток слушателей.
+    isBroadcastingEnabled = true;
+    localStorageSettings.broadcasting = true;
+    lS.setSettings(localStorageSettings);
+}
 let hostOnlyRecording = false;
 let isEnumerateAudioDevices = false;
 let isEnumerateVideoDevices = false;
@@ -550,6 +557,7 @@ function refreshMainButtonsToolTipPlacement() {
         setTippy('swapCameraButton', 'Переключить камеру', bPlacement);
         setTippy('startScreenButton', 'Начать демонстрацию экрана', bPlacement);
         setTippy('stopScreenButton', 'Остановить демонстрацию экрана', bPlacement);
+        setTippy('camBubbleButton', 'Камера кружком поверх экрана', bPlacement);
         setTippy('raiseHandButton', 'Поднять руку', bPlacement);
         setTippy('lowerHandButton', 'Опустить руку', bPlacement);
         setTippy('chatButton', 'Показать или скрыть чат', bPlacement);
@@ -988,6 +996,18 @@ function getChat() {
     return chat;
 }
 
+function getLectoriumActive() {
+    const v = getQueryParam('lectorium');
+    if (v === null || v === undefined || v === '') return false;
+    return ['1', 'true', 'yes', 'on'].includes(String(v).toLowerCase());
+}
+
+/** В лектории / трансляции на сцене только ведущий; остальные — только в списке чата. */
+function shouldShowPeerVideoTile(peerPresenter) {
+    if (isLectoriumEnabled || isBroadcastingEnabled) return Boolean(peerPresenter);
+    return true;
+}
+
 function getHideMeActive() {
     let hide = getQueryParam('hide');
     let queryHideMe = false;
@@ -1194,6 +1214,7 @@ function getPeerInfo() {
         peer_screen: isScreenAllowed,
         peer_recording: isRecording,
         peer_video_privacy: isVideoPrivacyActive,
+        peer_cam_bubble: false,
         peer_hand: false,
         peer_observer: isSuperAdminObserver,
         is_desktop_device: isDesktopDevice,
@@ -2785,6 +2806,11 @@ function handleButtons() {
     stopScreenButton.onclick = () => {
         rc.closeProducer(RoomClient.mediaType.screen);
     };
+    camBubbleButton.onclick = async () => {
+        if (!rc) return;
+        const next = !rc.peer_info?.peer_cam_bubble;
+        await rc.setCamBubbleEnabled(next);
+    };
     copyRtmpUrlButton.onclick = () => {
         rc.copyRTMPUrl(rtmpLiveUrl.value);
     };
@@ -3352,6 +3378,11 @@ function handleSelects() {
     });
     // room
     switchBroadcasting.onchange = (e) => {
+        if (isLectoriumEnabled) {
+            e.currentTarget.checked = true;
+            e.target.blur();
+            return;
+        }
         isBroadcastingEnabled = e.currentTarget.checked;
         rc.roomAction('broadcasting');
         localStorageSettings.broadcasting = isBroadcastingEnabled;
@@ -4324,6 +4355,7 @@ function handleRoomClientEvents() {
         hideClassElements('videoMenuBar');
         // if (isParticipantsListOpen) getRoomParticipants();
         screen = true;
+        rc.syncCamBubbleButton();
     });
     rc.on(RoomClient.EVENTS.pauseScreen, () => {
         console.log('Room event: Client pause screen');
@@ -4331,6 +4363,7 @@ function handleRoomClientEvents() {
         show(stopScreenButton);
         hideClassElements('videoMenuBar');
         screen = false;
+        rc.syncCamBubbleButton();
     });
     rc.on(RoomClient.EVENTS.resumeScreen, () => {
         console.log('Room event: Client resume screen');
@@ -4338,6 +4371,7 @@ function handleRoomClientEvents() {
         show(startScreenButton);
         hideClassElements('videoMenuBar');
         screen = true;
+        rc.syncCamBubbleButton();
     });
     rc.on(RoomClient.EVENTS.stopScreen, () => {
         console.log('Room event: Client stop screen');
@@ -4346,6 +4380,9 @@ function handleRoomClientEvents() {
         hideClassElements('videoMenuBar');
         // if (isParticipantsListOpen) getRoomParticipants();
         screen = false;
+        if (rc.peer_info) rc.peer_info.peer_cam_bubble = false;
+        rc.clearCamBubble(rc.peer_id);
+        rc.syncCamBubbleButton();
     });
     rc.on(RoomClient.EVENTS.roomLock, () => {
         console.log('Room event: Client lock room');
