@@ -543,6 +543,11 @@ class RoomClient {
         } catch (err) {
             console.log('Create room:', err);
             const msg = String(err?.error || err || '');
+            // Existing rooms are the normal participant flow: createRoom also
+            // associates this socket with the room, then join() completes entry.
+            if (msg.includes('already exists')) {
+                return;
+            }
             if (msg.includes('phone auth')) {
                 openURL(`/phone-auth?next=${encodeURIComponent(`/join/${room_id}`)}`);
                 throw err;
