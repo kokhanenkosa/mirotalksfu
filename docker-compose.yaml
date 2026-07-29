@@ -120,6 +120,10 @@ services:
             - mirotalksfu-rtmp:/src/app/rtmp
             - mirotalksfu-phone-data:/src/app/data
 
+        networks:
+            - default
+            - coolify
+
         healthcheck:
             test:
                 [
@@ -137,3 +141,7 @@ volumes:
     mirotalksfu-rec:
     mirotalksfu-rtmp:
     mirotalksfu-phone-data:
+
+networks:
+    coolify:
+        external: true
