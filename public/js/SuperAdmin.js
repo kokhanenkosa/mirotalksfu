@@ -83,7 +83,7 @@
             });
             const data = await response.json().catch(() => ({}));
             if (response.status === 401) {
-                window.location.href = '/phone-auth?next=%2Fsuper-admin';
+                window.location.replace('/phone-auth?next=%2Fsuper-admin');
                 return;
             }
             if (!response.ok || !data.ok || !data.user) {
@@ -281,7 +281,7 @@
             });
             const data = await response.json().catch(() => ({}));
             if (response.status === 401) {
-                window.location.href = '/phone-auth?next=%2Fsuper-admin';
+                window.location.replace('/phone-auth?next=%2Fsuper-admin');
                 return;
             }
             if (!response.ok || !data.ok) throw new Error(data.error || 'Не удалось загрузить данные');

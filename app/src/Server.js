@@ -1229,6 +1229,12 @@ async function startServer() {
         if (!phoneAuth.isEnabled()) {
             return res.redirect('/');
         }
+        // Уже авторизован — сразу дальше, без мелькания формы/«номер подтверждён».
+        const session = phoneAuth.getSession(req);
+        if (session) {
+            const next = phoneAuth.resolveAuthenticatedRedirect(session, req.query?.next);
+            return res.redirect(302, next);
+        }
         return res.sendFile(views.phoneAuth);
     });
 

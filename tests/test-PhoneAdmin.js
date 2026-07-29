@@ -167,6 +167,38 @@ describe('test-PhoneAdmin', () => {
         assert.strictEqual(auth.canPresent('+79001112233', '+79000000000'), false);
     });
 
+    it('sanitizes auth next paths and skips phone-auth for authenticated users', () => {
+        const auth = new PhoneAuth({
+            enabled: true,
+            jwtKey: 'test-secret',
+            creators: ['+79001112233'],
+            superAdmins: [],
+        });
+        const session = auth.verifyToken(auth.signSession('+79001112233').token);
+
+        assert.strictEqual(auth.sanitizeNextPath('/join/abc'), '/join/abc');
+        assert.strictEqual(auth.sanitizeNextPath('https://evil.test/x'), '/');
+        assert.strictEqual(auth.sanitizeNextPath('//evil.test'), '/');
+        assert.strictEqual(auth.sanitizeNextPath('/phone-auth?next=/join/x'), '/');
+        assert.strictEqual(
+            auth.sanitizeNextPath('/join/x?phone_token=secret'),
+            '/join/x'
+        );
+        assert.strictEqual(auth.resolveAuthenticatedRedirect(session, '/join/room1'), '/join/room1');
+        assert.strictEqual(auth.resolveAuthenticatedRedirect(session, '/customizeRoom'), '/customizeRoom');
+
+        const guest = auth.verifyToken(
+            new PhoneAuth({
+                enabled: true,
+                jwtKey: 'test-secret',
+                creators: [],
+                superAdmins: [],
+            }).signSession('+79002223344').token
+        );
+        assert.strictEqual(auth.resolveAuthenticatedRedirect(guest, '/customizeRoom'), '/no-create-access');
+        assert.ok(auth.buildAuthRedirect({}, '/join/r1').startsWith('/phone-auth?next='));
+    });
+
     it('falls back to cookie auth when socket payload is a cookie marker', () => {
         const auth = new PhoneAuth({
             enabled: true,

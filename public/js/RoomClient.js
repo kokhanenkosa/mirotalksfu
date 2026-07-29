@@ -557,15 +557,15 @@ class RoomClient {
                 return;
             }
             if (msg.includes('phone auth')) {
-                openURL(`/phone-auth?next=${encodeURIComponent(`/join/${room_id}`)}`);
+                openURL(`/phone-auth?next=${encodeURIComponent(`/join/${room_id}`)}`, false, true);
                 throw err;
             }
             if (msg.includes('create not allowed')) {
-                openURL('/no-create-access');
+                openURL('/no-create-access', false, true);
                 throw err;
             }
             if (/does not exist/i.test(msg)) {
-                openURL('/no-create-access');
+                openURL('/no-create-access', false, true);
                 throw err;
             }
             throw err;
@@ -10236,7 +10236,7 @@ class RoomClient {
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then(() => {
             endRoomSession();
-            openURL(`/phone-auth?next=${encodeURIComponent(`/join/${this.room_id}`)}`);
+            openURL(`/phone-auth?next=${encodeURIComponent(`/join/${this.room_id}`)}`, false, true);
         });
     }
 

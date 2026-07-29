@@ -226,7 +226,7 @@
                     paSub.textContent =
                         'Номер подтверждён, но создавать встречи могут только организаторы. Попросите администратора добавить ваш номер.';
                 window.setTimeout(() => {
-                    window.location.href = '/no-create-access';
+                    window.location.replace('/no-create-access');
                 }, reduceMotion ? 400 : 1600);
                 return;
             }
@@ -241,9 +241,10 @@
                 return;
             }
 
+            // replace — /phone-auth не остаётся в истории (Назад не вернёт на форму).
             window.setTimeout(
                 () => {
-                    window.location.href = safeNext;
+                    window.location.replace(safeNext);
                 },
                 reduceMotion ? 150 : 900
             );
@@ -289,23 +290,23 @@
     });
 
     if (!embedded) {
+        // Сервер уже редиректит авторизованных; это запасной путь + replace без мелькания в history.
         fetch('/phone/me', { credentials: 'same-origin' })
             .then((r) => r.json())
             .then((data) => {
                 if (data?.ok && data.authenticated) {
-                    const safeNext = nextUrl.startsWith('/') ? nextUrl : '/';
+                    const safeNext = nextUrl.startsWith('/') && !nextUrl.startsWith('//') ? nextUrl : '/';
                     const wantsCreate = ['/customizeRoom', '/newroom'].some(
                         (p) => safeNext === p || safeNext.startsWith(p + '?')
                     );
                     if (!data.canCreate && wantsCreate) {
-                        window.location.href = '/no-create-access';
+                        window.location.replace('/no-create-access');
                         return;
                     }
-                    window.location.href = safeNext;
+                    window.location.replace(safeNext);
                 }
             })
             .catch(() => {});
+        phoneInput?.focus();
     }
-
-    if (!embedded) phoneInput?.focus();
 })();

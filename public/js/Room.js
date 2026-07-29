@@ -4782,8 +4782,16 @@ function isDesktop() {
     return !isMobileDevice && !isTabletDevice && !isIPadDevice;
 }
 
-function openURL(url, blank = false) {
-    blank ? window.open(url, '_blank') : (window.location.href = url);
+function openURL(url, blank = false, replace = false) {
+    if (blank) {
+        window.open(url, '_blank');
+        return;
+    }
+    if (replace) {
+        window.location.replace(url);
+        return;
+    }
+    window.location.href = url;
 }
 
 function bytesToSize(bytes) {
@@ -7518,7 +7526,7 @@ window.addEventListener('popstate', (event) => {
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Да',
-        cancelButtonText: 'No',
+        cancelButtonText: 'Нет',
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
         showClass: { popup: 'animate__animated animate__fadeInDown' },
@@ -7531,8 +7539,13 @@ window.addEventListener('popstate', (event) => {
                 rc.saveRecording('User popstate changes');
             }
             preventExit = false;
-            // Actually go back in history
-            history.back();
+            // Не history.back(): иначе часто вываливаемся на /phone-auth из стека.
+            try {
+                rc.exit(true);
+            } catch {
+                /* ignore */
+            }
+            window.location.replace('/');
         } else {
             // Stay in session: push state again to prevent exit
             history.pushState({ sessionActive: true }, '', location.href);

@@ -312,17 +312,46 @@ class PhoneAuth {
         };
     }
 
-    buildAuthRedirect(req, nextPath) {
-        const next = nextPath || req.originalUrl || '/';
-        // Убираем phone_token из next, чтобы не светить JWT в query после логина
+    /**
+     * Safe relative redirect target only (blocks open redirects).
+     * @param {string} nextPath
+     * @returns {string}
+     */
+    sanitizeNextPath(nextPath) {
+        const fallback = '/';
+        if (!nextPath || typeof nextPath !== 'string') return fallback;
         try {
-            const url = new URL(next, 'http://local');
+            const url = new URL(nextPath, 'http://local');
+            if (url.origin !== 'http://local') return fallback;
+            if (!url.pathname.startsWith('/') || url.pathname.startsWith('//')) return fallback;
+            if (url.pathname === '/phone-auth') return fallback;
             url.searchParams.delete('phone_token');
-            const clean = url.pathname + url.search + url.hash;
-            return `/phone-auth?next=${encodeURIComponent(clean || '/')}`;
+            return url.pathname + url.search + url.hash || fallback;
         } catch {
-            return `/phone-auth?next=${encodeURIComponent(next)}`;
+            return fallback;
         }
+    }
+
+    buildAuthRedirect(req, nextPath) {
+        const clean = this.sanitizeNextPath(nextPath || req.originalUrl || '/');
+        return `/phone-auth?next=${encodeURIComponent(clean)}`;
+    }
+
+    /**
+     * Where an already-authenticated user should go instead of /phone-auth.
+     * @param {object} session
+     * @param {string} nextPath
+     * @returns {string}
+     */
+    resolveAuthenticatedRedirect(session, nextPath) {
+        const safeNext = this.sanitizeNextPath(nextPath);
+        const wantsCreate = ['/customizeRoom', '/newroom'].some(
+            (p) => safeNext === p || safeNext.startsWith(`${p}?`)
+        );
+        if (session && !session.canCreate && wantsCreate) {
+            return '/no-create-access';
+        }
+        return safeNext;
     }
 
     /** HTML-страница: номер подтверждён, но создавать комнаты нельзя */
