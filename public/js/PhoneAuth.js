@@ -111,7 +111,7 @@
             if (paSub) paSub.textContent = '';
             window.ThinkingOrbs?.update(paIcon, { state: 'shaping', paused: true });
         } else {
-            if (paTitle) paTitle.textContent = 'Подтвердите номер';
+            if (paTitle) paTitle.textContent = 'Вход телефоном';
             if (paSub)
                 paSub.textContent =
                     'Чтобы создать комнату или войти на встречу, нужен код из Telegram или SMS.';
