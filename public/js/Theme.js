@@ -39,10 +39,12 @@
     }
 
     function updateControls(preference) {
-        document.querySelectorAll('[data-optrf-theme-value]').forEach((button) => {
-            const active = button.dataset.optrfThemeValue === preference;
-            button.classList.toggle('is-active', active);
-            button.setAttribute('aria-pressed', String(active));
+        document.querySelectorAll('[data-optrf-theme-toggle]').forEach((button) => {
+            const label = LABELS[preference];
+            const icon = button.querySelector('.optrf-theme-icon');
+            if (icon) icon.textContent = ICONS[preference];
+            button.title = `Тема: ${label}. Нажмите для переключения`;
+            button.setAttribute('aria-label', button.title);
         });
 
         document.querySelectorAll('[data-optrf-theme-label]').forEach((label) => {
@@ -90,28 +92,20 @@
         wrapper.dataset.optrfThemeSwitcher = '';
         wrapper.setAttribute('aria-label', 'Тема оформления');
 
-        VALUES.forEach((value) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'optrf-theme-option';
-            button.dataset.optrfThemeValue = value;
-            button.title = LABELS[value];
-            button.setAttribute('aria-label', `Тема: ${LABELS[value]}`);
-            button.innerHTML = `<b class="optrf-theme-icon" aria-hidden="true">${ICONS[value]}</b><span>${LABELS[value]}</span>`;
-            button.addEventListener('click', () => setPreference(value));
-            wrapper.appendChild(button);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'optrf-theme-option';
+        button.dataset.optrfThemeToggle = '';
+        button.innerHTML = '<b class="optrf-theme-icon" aria-hidden="true"></b>';
+        button.addEventListener('click', () => {
+            const current = getPreference();
+            const next = VALUES[(VALUES.indexOf(current) + 1) % VALUES.length];
+            setPreference(next);
         });
+        wrapper.appendChild(button);
 
-        const header = document.querySelector(
-            '[data-optrf-theme-host], .site-header-inner, .pa-top, .cr-header, .header, header'
-        );
-        if (header) {
-            wrapper.classList.add('optrf-theme-switcher--header');
-            header.appendChild(wrapper);
-        } else {
-            wrapper.classList.add('optrf-theme-switcher--floating');
-            document.body.appendChild(wrapper);
-        }
+        wrapper.classList.add('optrf-theme-switcher--floating');
+        document.body.appendChild(wrapper);
 
         updateControls(getPreference());
     }

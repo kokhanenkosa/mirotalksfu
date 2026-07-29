@@ -290,68 +290,46 @@ html[data-theme='dark'] .logo-for-dark {
 /* Универсальный переключатель. */
 .optrf-theme-switcher {
     z-index: 1050;
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    gap: 3px;
     padding: 3px;
     color: var(--optrf-text);
-    background: var(--optrf-surface-2);
+    background: var(--optrf-surface);
     border: 1px solid var(--optrf-border);
-    border-radius: 11px;
+    border-radius: 50%;
     box-shadow: var(--optrf-shadow);
     font-family: var(--optrf-font);
 }
 
-.optrf-theme-switcher--header {
-    margin-left: auto;
-}
-
 .optrf-theme-switcher--floating {
     position: fixed;
-    top: 12px;
-    right: 12px;
-}
-
-[data-optrf-theme-host] {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-    margin: 8px 0 18px;
-}
-
-[data-optrf-theme-host] .optrf-theme-switcher {
-    margin-left: auto;
+    top: 14px;
+    right: 14px;
 }
 
 .optrf-theme-option {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    min-height: 32px;
-    padding: 6px 9px;
-    color: var(--optrf-muted);
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    color: var(--optrf-text);
     background: transparent;
     border: 0;
-    border-radius: 8px;
-    font: 500 12px/1 var(--optrf-font);
+    border-radius: 50%;
+    font: 500 14px/1 var(--optrf-font);
     cursor: pointer;
 }
 
 .optrf-theme-option:hover {
-    color: var(--optrf-text);
-    background: var(--optrf-surface-3);
-}
-
-.optrf-theme-option.is-active {
     color: #fff;
     background: var(--optrf-accent);
 }
 
 .optrf-theme-icon {
     min-width: 1em;
-    font-size: 13px;
+    font-size: 15px;
     line-height: 1;
     text-align: center;
 }
@@ -417,16 +395,4 @@ html[data-theme] .text-light {
 
 .optrf-legacy-theme-controls {
     display: none !important;
-}
-
-@media (max-width: 760px) {
-    .optrf-theme-option span {
-        display: none;
-    }
-
-    .optrf-theme-option {
-        width: 32px;
-        justify-content: center;
-        padding: 6px;
-    }
 }

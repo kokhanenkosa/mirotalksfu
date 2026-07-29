@@ -556,12 +556,12 @@ a:hover {
     margin: 0 auto;
     padding: 8px 4px 0;
     /* карточка уже у .cta-inner — панель без второй рамки */
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    animation: none;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    animation: none !important;
 }
 
 .phone-gate--orbs .pa-icon-wrap--lg {
