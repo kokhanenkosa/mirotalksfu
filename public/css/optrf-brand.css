@@ -1,4 +1,4 @@
-/* ОПТ РФ — тема в стиле optrf.store */
+/* OPTRF — тема в стиле optrf.store */
 :root {
     --optrf-blue: #00a8e8;
     --optrf-blue-hover: #019ad5;
@@ -31,25 +31,30 @@ body {
 
 /* Header */
 .site-header {
+    position: relative;
+    z-index: 2000;
     background: var(--optrf-surface);
     border-bottom: 1px solid var(--optrf-border);
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
-    padding: 16px 0 !important;
+    padding: 10px 0 !important;
 }
 
 .site-header > .container,
 .site-footer > .container {
-    max-width: 1040px;
+    max-width: 1128px;
 }
 
 .site-header-inner .header-theme-host,
 .site-header-inner > .optrf-theme-switcher {
+    position: relative;
+    z-index: 1;
     margin-left: auto;
 }
 
 .header-logo-image {
-    height: 44px !important;
-    max-width: min(260px, 72vw) !important;
+    display: block;
+    height: 34px !important;
+    max-width: min(210px, 64vw) !important;
     filter: none !important;
 }
 
@@ -59,7 +64,7 @@ body {
     transform: none;
 }
 
-/* Светлая тема ОПТ РФ: тёмный лого; тёмный фолбэк MiroTalk: светлый лого */
+/* Светлая тема OPTRF: тёмный логотип; тёмный резервный вариант: светлый логотип */
 .logo-for-light {
     display: inline-block !important;
 }
@@ -89,6 +94,11 @@ body {
 
 .hero-figure-box {
     opacity: 0.55;
+}
+
+.hero-figure,
+.hero-figure * {
+    pointer-events: none !important;
 }
 
 .hero-figure-box-01,
@@ -582,6 +592,35 @@ a:hover {
     min-height: 170px;
 }
 
+/* Компактная форма входа: одна карточка без пустых боковых областей. */
+.phone-session-pending .dashboard-container,
+.is-phone-guest .dashboard-container {
+    max-width: 640px;
+}
+
+.phone-session-pending .dashboard-section,
+.is-phone-guest .dashboard-section {
+    padding: 32px 0 48px !important;
+}
+
+.phone-session-pending .dashboard-shell,
+.is-phone-guest .dashboard-shell {
+    width: 100%;
+    padding: 32px !important;
+}
+
+.phone-session-pending .phone-gate,
+.is-phone-guest .phone-gate {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.phone-session-pending .phone-gate--orbs .pa-panel--embed,
+.is-phone-guest .phone-gate--orbs .pa-panel--embed {
+    padding: 0 !important;
+}
+
 .phone-cabinet {
     margin-bottom: 1.5rem;
     padding-bottom: 1.25rem;
@@ -746,8 +785,8 @@ a:hover {
 .header-theme-host {
     display: flex;
     align-items: center;
-    min-width: 42px;
-    min-height: 42px;
+    min-width: 38px;
+    min-height: 38px;
 }
 
 .is-phone-authenticated .dashboard-section {
@@ -859,6 +898,19 @@ a:hover {
 }
 
 @media (max-width: 640px) {
+    .phone-session-pending .dashboard-section,
+    .is-phone-guest .dashboard-section {
+        padding: 16px 0 32px !important;
+    }
+
+    .phone-session-pending .dashboard-shell,
+    .is-phone-guest .dashboard-shell {
+        padding: 24px 20px !important;
+        border-right: 0 !important;
+        border-left: 0 !important;
+        border-radius: 0 !important;
+    }
+
     .is-phone-authenticated .dashboard-section {
         padding: 16px 0 32px !important;
     }

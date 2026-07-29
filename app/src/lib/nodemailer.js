@@ -8,7 +8,7 @@ const config = require('../config');
 const Logger = require('../Logger');
 const log = new Logger('NodeMailer');
 
-const APP_NAME = config.ui.brand.app.name || 'ОПТ РФ';
+const APP_NAME = config.ui.brand.app.name || 'OPTRF';
 
 // ####################################################
 // EMAIL CONFIG

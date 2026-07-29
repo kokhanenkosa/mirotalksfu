@@ -327,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const joinUrl = buildJoinUrl();
                 await navigator.share({
-                    title: document.title || 'Комната ОПТ РФ',
+                    title: document.title || 'Комната OPTRF',
                     url: joinUrl.toString(),
                 });
             } catch (err) {

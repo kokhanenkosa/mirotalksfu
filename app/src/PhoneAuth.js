@@ -220,7 +220,7 @@ class PhoneAuth {
             };
         }
 
-        const template = this.smsc.messageTemplate || 'Код входа в видеоконференции ОПТ РФ: %CODE%';
+        const template = this.smsc.messageTemplate || 'Код входа в видеоконференцию OPTRF: %CODE%';
         const message = template.replace(/%CODE%/g, code);
 
         try {
@@ -302,7 +302,7 @@ class PhoneAuth {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Нет доступа — ОПТ РФ</title>
+<title>Нет доступа — OPTRF</title>
 <link rel="shortcut icon" href="/images/logo-no-background.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -321,7 +321,7 @@ p{margin:0 0 .85rem;color:var(--muted);line-height:1.5;text-align:center;font-si
 </head>
 <body>
 <main class="card">
-<img class="logo" src="/images/logo-no-background.svg" alt="ОПТ РФ" />
+<img class="logo" src="/images/logo-no-background.svg" alt="OPTRF" />
 <h1>Нет доступа к созданию комнат</h1>
 <p>Ваш номер подтверждён, но создавать встречи могут только организаторы.</p>
 <p>Вы можете присоединяться к уже созданным комнатам по ссылке или названию.</p>

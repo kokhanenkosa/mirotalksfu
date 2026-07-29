@@ -552,7 +552,7 @@ module.exports = {
                 password: process.env.SMSC_PASSWORD || '',
                 sender: process.env.SMSC_SENDER || '',
                 messageTemplate:
-                    process.env.SMSC_MESSAGE_TEMPLATE || 'Код входа в видеоконференции ОПТ РФ: %CODE%',
+                    process.env.SMSC_MESSAGE_TEMPLATE || 'Код входа в видеоконференцию OPTRF: %CODE%',
             },
         },
 
@@ -786,7 +786,7 @@ module.exports = {
             apiKey: process.env.VIDEOAI_API_KEY || '',
             mode: process.env.VIDEOAI_MODE || 'FULL',
             contextId: process.env.VIDEOAI_CONTEXT_ID || '',
-            systemLimit: process.env.VIDEOAI_SYSTEM_LIMIT || 'Вы — виртуальный помощник платформы ОПТ РФ.',
+            systemLimit: process.env.VIDEOAI_SYSTEM_LIMIT || 'Вы — виртуальный помощник платформы OPTRF.',
             sessionTimeLimit: process.env.VIDEOAI_SESSION_TIME_LIMIT
                 ? parseInt(process.env.VIDEOAI_SESSION_TIME_LIMIT, 10)
                 : 0, // Session time limit in seconds (0 = unlimited)
@@ -1169,9 +1169,9 @@ module.exports = {
 
             app: {
                 language: process.env.UI_LANGUAGE || 'ru',
-                name: 'ОПТ РФ',
+                name: 'OPTRF',
                 // Не берём APP_TITLE/APP_DESCRIPTION из env — в Coolify часто залипают старые MiroTalk-строки
-                title: 'ОПТ РФ<br />Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
+                title: 'Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
                 description:
                     'Начните видеозвонок в один клик. Без установки программ и плагинов — сразу к разговору, чату и демонстрации экрана.',
                 joinDescription:
@@ -1187,7 +1187,7 @@ module.exports = {
              * Site-wide settings including icons and page-specific content.
              */
             site: {
-                title: process.env.SITE_TITLE || 'ОПТ РФ — видеоконференции',
+                title: process.env.SITE_TITLE || 'OPTRF — видеоконференции',
                 icon: process.env.SITE_ICON_PATH || '../images/logo-no-background.svg',
                 appleTouchIcon: process.env.APPLE_TOUCH_ICON_PATH || '../images/logo-no-background.svg',
                 newRoomTitle: process.env.NEW_ROOM_TITLE || 'Название.<br />Ссылка.<br />Встреча.',
@@ -1204,7 +1204,7 @@ module.exports = {
             meta: {
                 description:
                     process.env.META_DESCRIPTION ||
-                    'Платформа онлайн-обучения ОПТ РФ: занятия в браузере, видео, чат и демонстрация экрана.',
+                    'Платформа онлайн-обучения OPTRF: занятия в браузере, видео, чат и демонстрация экрана.',
                 keywords:
                     process.env.META_KEYWORDS ||
                     'видеоконференции, видеозвонок, вебинар, чат, демонстрация экрана, webrtc, sfu',
@@ -1217,8 +1217,8 @@ module.exports = {
              */
             og: {
                 type: process.env.OG_TYPE || 'app-webrtc',
-                siteName: process.env.OG_SITE_NAME || 'ОПТ РФ',
-                title: process.env.OG_TITLE || 'Присоединяйтесь к видеовстрече ОПТ РФ',
+                siteName: process.env.OG_SITE_NAME || 'OPTRF',
+                title: process.env.OG_TITLE || 'Присоединяйтесь к видеовстрече OPTRF',
                 description:
                     process.env.OG_DESCRIPTION || 'Онлайн-звонки, чат и демонстрация экрана в браузере.',
                 image: process.env.OG_IMAGE_URL || '',
@@ -1288,11 +1288,11 @@ module.exports = {
              */
             about: {
                 imageUrl: '../images/logo-no-background.svg',
-                title: process.env.ABOUT_TITLE || 'ОПТ РФ',
+                title: process.env.ABOUT_TITLE || 'OPTRF',
                 html: `
                     <hr />
                     <span>
-                        &copy; ${new Date().getFullYear()} ${process.env.COPYRIGHT_TEXT || 'ОПТ РФ. Все права защищены.'}
+                        &copy; ${new Date().getFullYear()} ${process.env.COPYRIGHT_TEXT || 'OPTRF. Все права защищены.'}
                     </span>
                     <hr />
                     `,
@@ -1335,7 +1335,7 @@ module.exports = {
                         connectText: process.env.WIDGET_SUPPORT_CONNECT_TEXT || 'connect in < 5 seconds',
                         onlineText: process.env.WIDGET_SUPPORT_ONLINE_TEXT || 'We are online',
                         offlineText: process.env.WIDGET_SUPPORT_OFFLINE_TEXT || 'We are offline',
-                        poweredBy: 'ОПТ РФ',
+                        poweredBy: 'OPTRF',
                     },
                 },
                 alert: {

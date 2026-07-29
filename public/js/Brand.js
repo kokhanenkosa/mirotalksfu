@@ -13,7 +13,7 @@ const brandDataKey = 'brandData_optrf_v4';
 
 /** Жёстко фиксируем hero-тексты — env/Coolify не должен их перетирать */
 const OPTRF_HERO = {
-    title: 'ОПТ РФ<br />Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
+    title: 'Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
     description:
         'Начните видеозвонок в один клик. Без установки программ и плагинов — сразу к разговору, чату и демонстрации экрана.',
 };
@@ -67,7 +67,7 @@ const loginButton = document.getElementById('loginButton');
 let BRAND = {
     app: {
         language: 'ru',
-        name: 'ОПТ РФ',
+        name: 'OPTRF',
         title: OPTRF_HERO.title,
         description: OPTRF_HERO.description,
         joinDescription: 'Введите название комнаты.<br />Например, вот такое:',
@@ -76,14 +76,14 @@ let BRAND = {
         joinLastLabel: 'Недавняя комната:',
     },
     site: {
-        title: 'ОПТ РФ — видеоконференции',
+        title: 'OPTRF — видеоконференции',
         icon: '../images/logo-no-background.svg',
         appleTouchIcon: '../images/logo-no-background.svg',
         newRoomTitle: 'Название.<br />Ссылка.<br />Встреча.',
         newRoomDescription: 'У каждой комнаты свой URL. Придумайте название и отправьте ссылку участникам.',
     },
     meta: {
-        description: 'Платформа онлайн-обучения ОПТ РФ: занятия в браузере, видео, чат и демонстрация экрана.',
+        description: 'Платформа онлайн-обучения OPTRF: занятия в браузере, видео, чат и демонстрация экрана.',
         keywords: 'видеоконференции, видеозвонок, вебинар, чат, демонстрация экрана, онлайн-обучение',
     },
     html: {
@@ -119,10 +119,10 @@ let BRAND = {
     },
     about: {
         imageUrl: '../images/logo-no-background.svg',
-        title: '<strong>ОПТ РФ</strong>',
+        title: '<strong>OPTRF</strong>',
         html: `
             <hr />
-            <span>&copy; ${new Date().getFullYear()} ОПТ РФ. Все права защищены.</span>
+            <span>&copy; ${new Date().getFullYear()} OPTRF. Все права защищены.</span>
             <hr />
         `,
     },
@@ -152,7 +152,7 @@ let BRAND = {
                 connectText: 'connect in < 5 seconds',
                 onlineText: 'We are online',
                 offlineText: 'We are offline',
-                poweredBy: 'ОПТ РФ',
+                poweredBy: 'OPTRF',
             },
             alert: {
                 enabled: false,

@@ -33,7 +33,7 @@ class MiroTalkWidget {
                 connectText: 'подключение менее чем за 10 секунд',
                 onlineText: 'Мы онлайн',
                 offlineText: 'Мы не в сети',
-                poweredBy: '<span class="mirotalk-powered-by">ОПТ РФ</span>',
+                poweredBy: '<span class="mirotalk-powered-by">OPTRF</span>',
             },
         },
     };
