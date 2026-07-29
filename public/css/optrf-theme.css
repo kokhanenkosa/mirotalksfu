@@ -199,6 +199,17 @@ select:focus,
     box-shadow: 0 0 0 3px var(--optrf-accent-soft) !important;
 }
 
+/* Подсвечивается вся телефонная строка, а не вложенный input. */
+.pa-field > .pa-input,
+.pa-field > .pa-input:focus,
+.pa-field > .pa-input:focus-visible {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    outline: 0 !important;
+    box-shadow: none !important;
+}
+
 .button-primary,
 .button.button-primary,
 .pa-btn,

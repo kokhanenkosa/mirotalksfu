@@ -592,33 +592,102 @@ a:hover {
     min-height: 170px;
 }
 
-/* Компактная форма входа: одна карточка без пустых боковых областей. */
+/* Вход на всю ширину макета: без карточки и пустых боковых областей. */
 .phone-session-pending .dashboard-container,
 .is-phone-guest .dashboard-container {
-    max-width: 640px;
+    max-width: 1128px;
 }
 
 .phone-session-pending .dashboard-section,
 .is-phone-guest .dashboard-section {
-    padding: 32px 0 48px !important;
+    padding: 40px 0 48px !important;
 }
 
 .phone-session-pending .dashboard-shell,
 .is-phone-guest .dashboard-shell {
     width: 100%;
-    padding: 32px !important;
+    margin: 0 !important;
+    padding: 0 24px !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
 }
 
 .phone-session-pending .phone-gate,
 .is-phone-guest .phone-gate {
     width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
+    padding: 0;
 }
 
 .phone-session-pending .phone-gate--orbs .pa-panel--embed,
 .is-phone-guest .phone-gate--orbs .pa-panel--embed {
+    display: grid;
+    grid-template-columns: minmax(250px, 0.8fr) minmax(360px, 1.2fr);
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas:
+        'icon steps'
+        'title stage'
+        'sub stage'
+        '. error';
+    column-gap: clamp(48px, 8vw, 112px);
+    align-items: start;
     padding: 0 !important;
+}
+
+.phone-session-pending .phone-gate--orbs .pa-steps,
+.is-phone-guest .phone-gate--orbs .pa-steps {
+    grid-area: steps;
+    justify-content: flex-start;
+    margin: 0 0 22px;
+}
+
+.phone-session-pending .phone-gate--orbs .pa-icon-wrap--lg,
+.is-phone-guest .phone-gate--orbs .pa-icon-wrap--lg {
+    grid-area: icon;
+    width: 72px;
+    height: 72px;
+    margin: 0 0 20px;
+}
+
+.phone-session-pending .phone-gate--orbs .pa-orb-host--lg,
+.is-phone-guest .phone-gate--orbs .pa-orb-host--lg,
+.phone-session-pending .phone-gate--orbs .pa-orb-host--lg canvas,
+.is-phone-guest .phone-gate--orbs .pa-orb-host--lg canvas {
+    width: 72px !important;
+    height: 72px !important;
+}
+
+.phone-session-pending .phone-gate--orbs .pa-title,
+.is-phone-guest .phone-gate--orbs .pa-title {
+    grid-area: title;
+    max-width: 24rem;
+    margin-bottom: 10px;
+    text-align: left;
+    font-size: clamp(1.75rem, 3vw, 2.5rem);
+}
+
+.phone-session-pending .phone-gate--orbs .pa-sub,
+.is-phone-guest .phone-gate--orbs .pa-sub {
+    grid-area: sub;
+    max-width: 30rem;
+    margin: 0;
+    text-align: left;
+    font-size: 1rem;
+}
+
+.phone-session-pending .phone-gate--orbs .pa-stage,
+.is-phone-guest .phone-gate--orbs .pa-stage {
+    grid-area: stage;
+    width: 100%;
+    min-height: 0;
+}
+
+.phone-session-pending .phone-gate--orbs .pa-error,
+.is-phone-guest .phone-gate--orbs .pa-error {
+    grid-area: error;
 }
 
 .phone-cabinet {
@@ -897,6 +966,39 @@ a:hover {
     margin-top: 1rem;
 }
 
+@media (max-width: 760px) {
+    .phone-session-pending .phone-gate--orbs .pa-panel--embed,
+    .is-phone-guest .phone-gate--orbs .pa-panel--embed {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        grid-template-areas:
+            'steps'
+            'title'
+            'sub'
+            'stage'
+            'error';
+        row-gap: 0;
+    }
+
+    .phone-session-pending .phone-gate--orbs .pa-icon-wrap--lg,
+    .is-phone-guest .phone-gate--orbs .pa-icon-wrap--lg {
+        display: none;
+    }
+
+    .phone-session-pending .phone-gate--orbs .pa-title,
+    .is-phone-guest .phone-gate--orbs .pa-title,
+    .phone-session-pending .phone-gate--orbs .pa-sub,
+    .is-phone-guest .phone-gate--orbs .pa-sub {
+        max-width: none;
+        text-align: center;
+    }
+
+    .phone-session-pending .phone-gate--orbs .pa-sub,
+    .is-phone-guest .phone-gate--orbs .pa-sub {
+        margin-bottom: 24px;
+    }
+}
+
 @media (max-width: 640px) {
     .phone-session-pending .dashboard-section,
     .is-phone-guest .dashboard-section {
@@ -905,7 +1007,7 @@ a:hover {
 
     .phone-session-pending .dashboard-shell,
     .is-phone-guest .dashboard-shell {
-        padding: 24px 20px !important;
+        padding: 0 20px !important;
         border-right: 0 !important;
         border-left: 0 !important;
         border-radius: 0 !important;
