@@ -152,7 +152,10 @@
             button.focus();
         });
 
-        const host = document.querySelector('[data-optrf-theme-host]');
+        const host =
+            document.querySelector('[data-optrf-theme-host]') ||
+            document.querySelector('.site-header-inner') ||
+            document.querySelector('.admin-header-inner');
         if (host) {
             wrapper.classList.add('optrf-theme-switcher--embedded');
             host.appendChild(wrapper);

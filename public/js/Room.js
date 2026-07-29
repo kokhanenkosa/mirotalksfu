@@ -555,6 +555,7 @@ function refreshMainButtonsToolTipPlacement() {
         setTippy('chatButton', 'Показать или скрыть чат', bPlacement);
         setTippy('participantsButton', 'Показать или скрыть список участников', bPlacement);
         setTippy('settingsButton', 'Показать или скрыть настройки', bPlacement);
+        setTippy('phoneCabinetButton', 'Мой кабинет', bPlacement);
         setTippy('exitButton', 'Покинуть комнату', bPlacement);
     }
 }
@@ -638,8 +639,31 @@ async function initRoom() {
 
 async function initEnumerateDevices() {
     console.log('01 ----> init Enumerate Devices');
-    await initEnumerateVideoDevices();
-    await initEnumerateAudioDevices();
+    if (isMobileDevice && navigator.mediaDevices?.getUserMedia) {
+        let stream;
+        try {
+            // На мобильных два последовательных getUserMedia часто оставляют страницу
+            // на экране загрузки. Запрашиваем камеру и микрофон одним системным диалогом.
+            stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: { facingMode: 'user' },
+            });
+            await enumerateVideoDevices(stream, false);
+            await enumerateAudioDevices(stream, false);
+            isVideoAllowed = hasVideoTrack(stream);
+            isAudioAllowed = hasAudioTrack(stream);
+            await getMicrophoneVolumeIndicator(stream);
+            await stopTracks(stream);
+        } catch (error) {
+            console.warn('Combined mobile media request failed, using separate requests', error);
+            if (stream) await stopTracks(stream);
+            await initEnumerateVideoDevices();
+            await initEnumerateAudioDevices();
+        }
+    } else {
+        await initEnumerateVideoDevices();
+        await initEnumerateAudioDevices();
+    }
     await initRoom();
 }
 
@@ -683,7 +707,7 @@ async function initEnumerateVideoDevices() {
         });
 }
 
-async function enumerateVideoDevices(stream) {
+async function enumerateVideoDevices(stream, stopStream = true) {
     console.log('02 ----> Get Video Devices');
 
     if (videoSelect) videoSelect.innerHTML = '';
@@ -705,7 +729,7 @@ async function enumerateVideoDevices(stream) {
             })
         )
         .then(async () => {
-            await stopTracks(stream);
+            if (stopStream) await stopTracks(stream);
             isEnumerateVideoDevices = true;
         });
 }
@@ -724,7 +748,7 @@ async function initEnumerateAudioDevices() {
         });
 }
 
-async function enumerateAudioDevices(stream) {
+async function enumerateAudioDevices(stream, stopStream = true) {
     console.log('03 ----> Get Audio Devices');
 
     if (microphoneSelect) microphoneSelect.innerHTML = '';
@@ -753,7 +777,7 @@ async function enumerateAudioDevices(stream) {
             })
         )
         .then(async () => {
-            await stopTracks(stream);
+            if (stopStream) await stopTracks(stream);
             isEnumerateAudioDevices = true;
             speakerSelect.disabled = !sinkId;
             // Check if there is speakers
@@ -2156,7 +2180,7 @@ function updateChatConversationsCount() {
     if (!el) return;
     const list = getId('participantsList');
     const count = list ? list.querySelectorAll(':scope > li').length : 0;
-    el.textContent = count > 0 ? `${count} conversation${count !== 1 ? 's' : ''}` : '';
+    el.textContent = count > 0 ? `${count} ${count === 1 ? 'диалог' : count < 5 ? 'диалога' : 'диалогов'}` : '';
 }
 
 function updateChatCharCount() {
@@ -2891,6 +2915,9 @@ function handleButtons() {
     };
     aboutButton.onclick = () => {
         showAbout();
+    };
+    phoneCabinetButton.onclick = () => {
+        window.location.assign('/');
     };
     restartICEButton.onclick = async () => {
         await rc.restartIce();
@@ -5004,8 +5031,8 @@ function setupQuickDeviceSwitchDropdowns() {
         if (!videoMenu || !videoSelect) return;
         videoMenu.innerHTML = '';
 
-        appendMenuHeader(videoMenu, 'fas fa-video', 'Cameras');
-        appendSelectOptions(videoMenu, videoSelect, 'No cameras found', buildVideoMenu);
+        appendMenuHeader(videoMenu, 'fas fa-video', 'Камеры');
+        appendSelectOptions(videoMenu, videoSelect, 'Камеры не найдены', buildVideoMenu);
 
         // Add settings button
         appendMenuDivider(videoMenu);
@@ -5015,7 +5042,7 @@ function setupQuickDeviceSwitchDropdowns() {
         const settingsIcon = document.createElement('i');
         settingsIcon.className = 'fas fa-cog';
         settingsBtn.appendChild(settingsIcon);
-        settingsBtn.appendChild(document.createTextNode(' Open Video Settings'));
+        settingsBtn.appendChild(document.createTextNode(' Открыть настройки видео'));
         settingsBtn.addEventListener('click', () => {
             rc.toggleMySettings();
             // Simulate tab click to open video devices tab
@@ -5031,13 +5058,13 @@ function setupQuickDeviceSwitchDropdowns() {
 
         audioMenu.innerHTML = '';
 
-        appendMenuHeader(audioMenu, 'fas fa-microphone', 'Microphones');
-        appendSelectOptions(audioMenu, microphoneSelect, 'No microphones found', buildAudioMenu);
+        appendMenuHeader(audioMenu, 'fas fa-microphone', 'Микрофоны');
+        appendSelectOptions(audioMenu, microphoneSelect, 'Микрофоны не найдены', buildAudioMenu);
 
         // Noise cancellation toggle (only when custom noise suppression is enabled & supported)
         if (BUTTONS.settings.customNoiseSuppression && rc.isRNNoiseSupported) {
             appendMenuDivider(audioMenu);
-            appendMenuHeader(audioMenu, 'fas fa-ear-listen', 'Microphone Effects');
+            appendMenuHeader(audioMenu, 'fas fa-ear-listen', 'Обработка микрофона');
 
             const toggleRow = document.createElement('div');
             toggleRow.className = 'device-menu-toggle-row';
@@ -5045,7 +5072,7 @@ function setupQuickDeviceSwitchDropdowns() {
             const labelDiv = document.createElement('div');
             labelDiv.className = 'title';
             const label = document.createElement('p');
-            label.textContent = 'Noise cancellation';
+            label.textContent = 'Шумоподавление';
             labelDiv.appendChild(label);
 
             const switchDiv = document.createElement('div');
@@ -5076,16 +5103,16 @@ function setupQuickDeviceSwitchDropdowns() {
             appendMenuDivider(audioMenu);
         }
 
-        appendMenuHeader(audioMenu, 'fas fa-volume-high', 'Speakers');
+        appendMenuHeader(audioMenu, 'fas fa-volume-high', 'Динамики');
         if (!speakerSelect || speakerSelect.disabled) {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.disabled = true;
-            btn.textContent = 'Speaker selection not supported';
+            btn.textContent = 'Выбор динамиков не поддерживается';
             audioMenu.appendChild(btn);
             return;
         }
-        appendSelectOptions(audioMenu, speakerSelect, 'No speakers found', buildAudioMenu);
+        appendSelectOptions(audioMenu, speakerSelect, 'Динамики не найдены', buildAudioMenu);
 
         // Add action buttons
         appendMenuDivider(audioMenu);
@@ -5097,7 +5124,7 @@ function setupQuickDeviceSwitchDropdowns() {
         const testIcon = document.createElement('i');
         testIcon.className = 'fa-solid fa-circle-play';
         testBtn.appendChild(testIcon);
-        testBtn.appendChild(document.createTextNode(' Test Speaker'));
+        testBtn.appendChild(document.createTextNode(' Проверить динамики'));
         testBtn.addEventListener('click', () => {
             playSpeaker(speakerSelect?.value, 'speaker');
         });
@@ -5110,7 +5137,7 @@ function setupQuickDeviceSwitchDropdowns() {
         const settingsIcon = document.createElement('i');
         settingsIcon.className = 'fas fa-cog';
         settingsBtn.appendChild(settingsIcon);
-        settingsBtn.appendChild(document.createTextNode(' Open Audio Settings'));
+        settingsBtn.appendChild(document.createTextNode(' Открыть настройки звука'));
         settingsBtn.addEventListener('click', () => {
             rc.toggleMySettings();
             // Simulate tab click to open audio devices tab
@@ -6452,9 +6479,9 @@ function getParticipantsList(peers) {
         itemClass: `clearfix${public_chat_active}`,
         onClick: "rc.showPeerAboutAndMessages(this.id, 'all', '', event)",
         avatarSrc: image.all,
-        name: 'Public chat',
+        name: 'Общий чат',
         nameSuffix: ' <span id="all-unread-count" class="unread-count hidden"></span>',
-        statusHtml: renderParticipantStatus(`Everyone in room ${participantsCount}`),
+        statusHtml: renderParticipantStatus(`Участников в комнате: ${participantsCount}`),
         dropdownHtml: publicDropdownHtml,
         buttonsHtml: publicButtonsHtml,
     });

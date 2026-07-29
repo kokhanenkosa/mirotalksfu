@@ -5295,7 +5295,7 @@ class RoomClient {
 
         btnFs.addEventListener('click', () => {
             if (videoPlayer.classList.contains('videoCircle')) {
-                return this.userLog('info', 'Full Screen not allowed if video on privacy mode', 'top-end');
+                return this.userLog('info', 'Полноэкранный режим недоступен для скрытого видео', 'top-end');
             }
             this.toggleFullScreen(fsTarget);
             setTimeout(sync, 0);

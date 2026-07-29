@@ -37,6 +37,16 @@ body {
     padding: 16px 0 !important;
 }
 
+.site-header > .container,
+.site-footer > .container {
+    max-width: 1040px;
+}
+
+.site-header-inner .header-theme-host,
+.site-header-inner > .optrf-theme-switcher {
+    margin-left: auto;
+}
+
 .header-logo-image {
     height: 44px !important;
     max-width: min(260px, 72vw) !important;
