@@ -2674,7 +2674,8 @@ function handleButtons() {
         transcription.delete();
     };
     chatHideParticipantsList.onclick = (e) => {
-        rc.toggleShowParticipants(true);
+        // X на списке диалогов — закрыть всю панель, не открывать общий чат
+        rc.closeChatSidePanel();
     };
     chatShowParticipantsListBtn.onclick = (e) => {
         rc.toggleShowParticipants(true);
