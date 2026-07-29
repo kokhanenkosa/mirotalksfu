@@ -75,6 +75,7 @@ services:
       - PHONE_AUTH_ENABLED=${PHONE_AUTH_ENABLED:-true}
       - PHONE_AUTH_JWT_EXP=${PHONE_AUTH_JWT_EXP:-7d}
       - PHONE_CREATORS=${PHONE_CREATORS:-}
+      - PHONE_STORE_PATH=${PHONE_STORE_PATH:-/src/app/data/phone-store.json}
       - TELEGRAM_GATEWAY_TOKEN=${TELEGRAM_GATEWAY_TOKEN:-}
       - TELEGRAM_GATEWAY_API_URL=${TELEGRAM_GATEWAY_API_URL:-https://gatewayapi.telegram.org/}
       - PROXY_URL=${PROXY_URL:-}
@@ -110,6 +111,7 @@ services:
     volumes:
       - mirotalksfu-rec:/src/app/rec
       - mirotalksfu-rtmp:/src/app/rtmp
+      - mirotalksfu-phone-data:/src/app/data
 
     healthcheck:
       test:
@@ -127,3 +129,4 @@ services:
 volumes:
   mirotalksfu-rec:
   mirotalksfu-rtmp:
+  mirotalksfu-phone-data:

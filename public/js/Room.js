@@ -1274,7 +1274,10 @@ async function whoAreYou() {
         return;
     }
 
-    let default_name = window.localStorage.peer_name ? window.localStorage.peer_name : '';
+    let default_name =
+        window.sessionStorage.phone_display_name ||
+        window.localStorage.peer_name ||
+        '';
     if (getCookie(room_id + '_name')) {
         default_name = getCookie(room_id + '_name');
     }

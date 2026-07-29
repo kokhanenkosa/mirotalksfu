@@ -16,6 +16,9 @@ module.exports = class Room {
         // (last peer leaves). Reusing the same room name later yields a brand-new sessionId,
         // so webhook events and recordings can be reliably grouped per meeting instance.
         this.sessionId = uuidv4();
+        /** @type {string|null} E.164 создателя (phone auth), если известен */
+        this.createdByPhone = null;
+        this.createdAt = Date.now();
         this.worker = worker;
         this.webRtcServer = worker.appData.webRtcServer;
         this.webRtcServerActive = config.mediasoup.webRtcServerActive;

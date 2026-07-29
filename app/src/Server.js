@@ -97,6 +97,7 @@ const Room = require('./Room');
 const Peer = require('./Peer');
 const ServerApi = require('./ServerApi');
 const PhoneAuth = require('./PhoneAuth');
+const PhoneStore = require('./PhoneStore');
 const Logger = require('./Logger');
 const Validator = require('./Validator');
 const HtmlInjector = require('./HtmlInjector');
@@ -326,12 +327,30 @@ const phoneAuth = new PhoneAuth({
     log: (...args) => log.info(...args),
 });
 
+const phoneStore = new PhoneStore({
+    log: (...args) => log.info(...args),
+});
+
 if (phoneAuth.isEnabled()) {
     log.info('Phone auth enabled', {
         creators: phoneAuth.creators.size,
         proxy: Boolean(process.env.PROXY_URL || process.env.HTTPS_PROXY || process.env.HTTP_PROXY),
         smsc: Boolean(phoneAuthCfg?.smsc?.login),
+        store: phoneStore.filePath,
     });
+}
+
+/** Удалить комнату из roomList и закрыть запись в истории создателя */
+function removeRoomFromList(roomId) {
+    const room = roomList.get(roomId);
+    if (room?.createdByPhone) {
+        try {
+            phoneStore.recordRoomEnded(room.createdByPhone, roomId);
+        } catch (err) {
+            log.warn('PhoneStore recordRoomEnded failed', err.message);
+        }
+    }
+    roomList.delete(roomId);
 }
 
 // Lifetime of the per-session server recording upload token (must outlive long recordings)
@@ -1142,6 +1161,57 @@ function startServer() {
             authenticated: true,
             phone: session.phone,
             canCreate: session.canCreate,
+            displayName: phoneStore.getDisplayName(session.phone) || '',
+        });
+    });
+
+    app.post('/phone/profile', (req, res) => {
+        if (!phoneAuth.isEnabled()) {
+            return res.status(404).json({ ok: false, error: 'Авторизация по телефону отключена' });
+        }
+        const session = phoneAuth.getSession(req);
+        if (!session) {
+            return res.status(401).json({ ok: false, error: 'Требуется авторизация' });
+        }
+        const body = checkXSS(req.body) || {};
+        const result = phoneStore.setDisplayName(session.phone, body.displayName);
+        return res.status(result.ok ? 200 : 400).json(result);
+    });
+
+    app.get('/phone/rooms', (req, res) => {
+        if (!phoneAuth.isEnabled()) {
+            return res.status(404).json({ ok: false, error: 'Авторизация по телефону отключена' });
+        }
+        const session = phoneAuth.getSession(req);
+        if (!session) {
+            return res.status(401).json({ ok: false, error: 'Требуется авторизация' });
+        }
+        if (!session.canCreate) {
+            return res.json({ ok: true, canCreate: false, active: [], history: [] });
+        }
+
+        const active = [];
+        for (const [id, room] of roomList.entries()) {
+            if (room?.createdByPhone === session.phone) {
+                active.push({
+                    id,
+                    peers: typeof room.getPeersCount === 'function' ? room.getPeersCount() : room.peers?.size || 0,
+                    createdAt: room.createdAt || null,
+                });
+            }
+        }
+        active.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        const history = phoneStore.getHistory(session.phone).map((h) => ({
+            ...h,
+            isActive: roomList.has(h.roomId) && roomList.get(h.roomId)?.createdByPhone === session.phone,
+        }));
+
+        return res.json({
+            ok: true,
+            canCreate: true,
+            active,
+            history,
         });
     });
 
@@ -2481,7 +2551,17 @@ function startServer() {
             } else {
                 log.debug('Created room', { room_id: socket.room_id });
                 const worker = await getMediasoupWorker();
-                roomList.set(socket.room_id, new Room(socket.room_id, worker, io));
+                const room = new Room(socket.room_id, worker, io);
+                const creatorPhone = socket.phone_session?.phone || null;
+                if (creatorPhone) {
+                    room.createdByPhone = creatorPhone;
+                    try {
+                        phoneStore.recordRoomCreated(creatorPhone, socket.room_id, room.sessionId);
+                    } catch (err) {
+                        log.warn('PhoneStore recordRoomCreated failed', err.message);
+                    }
+                }
+                roomList.set(socket.room_id, room);
                 callback({ room_id: socket.room_id });
             }
         });
@@ -4906,7 +4986,7 @@ function startServer() {
                 //
                 stopRTMPActiveStreams(isPresenter, room);
 
-                roomList.delete(socket.room_id);
+                removeRoomFromList(socket.room_id);
 
                 delete presenters[socket.room_id];
 
@@ -4971,7 +5051,7 @@ function startServer() {
                 //
                 stopRTMPActiveStreams(isPresenter, room);
 
-                roomList.delete(socket.room_id);
+                removeRoomFromList(socket.room_id);
 
                 delete presenters[socket.room_id];
 
@@ -5652,7 +5732,7 @@ async function gracefulShutdown(signal) {
                     room.removePeer(peerId);
                 }
 
-                roomList.delete(roomId);
+                removeRoomFromList(roomId);
             } catch (err) {
                 log.error(`Error closing room ${roomId}:`, err.message);
             }

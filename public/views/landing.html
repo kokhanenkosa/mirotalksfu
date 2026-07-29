@@ -98,54 +98,121 @@
                 <section class="cta section">
                     <div class="container">
                         <div class="cta-inner section-inner br-12">
-                            <h3 id="joinDescription" class="section-title mt-0">
-                                Введите название комнаты.<br />
-                                Например, вот такое:
-                            </h3>
-                            <div>
-                                <div class="mb-24">
-                                    <label for="roomName"></label>
-                                    <div class="form-group-desktop">
-                                        <div class="room-input-wrapper">
-                                            <input
-                                                id="roomName"
-                                                class="form-input"
-                                                type="text"
-                                                maxlength="32"
-                                                value=""
-                                            />
-                                            <button
-                                                id="genRoomButton"
-                                                class="button button-primary br-6 fas fa-arrows-rotate gen-room-btn"
-                                                title="Сгенерировать название"
-                                            ></button>
-                                        </div>
-                                        <button id="joinRoomButton" class="button button-primary pulse">
-                                            Создать комнату
+                            <!-- Гейт: нужна авторизация по телефону -->
+                            <div id="phoneGate" class="phone-gate" hidden>
+                                <h3 class="section-title mt-0">Войдите по номеру телефона</h3>
+                                <p class="phone-gate-text">
+                                    Чтобы создавать комнаты и сохранять имя для встреч, подтвердите номер через
+                                    Telegram или SMS.
+                                </p>
+                                <a id="phoneGateLoginBtn" class="button button-primary pulse" href="/phone-auth?next=/">
+                                    Войти по телефону
+                                </a>
+                            </div>
+
+                            <!-- Мини-кабинет после авторизации -->
+                            <div id="phoneCabinet" class="phone-cabinet" hidden>
+                                <div class="phone-cabinet-head">
+                                    <div class="phone-cabinet-user">
+                                        <span class="phone-cabinet-label">Вы вошли как</span>
+                                        <strong id="phoneCabinetNumber" class="phone-cabinet-number"></strong>
+                                    </div>
+                                    <button id="phoneLogoutBtn" class="button button-secondary br-6" type="button">
+                                        Выйти
+                                    </button>
+                                </div>
+                                <div class="phone-cabinet-name">
+                                    <label class="phone-cabinet-label" for="phoneDisplayName"
+                                        >Имя в комнатах</label
+                                    >
+                                    <div class="phone-cabinet-name-row">
+                                        <input
+                                            id="phoneDisplayName"
+                                            class="form-input"
+                                            type="text"
+                                            maxlength="32"
+                                            placeholder="Как вас представлять"
+                                            autocomplete="nickname"
+                                        />
+                                        <button id="phoneSaveNameBtn" class="button button-primary br-6" type="button">
+                                            Сохранить
                                         </button>
                                     </div>
-                                    <div class="mt-16">
-                                        <button
-                                            id="customizeRoomButton"
-                                            class="button button-secondary button-block br-6"
-                                        >
-                                            Настроить комнату
-                                        </button>
+                                    <p id="phoneNameStatus" class="phone-cabinet-status" aria-live="polite"></p>
+                                </div>
+                                <div id="phoneRoomsBlock" class="phone-rooms" hidden>
+                                    <div class="phone-rooms-section">
+                                        <h4 class="phone-rooms-title">Активные комнаты</h4>
+                                        <ul id="phoneActiveRooms" class="phone-rooms-list"></ul>
+                                        <p id="phoneActiveEmpty" class="phone-rooms-empty" hidden>
+                                            Сейчас нет активных комнат
+                                        </p>
                                     </div>
-                                    <div class="mt-8">
-                                        <button
-                                            id="scheduleMeetingBtn"
-                                            class="schedule-meeting-btn"
-                                            type="button"
-                                            hidden
-                                        >
-                                            <i class="fas fa-calendar-check"></i> Запланировать встречу
-                                        </button>
+                                    <div class="phone-rooms-section">
+                                        <h4 class="phone-rooms-title">История</h4>
+                                        <ul id="phoneHistoryRooms" class="phone-rooms-list"></ul>
+                                        <p id="phoneHistoryEmpty" class="phone-rooms-empty" hidden>
+                                            История пока пуста — появится после создания комнат
+                                        </p>
                                     </div>
                                 </div>
-                                <div id="lastRoomContainer" class="last-room">
-                                    <span id="joinLastLabel">Недавняя комната:</span>
-                                    <a id="lastRoom"></a>
+                                <p id="phoneGuestHint" class="phone-guest-hint" hidden>
+                                    Этот номер может только присоединяться к уже созданным комнатам по ссылке.
+                                    Создание встреч доступно организаторам.
+                                </p>
+                            </div>
+
+                            <!-- Создание комнаты — только после авторизации организатора -->
+                            <div id="createRoomPanel" hidden>
+                                <h3 id="joinDescription" class="section-title mt-0">
+                                    Введите название комнаты.<br />
+                                    Например, вот такое:
+                                </h3>
+                                <div>
+                                    <div class="mb-24">
+                                        <label for="roomName"></label>
+                                        <div class="form-group-desktop">
+                                            <div class="room-input-wrapper">
+                                                <input
+                                                    id="roomName"
+                                                    class="form-input"
+                                                    type="text"
+                                                    maxlength="64"
+                                                    value=""
+                                                />
+                                                <button
+                                                    id="genRoomButton"
+                                                    class="button button-primary br-6 fas fa-arrows-rotate gen-room-btn"
+                                                    title="Сгенерировать название"
+                                                ></button>
+                                            </div>
+                                            <button id="joinRoomButton" class="button button-primary pulse">
+                                                Создать комнату
+                                            </button>
+                                        </div>
+                                        <div class="mt-16">
+                                            <button
+                                                id="customizeRoomButton"
+                                                class="button button-secondary button-block br-6"
+                                            >
+                                                Настроить комнату
+                                            </button>
+                                        </div>
+                                        <div class="mt-8">
+                                            <button
+                                                id="scheduleMeetingBtn"
+                                                class="schedule-meeting-btn"
+                                                type="button"
+                                                hidden
+                                            >
+                                                <i class="fas fa-calendar-check"></i> Запланировать встречу
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="lastRoomContainer" class="last-room">
+                                        <span id="joinLastLabel">Недавняя комната:</span>
+                                        <a id="lastRoom"></a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -355,6 +422,7 @@
         <script defer src="../js/Utils.js"></script>
         <script defer src="../js/RoomNameGen.js"></script>
         <script defer src="../js/Common.js"></script>
+        <script defer src="../js/PhoneCabinet.js"></script>
         <script defer src="../js/Landing.js"></script>
         <script defer src="../js/ScheduleMeeting.js"></script>
     </body>

@@ -61,6 +61,7 @@ ufw allow 40000:40100/tcp
 | `HOST_PROTECTED` | `false` | Защита создания комнат (логин/пароль MiroTalk) |
 | `PHONE_AUTH_ENABLED` | `true` | OTP по телефону до join/create |
 | `PHONE_CREATORS` | — | Номера организаторов `+79…,+79…` (только они создают комнаты) |
+| `PHONE_STORE_PATH` | `/src/app/data/phone-store.json` | Файл профилей/истории (volume `mirotalksfu-phone-data`) |
 | `TELEGRAM_GATEWAY_TOKEN` | — | Токен Telegram Gateway |
 | `PROXY_URL` | — | **Обязателен** для Gateway (`http://user:pass@host:port`) |
 | `SMSC_LOGIN` / `SMSC_PASSWORD` | — | Fallback SMS через SMSC.ru |
