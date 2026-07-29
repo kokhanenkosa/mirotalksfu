@@ -1230,7 +1230,7 @@ module.exports = {
              */
             html: {
                 topSponsors: process.env.SHOW_TOP_SPONSORS === 'true',
-                features: process.env.SHOW_FEATURES !== 'false',
+                features: process.env.SHOW_FEATURES === 'true',
                 teams: process.env.SHOW_TEAMS === 'true',
                 tryEasier: process.env.SHOW_TRY_EASIER !== 'false',
                 poweredBy: process.env.SHOW_POWERED_BY === 'true',

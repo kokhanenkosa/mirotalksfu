@@ -60,7 +60,7 @@ services:
       - SHOW_PAST_SPONSORS=false
       - SHOW_ADVERTISERS=false
       - SHOW_SUPPORT_US=false
-      - SHOW_FEATURES=true
+      - SHOW_FEATURES=false
       - SHOW_TRY_EASIER=true
       - SHOW_FOOTER=true
 

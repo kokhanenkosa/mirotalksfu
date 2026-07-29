@@ -81,7 +81,7 @@ let BRAND = {
     },
     html: {
         topSponsors: false,
-        features: true,
+        features: false,
         teams: false,
         tryEasier: true,
         poweredBy: false,
