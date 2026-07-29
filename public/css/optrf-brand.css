@@ -214,37 +214,177 @@ body {
     color: var(--optrf-dark) !important;
 }
 
-/* Текстовые страницы (privacy, about) */
-.cta-inner.section-inner h1.section-title {
-    color: var(--optrf-dark) !important;
+/* Текстовые страницы (privacy, about) — изолированы от лендингового CTA-flex */
+.page-legal .site-header::before {
+    display: none !important;
 }
 
-.cta-inner.section-inner h3 {
-    color: var(--optrf-dark);
-    margin: 1.5rem 0 0.5rem;
+.page-legal .legal-main {
+    padding: 1.5rem 0 3rem;
+}
+
+.page-legal .legal-card,
+.page-legal .content-card,
+.page-legal article.cta-inner.section-inner {
+    display: block !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    width: 100%;
+    max-width: 48rem;
+    margin: 0 auto;
+    padding: 2rem 1.75rem !important;
+    background: var(--optrf-surface) !important;
+    border: 1px solid var(--optrf-border) !important;
+    border-radius: var(--optrf-radius) !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+    overflow: visible !important;
+    position: relative;
+}
+
+.page-legal .legal-card::before,
+.page-legal .content-card::before,
+.page-legal article.cta-inner.section-inner::before {
+    content: none !important;
+    display: none !important;
+}
+
+.page-legal .legal-card > *,
+.page-legal .content-card > *,
+.page-legal article.cta-inner.section-inner > * {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+    float: none !important;
+}
+
+.page-legal .legal-card h1,
+.page-legal .legal-card h2,
+.page-legal .legal-card h3 {
+    color: var(--optrf-dark) !important;
+    line-height: 1.3;
+}
+
+.page-legal .legal-card h1 {
+    margin: 0 0 0.5rem !important;
+    font-size: 1.75rem;
+}
+
+.page-legal .legal-card h2 {
+    margin: 1.75rem 0 0.6rem;
+    font-size: 1.15rem;
     font-weight: 600;
 }
 
-.cta-inner.section-inner .hero-paragraph {
-    margin-bottom: 0.75rem;
+.page-legal .legal-card h3 {
+    margin: 1.1rem 0 0.4rem;
+    font-size: 1.02rem;
+    font-weight: 600;
 }
 
-.cta-inner.section-inner {
-    background: var(--optrf-surface);
-    border: 1px solid var(--optrf-border);
+.page-legal .legal-card p,
+.page-legal .legal-card li {
+    color: var(--optrf-gray);
+    line-height: 1.55;
+    margin: 0 0 0.75rem;
 }
 
-/* Footer */
+.page-legal .legal-card ul {
+    margin: 0 0 0.85rem 1.2rem;
+    padding: 0;
+}
+
+.page-legal .legal-card li {
+    margin-bottom: 0.35rem;
+}
+
+.page-legal .legal-meta {
+    color: var(--optrf-muted) !important;
+    font-style: italic;
+    margin-bottom: 1.25rem !important;
+}
+
+.page-legal .legal-note {
+    margin-top: 1.5rem !important;
+    padding: 0.85rem 1rem;
+    background: var(--optrf-bg);
+    border-radius: var(--optrf-radius);
+    font-size: 0.92rem;
+    color: var(--optrf-muted) !important;
+}
+
+.page-legal .legal-card .button,
+.page-legal .legal-card a.button {
+    display: inline-flex !important;
+    width: auto !important;
+    margin-top: 1rem;
+}
+
+.page-legal .legal-card code {
+    font-size: 0.9em;
+    background: var(--optrf-bg);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+}
+
+/* Footer — одна строка: лого | ссылки | копирайт */
 .site-footer,
 #footer {
     background: var(--optrf-dark) !important;
     color: var(--optrf-muted) !important;
     border-top: none !important;
+    margin-top: 0 !important;
+}
+
+.site-footer-inner {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 1rem 1.5rem;
+    padding-top: 1.1rem !important;
+    padding-bottom: 1.1rem !important;
+}
+
+.footer-brand,
+.footer-links,
+.footer-copyright,
+.footer-social-links {
+    flex: 0 1 auto !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.footer-brand {
+    order: 1 !important;
+    justify-content: flex-start !important;
+}
+
+.footer-links {
+    order: 2 !important;
+    justify-content: center !important;
+    flex: 1 1 auto !important;
+}
+
+.footer-copyright {
+    order: 3 !important;
+    justify-content: flex-end !important;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--optrf-muted) !important;
+    font-size: 0.85rem !important;
 }
 
 .site-footer a,
 .footer-links a {
     color: #cfcfcf !important;
+    white-space: nowrap;
 }
 
 .site-footer a:hover,
@@ -262,13 +402,35 @@ body {
     display: none !important;
 }
 
-.footer-copyright {
-    color: var(--optrf-muted) !important;
+.footer-links li + li {
+    margin-left: 1.1rem;
 }
 
 /* Футер тёмный — подменяем на светлый логотип */
 .footer-brand .header-logo-image {
     content: url('../images/logo-on-dark.svg');
+    height: 28px !important;
+}
+
+@media (max-width: 640px) {
+    .site-footer-inner {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        text-align: center;
+        gap: 0.75rem;
+    }
+
+    .footer-brand,
+    .footer-links,
+    .footer-copyright {
+        flex: 1 1 100% !important;
+        justify-content: center !important;
+        text-align: center;
+    }
+
+    .footer-copyright {
+        white-space: normal;
+    }
 }
 
 hr {

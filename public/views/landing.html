@@ -12,7 +12,7 @@
         <meta
             id="description"
             name="description"
-            content="Видеоконференции в браузере: звонки, чат и демонстрация экрана без установки программ."
+            content="Платформа онлайн-обучения ОПТ РФ: занятия в браузере, видео, чат и демонстрация экрана."
         />
 
         <meta property="og:type" content="{{OG_TYPE}}" />
@@ -68,12 +68,12 @@
                         <div class="hero-inner">
                             <div class="hero-copy">
                                 <h1 id="appTitle" class="hero-title mt-0">
-                                    ОПТ РФ<br />Видеоконференции для команды.<br />
-                                    Просто. Надёжно. Быстро.
+                                    ОПТ РФ<br />Платформа онлайн-обучения.<br />
+                                    Учитесь. Общайтесь. Вместе.
                                 </h1>
                                 <p id="appDescription" class="hero-paragraph">
-                                    Онлайн-встречи в один клик — без установки программ. Звонки, чат и демонстрация
-                                    экрана в браузере.
+                                    Начните видеозвонок в один клик. Без установки программ и плагинов — сразу к
+                                    разговору, чату и демонстрации экрана.
                                 </p>
                             </div>
                             <div class="hero-figure anime-element">
@@ -98,16 +98,63 @@
                 <section class="cta section">
                     <div class="container">
                         <div class="cta-inner section-inner br-12">
-                            <!-- Гейт: нужна авторизация по телефону -->
+                            <!-- Гейт: поля авторизации сразу на лендинге -->
                             <div id="phoneGate" class="phone-gate" hidden>
                                 <h3 class="section-title mt-0">Войдите по номеру телефона</h3>
                                 <p class="phone-gate-text">
                                     Чтобы создавать комнаты и сохранять имя для встреч, подтвердите номер через
                                     Telegram или SMS.
                                 </p>
-                                <a id="phoneGateLoginBtn" class="button button-primary pulse" href="/phone-auth?next=/">
-                                    Войти по телефону
-                                </a>
+
+                                <div id="gateStepPhone" class="phone-gate-form">
+                                    <label class="phone-gate-label" for="gatePhoneInput">Номер телефона</label>
+                                    <div class="phone-gate-field">
+                                        <span class="phone-gate-prefix">+7</span>
+                                        <input
+                                            id="gatePhoneInput"
+                                            class="phone-gate-input"
+                                            type="tel"
+                                            inputmode="tel"
+                                            placeholder="900 123-45-67"
+                                            autocomplete="tel-national"
+                                            maxlength="16"
+                                        />
+                                    </div>
+                                    <button id="gateSendCodeBtn" class="button button-primary button-block" type="button">
+                                        Получить код
+                                    </button>
+                                </div>
+
+                                <div id="gateStepCode" class="phone-gate-form" hidden>
+                                    <p id="gateCodeHint" class="phone-gate-hint"></p>
+                                    <label class="phone-gate-label" for="gateCodeInput">Код из Telegram или SMS</label>
+                                    <input
+                                        id="gateCodeInput"
+                                        class="phone-gate-input phone-gate-input--code"
+                                        type="text"
+                                        inputmode="numeric"
+                                        autocomplete="one-time-code"
+                                        maxlength="6"
+                                        placeholder="••••••"
+                                    />
+                                    <button
+                                        id="gateVerifyCodeBtn"
+                                        class="button button-primary button-block"
+                                        type="button"
+                                    >
+                                        Подтвердить
+                                    </button>
+                                    <div class="phone-gate-actions">
+                                        <button id="gateResendBtn" class="phone-gate-link" type="button">
+                                            Отправить ещё раз
+                                        </button>
+                                        <button id="gateChangePhoneBtn" class="phone-gate-link" type="button">
+                                            Другой номер
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p id="gateAuthError" class="phone-gate-error" role="alert" hidden></p>
                             </div>
 
                             <!-- Мини-кабинет после авторизации -->
