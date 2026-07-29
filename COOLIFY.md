@@ -11,7 +11,8 @@
 2. Coolify → **New Resource** → репозиторий → Build Pack: **Docker Compose**.
 3. **Docker Compose Location:** `/docker-compose.yaml` (именно `.yaml`).
 4. **Base Directory:** `/`
-5. Continue → в Environment Variables заполни:
+5. После пуша compose: в Coolify нажми **Reload Compose File** / Save — иначе может остаться пустой `services: {}` → ошибка `no service selected`.
+6. Continue → в Environment Variables заполни:
 
 | Переменная | Значение |
 |---|---|
@@ -21,10 +22,20 @@
 | `UI_LANGUAGE` | `ru` |
 | `APP_NAME` | Название, например `ОПТ РФ Миро` |
 
-6. У сервиса `mirotalksfu` домен **строго** так: `https://meet.твой-домен.ru:3010`  
+7. У сервиса `mirotalksfu` домен **строго** так: `https://meet.твой-домен.ru:3010`  
    (`:3010` = порт внутри контейнера; снаружи 443 через Traefik).  
    Без `:3010` Traefik стучится в 80 → сайт «не стартует».
-7. Deploy. Если в логах `ECONNRESET` каждые 30с — это healthcheck/proxy, не падение приложения.
+8. Deploy. Если в логах `ECONNRESET` каждые 30с — это healthcheck/proxy, не падение приложения.
+
+### Если деплой: `no service selected`
+
+Coolify уже мог остановить старый контейнер, а новый не поднять.
+
+1. Убедись, что в Git на `main` свежий `docker-compose.yaml` (без `${VAR:?}` и без кириллицы/`<br />` в defaults).
+2. В ресурсе Coolify → **Reload Compose File** → проверь, что сервис `mirotalksfu` виден.
+3. Redeploy.
+
+Русские тексты UI берутся из `config.template.js` / env в Coolify UI, не из defaults compose.
 
 ## Firewall (критично для видео/звука)
 
