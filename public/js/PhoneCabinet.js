@@ -17,7 +17,17 @@
     const activeEmpty = document.getElementById('phoneActiveEmpty');
     const historyEmpty = document.getElementById('phoneHistoryEmpty');
     const guestHint = document.getElementById('phoneGuestHint');
-    const gateLoginBtn = document.getElementById('phoneGateLoginBtn');
+
+    const gateStepPhone = document.getElementById('gateStepPhone');
+    const gateStepCode = document.getElementById('gateStepCode');
+    const gatePhoneInput = document.getElementById('gatePhoneInput');
+    const gateCodeInput = document.getElementById('gateCodeInput');
+    const gateSendCodeBtn = document.getElementById('gateSendCodeBtn');
+    const gateVerifyCodeBtn = document.getElementById('gateVerifyCodeBtn');
+    const gateResendBtn = document.getElementById('gateResendBtn');
+    const gateChangePhoneBtn = document.getElementById('gateChangePhoneBtn');
+    const gateCodeHint = document.getElementById('gateCodeHint');
+    const gateAuthError = document.getElementById('gateAuthError');
 
     function show(el, on) {
         if (!el) return;
@@ -28,6 +38,44 @@
         if (!nameStatusEl) return;
         nameStatusEl.textContent = msg || '';
         nameStatusEl.classList.toggle('is-error', Boolean(isError));
+    }
+
+    function setGateError(msg) {
+        if (!gateAuthError) return;
+        if (!msg) {
+            gateAuthError.hidden = true;
+            gateAuthError.textContent = '';
+            return;
+        }
+        gateAuthError.hidden = false;
+        gateAuthError.textContent = msg;
+    }
+
+    function digitsOnly(value) {
+        return String(value || '').replace(/\D/g, '');
+    }
+
+    function normalizePhone(value) {
+        let digits = digitsOnly(value);
+        if (!digits) return '';
+        if (digits.startsWith('8') && digits.length === 11) digits = `7${digits.slice(1)}`;
+        if (digits.length === 10) digits = `7${digits}`;
+        if (!digits.startsWith('7') && digits.length >= 11) return `+${digits}`;
+        if (digits.startsWith('7')) return `+${digits}`;
+        return `+7${digits}`;
+    }
+
+    function formatNational(digits) {
+        const d = digitsOnly(digits).replace(/^7/, '').replace(/^8/, '').slice(0, 10);
+        const p1 = d.slice(0, 3);
+        const p2 = d.slice(3, 6);
+        const p3 = d.slice(6, 8);
+        const p4 = d.slice(8, 10);
+        let out = p1;
+        if (p2) out += ` ${p2}`;
+        if (p3) out += `-${p3}`;
+        if (p4) out += `-${p4}`;
+        return out;
     }
 
     function formatPhone(phone) {
@@ -48,6 +96,22 @@
 
     function roomJoinUrl(roomId) {
         return `/join/?room=${encodeURIComponent(roomId)}`;
+    }
+
+    function setBusy(btn, busy) {
+        if (!btn) return;
+        btn.disabled = Boolean(busy);
+    }
+
+    async function postJson(url, body) {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify(body),
+        });
+        const data = await res.json().catch(() => ({}));
+        return { res, data };
     }
 
     function renderRoomItem(item, { active }) {
@@ -110,7 +174,6 @@
 
             if (historyList) {
                 historyList.innerHTML = '';
-                // история без дублей текущих активных сверху уже есть в active
                 history.forEach((item) => historyList.appendChild(renderRoomItem(item, { active: false })));
             }
             show(historyEmpty, history.length === 0);
@@ -126,7 +189,7 @@
             setNameStatus('Укажите имя', true);
             return;
         }
-        saveNameBtn.disabled = true;
+        setBusy(saveNameBtn, true);
         try {
             const res = await fetch('/phone/profile', {
                 method: 'POST',
@@ -145,7 +208,7 @@
         } catch {
             setNameStatus('Ошибка сети', true);
         } finally {
-            saveNameBtn.disabled = false;
+            setBusy(saveNameBtn, false);
         }
     }
 
@@ -167,9 +230,83 @@
         window.location.href = '/';
     }
 
+    function resetGateForm() {
+        setGateError('');
+        show(gateStepPhone, true);
+        show(gateStepCode, false);
+        if (gateCodeInput) gateCodeInput.value = '';
+        if (gatePhoneInput) gatePhoneInput.focus();
+    }
+
+    async function sendCode() {
+        setGateError('');
+        const phone = normalizePhone(gatePhoneInput?.value);
+        if (!/^\+7\d{10}$/.test(phone) && !/^\+\d{11,15}$/.test(phone)) {
+            setGateError('Введите корректный номер телефона');
+            gatePhoneInput?.focus();
+            return;
+        }
+
+        setBusy(gateSendCodeBtn, true);
+        setBusy(gateResendBtn, true);
+        try {
+            const { res, data } = await postJson('/phone/send-code', { phone });
+            if (!res.ok || !data.ok) {
+                setGateError(data.error || 'Не удалось отправить код');
+                return;
+            }
+            if (gatePhoneInput) gatePhoneInput.value = formatNational(phone);
+            if (gateCodeHint) gateCodeHint.textContent = data.message || 'Код отправлен';
+            show(gateStepPhone, false);
+            show(gateStepCode, true);
+            gateCodeInput?.focus();
+        } catch {
+            setGateError('Ошибка сети. Попробуйте ещё раз.');
+        } finally {
+            setBusy(gateSendCodeBtn, false);
+            setBusy(gateResendBtn, false);
+        }
+    }
+
+    async function verifyCode() {
+        setGateError('');
+        const phone = normalizePhone(gatePhoneInput?.value);
+        const code = digitsOnly(gateCodeInput?.value).slice(0, 8);
+        if (code.length < 4) {
+            setGateError('Введите код из сообщения');
+            gateCodeInput?.focus();
+            return;
+        }
+
+        setBusy(gateVerifyCodeBtn, true);
+        try {
+            const { res, data } = await postJson('/phone/verify', { phone, code });
+            if (!res.ok || !data.ok) {
+                setGateError(data.error || 'Неверный код');
+                gateCodeInput?.focus();
+                return;
+            }
+
+            if (data.token) {
+                window.sessionStorage.peer_token = data.token;
+                window.sessionStorage.phone_auth = data.token;
+                window.sessionStorage.phone_number = data.phone || phone;
+                window.sessionStorage.phone_can_create = data.canCreate ? '1' : '0';
+            }
+
+            // подтянуть профиль/кабинет без перезагрузки
+            const meRes = await fetch('/phone/me', { credentials: 'same-origin' });
+            const me = await meRes.json().catch(() => ({}));
+            applySession(me?.ok ? me : { enabled: true, authenticated: true, phone, canCreate: data.canCreate });
+        } catch {
+            setGateError('Ошибка сети. Попробуйте ещё раз.');
+        } finally {
+            setBusy(gateVerifyCodeBtn, false);
+        }
+    }
+
     function applySession(data) {
         if (!data?.enabled) {
-            // phone auth выключен — классический UI создания
             show(gate, false);
             show(cabinet, false);
             show(createPanel, true);
@@ -180,13 +317,10 @@
             show(gate, true);
             show(cabinet, false);
             show(createPanel, false);
-            if (gateLoginBtn) {
-                gateLoginBtn.href = `/phone-auth?next=${encodeURIComponent('/')}`;
-            }
+            resetGateForm();
             return;
         }
 
-        // сессия есть
         show(gate, false);
         show(cabinet, true);
 
@@ -213,6 +347,37 @@
         }
     }
 
+    gatePhoneInput?.addEventListener('input', () => {
+        const caretEnd = gatePhoneInput.selectionStart === gatePhoneInput.value.length;
+        gatePhoneInput.value = formatNational(gatePhoneInput.value);
+        if (caretEnd) {
+            gatePhoneInput.setSelectionRange(gatePhoneInput.value.length, gatePhoneInput.value.length);
+        }
+    });
+
+    gateCodeInput?.addEventListener('input', () => {
+        gateCodeInput.value = digitsOnly(gateCodeInput.value).slice(0, 6);
+        if (gateCodeInput.value.length === 6) verifyCode();
+    });
+
+    gateSendCodeBtn?.addEventListener('click', sendCode);
+    gateResendBtn?.addEventListener('click', sendCode);
+    gateVerifyCodeBtn?.addEventListener('click', verifyCode);
+    gateChangePhoneBtn?.addEventListener('click', () => {
+        if (gateCodeInput) gateCodeInput.value = '';
+        show(gateStepCode, false);
+        show(gateStepPhone, true);
+        setGateError('');
+        gatePhoneInput?.focus();
+    });
+
+    gatePhoneInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendCode();
+    });
+    gateCodeInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') verifyCode();
+    });
+
     saveNameBtn?.addEventListener('click', saveDisplayName);
     displayNameEl?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -222,7 +387,6 @@
     });
     logoutBtn?.addEventListener('click', logout);
 
-    // пока грузим /phone/me — ничего не мелькает лишнего
     show(gate, false);
     show(cabinet, false);
     show(createPanel, false);
@@ -231,9 +395,9 @@
         .then((r) => r.json())
         .then(applySession)
         .catch(() => {
-            // при ошибке сети не блокируем совсем — покажем гейт
             show(gate, true);
             show(cabinet, false);
             show(createPanel, false);
+            resetGateForm();
         });
 })();
