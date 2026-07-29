@@ -4626,16 +4626,16 @@ function showButtons() {
 }
 
 function checkButtonsBar() {
-    if (localStorageSettings.keep_buttons_visible) {
+    // На мобилке панель всегда на экране — иначе кнопки пропадают через 10с.
+    if (isMobileDevice || localStorageSettings.keep_buttons_visible) {
+        if (isMobileDevice) isButtonsBarOver = true;
         bottomButtons.style.display = 'flex';
         toggleClassElements('username', 'flex');
         isButtonsVisible = true;
-    } else {
-        if (!isButtonsBarOver) {
-            bottomButtons.style.display = 'none';
-            toggleClassElements('username', 'none');
-            isButtonsVisible = false;
-        }
+    } else if (!isButtonsBarOver) {
+        bottomButtons.style.display = 'none';
+        toggleClassElements('username', 'none');
+        isButtonsVisible = false;
     }
     setTimeout(() => {
         checkButtonsBar();

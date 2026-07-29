@@ -767,6 +767,14 @@ body {
     /* box-shadow: var(--box-shadow); */
 }
 
+#bottomButtonsScroller {
+    display: flex;
+    flex-direction: inherit;
+    align-items: center;
+    justify-content: center;
+    gap: inherit;
+}
+
 /* Split button (main action + device arrow) */
 #bottomButtons .split-btn {
     position: relative;
@@ -1074,43 +1082,78 @@ body {
 
 @media screen and (max-width: 500px) {
     #bottomButtons {
-        gap: 0.3rem;
-        padding: 3px;
+        top: auto !important;
+        right: 0;
+        bottom: max(8px, env(safe-area-inset-bottom)) !important;
+        left: 0 !important;
+        width: 100%;
+        max-width: 100vw;
+        padding: 0;
+        transform: none !important;
+        flex-direction: row !important;
+        box-sizing: border-box;
+        border-radius: 14px 14px 0 0;
+    }
+    #bottomButtonsScroller {
+        width: 100%;
+        padding: 8px 12px;
+        justify-content: flex-start;
+        gap: 0.5rem;
+        overflow-x: auto;
+        overflow-y: hidden;
+        box-sizing: border-box;
+        scroll-behavior: smooth;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x;
+        overscroll-behavior-x: contain;
+    }
+    #bottomButtonsScroller::-webkit-scrollbar {
+        display: none;
+    }
+    #bottomButtonsScroller > * {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
     }
     #bottomButtons button {
-        width: 38px;
-        height: 38px;
-        font-size: 0.95rem;
-        padding: 8px;
-        margin: 0 1px;
+        width: 48px;
+        min-width: 48px;
+        height: 48px;
+        min-height: 48px;
+        font-size: 1.25rem;
+        padding: 10px;
+        margin: 0;
     }
     #bottomButtons .device-dropdown-toggle {
-        width: 19px;
-        height: 38px;
+        width: 28px;
+        min-width: 28px;
+        height: 48px;
     }
     #bottomButtons .device-dropdown-toggle i {
-        font-size: 0.8rem;
+        font-size: 0.9rem;
+    }
+    #bottomButtons #exitMenu {
+        position: fixed;
+        right: 12px;
+        bottom: calc(72px + env(safe-area-inset-bottom));
+        left: auto;
     }
 }
 
 @media screen and (max-width: 360px) {
-    #bottomButtons {
-        gap: 0.15rem;
-        padding: 2px;
-    }
     #bottomButtons button {
-        width: 28px;
-        height: 28px;
-        font-size: 0.65rem;
-        padding: 6px;
-        margin: 0 1px;
+        width: 48px;
+        height: 48px;
+        font-size: 1.25rem;
+        padding: 10px;
     }
     #bottomButtons .device-dropdown-toggle {
-        width: 14px;
-        height: 28px;
+        width: 28px;
+        height: 48px;
     }
     #bottomButtons .device-dropdown-toggle i {
-        font-size: 0.7rem;
+        font-size: 0.9rem;
     }
 }
 

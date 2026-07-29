@@ -53,6 +53,13 @@ class PhoneAuth {
         return Boolean(formatted && this.superAdmins.has(formatted));
     }
 
+    canPresent(phone, createdByPhone) {
+        const formatted = formatPhoneE164(phone);
+        const owner = formatPhoneE164(createdByPhone);
+        if (!formatted) return false;
+        return Boolean((owner && formatted === owner) || this.isSuperAdmin(formatted));
+    }
+
     setRoleProvider(provider) {
         this.roleProvider = provider || null;
     }

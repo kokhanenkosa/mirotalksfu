@@ -159,15 +159,24 @@ html[data-theme] #bottomButtons #settingsExtraMenu .extra-menu-group {
 
 @media screen and (max-width: 500px) {
     #bottomButtons .optrf-theme-option {
-        width: 38px;
-        height: 38px;
+        width: 48px;
+        min-width: 48px;
+        height: 48px;
+        min-height: 48px;
+    }
+
+    #bottomButtons .optrf-theme-menu {
+        position: fixed;
+        top: auto;
+        right: 12px;
+        bottom: calc(72px + env(safe-area-inset-bottom));
     }
 }
 
 @media screen and (max-width: 360px) {
     #bottomButtons .optrf-theme-option {
-        width: 28px;
-        height: 28px;
+        width: 48px;
+        height: 48px;
     }
 }
 

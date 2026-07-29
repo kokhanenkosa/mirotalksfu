@@ -2821,10 +2821,10 @@ async function startServer() {
                 }
                 isObserver = requestedObserver && phoneSession.isSuperAdmin;
                 socket.isSuperAdminObserver = isObserver;
-                // Первый участник — ведущий только если номер в списке создателей
-                if (!isObserver && !socket.room_id.includes('_breakout_') && room?.getVisiblePeersCount() === 0) {
-                    is_presenter = phoneSession.canCreate;
-                }
+                // Ведущий только создатель комнаты или супер-админ. join_first/клиентский флаг игнорируем.
+                is_presenter =
+                    !isObserver && phoneAuth.canPresent(phoneSession.phone, room?.createdByPhone);
+                data.peer_info.peer_presenter = is_presenter;
                 if (isObserver) {
                     is_presenter = false;
                     Object.assign(data.peer_info, {
@@ -2841,6 +2841,7 @@ async function startServer() {
                 log.debug('[Join] - Phone auth OK', {
                     phone: phoneSession.phone,
                     canCreate: phoneSession.canCreate,
+                    createdByPhone: room?.createdByPhone || null,
                     is_presenter,
                 });
             }
@@ -2956,11 +2957,17 @@ async function startServer() {
             };
 
             /**
-             * first we check if the username match the presenters username else if join_first enabled
-             * For breakout rooms, skip join_first rule - only presenters.list or token-based presenters are valid
+             * Phone auth: only room creator / super-admin (is_presenter already decided above).
+             * Otherwise: presenters.list, join_first, or token presenter flag.
+             * Breakout rooms skip join_first — only presenters.list or token-based presenters.
              */
             const isBreakoutRoom = socket.room_id.includes('_breakout_');
-            if (
+            if (phoneAuth.isEnabled()) {
+                if (is_presenter) {
+                    presenter.is_presenter = true;
+                    presenters[socket.room_id][socket.id] = presenter;
+                }
+            } else if (
                 hostCfg?.presenters?.list?.includes(peer_name) ||
                 (!isBreakoutRoom &&
                     hostCfg?.presenters?.join_first &&
@@ -2973,9 +2980,11 @@ async function startServer() {
 
             log.debug('[Join] - Connected presenters grp by roomId', presenters);
 
-            const isPresenter = peer_token
+            const isPresenter = phoneAuth.isEnabled()
                 ? is_presenter
-                : isPeerPresenter(socket.room_id, socket.id, peer_name, peer_uuid);
+                : peer_token
+                  ? is_presenter
+                  : isPeerPresenter(socket.room_id, socket.id, peer_name, peer_uuid);
 
             const peer = room.getPeer(socket.id);
 

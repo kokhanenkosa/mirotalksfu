@@ -151,4 +151,19 @@ describe('test-PhoneAdmin', () => {
         assert.strictEqual(room.getPeersCount(), 2);
         assert.strictEqual(room.getVisiblePeersCount(), 1);
     });
+
+    it('grants presenter only to room creator or super-admin', () => {
+        const auth = new PhoneAuth({
+            enabled: true,
+            jwtKey: 'test-secret',
+            creators: ['+79001112233'],
+            superAdmins: ['+79009998877'],
+        });
+
+        assert.strictEqual(auth.canPresent('+79001112233', '+79001112233'), true);
+        assert.strictEqual(auth.canPresent('+79009998877', '+79001112233'), true);
+        assert.strictEqual(auth.canPresent('+79002223344', '+79001112233'), false);
+        assert.strictEqual(auth.canPresent('+79002223344', null), false);
+        assert.strictEqual(auth.canPresent('+79001112233', '+79000000000'), false);
+    });
 });
