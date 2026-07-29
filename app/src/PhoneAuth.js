@@ -101,8 +101,16 @@ class PhoneAuth {
         return '';
     }
 
+    isJwtLikeToken(token) {
+        if (!token || typeof token !== 'string') return false;
+        const value = token.trim();
+        // Client may store a cookie-auth marker ('cookie' / '1') in sessionStorage.
+        if (!value || value === 'cookie' || value === '1') return false;
+        return value.split('.').length === 3;
+    }
+
     getTokenFromSocket(socket, payloadToken) {
-        if (payloadToken) return String(payloadToken);
+        if (this.isJwtLikeToken(payloadToken)) return String(payloadToken).trim();
         const cookies = this.parseCookies(socket?.handshake?.headers?.cookie);
         return cookies[COOKIE_NAME] || socket?.handshake?.auth?.phone_token || '';
     }
@@ -131,7 +139,12 @@ class PhoneAuth {
     }
 
     getSocketSession(socket, payloadToken) {
-        return this.verifyToken(this.getTokenFromSocket(socket, payloadToken));
+        if (this.isJwtLikeToken(payloadToken)) {
+            const fromPayload = this.verifyToken(String(payloadToken).trim());
+            if (fromPayload) return fromPayload;
+        }
+        // Fall back to HttpOnly cookie / handshake auth when payload is a marker or stale JWT.
+        return this.verifyToken(this.getTokenFromSocket(socket, null));
     }
 
     signSession(phone) {

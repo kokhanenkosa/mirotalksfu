@@ -1068,9 +1068,17 @@ function getPeerUUID() {
     return peer_uuid;
 }
 
+function isJwtLikePeerToken(token) {
+    if (!token || typeof token !== 'string') return false;
+    const value = token.trim();
+    if (!value || value === 'cookie' || value === '1') return false;
+    return value.split('.').length === 3;
+}
+
 function getPeerToken() {
-    if (window.sessionStorage.phone_auth) return window.sessionStorage.phone_auth;
-    if (window.sessionStorage.peer_token) return window.sessionStorage.peer_token;
+    // phone_auth may be a cookie-session marker ('cookie'), not a JWT — don't send it to the server.
+    if (isJwtLikePeerToken(window.sessionStorage.phone_auth)) return window.sessionStorage.phone_auth;
+    if (isJwtLikePeerToken(window.sessionStorage.peer_token)) return window.sessionStorage.peer_token;
     let token = getQueryParam('token');
     let queryToken = false;
     if (token) {

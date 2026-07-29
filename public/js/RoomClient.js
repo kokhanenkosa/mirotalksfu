@@ -533,8 +533,16 @@ class RoomClient {
     // ####################################################
 
     async createRoom(room_id) {
-        const phone_token =
+        const rawPhoneToken =
             window.sessionStorage.phone_auth || window.sessionStorage.peer_token || this.peer_info?.peer_token || '';
+        // Cookie-auth marker must not override the HttpOnly phone_auth cookie on the server.
+        const phone_token =
+            typeof rawPhoneToken === 'string' &&
+            rawPhoneToken.includes('.') &&
+            rawPhoneToken !== 'cookie' &&
+            rawPhoneToken !== '1'
+                ? rawPhoneToken
+                : '';
         try {
             await this.socket.request('createRoom', {
                 room_id,

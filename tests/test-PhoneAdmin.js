@@ -166,4 +166,26 @@ describe('test-PhoneAdmin', () => {
         assert.strictEqual(auth.canPresent('+79002223344', null), false);
         assert.strictEqual(auth.canPresent('+79001112233', '+79000000000'), false);
     });
+
+    it('falls back to cookie auth when socket payload is a cookie marker', () => {
+        const auth = new PhoneAuth({
+            enabled: true,
+            jwtKey: 'test-secret',
+            creators: [],
+            superAdmins: ['+79001112233'],
+        });
+        const { token } = auth.signSession('+79001112233');
+        const socket = {
+            handshake: {
+                headers: {
+                    cookie: `phone_auth=${encodeURIComponent(token)}`,
+                },
+            },
+        };
+
+        assert.strictEqual(auth.getSocketSession(socket, 'cookie')?.phone, '+79001112233');
+        assert.strictEqual(auth.getSocketSession(socket, '1')?.phone, '+79001112233');
+        assert.strictEqual(auth.getSocketSession(socket, '')?.phone, '+79001112233');
+        assert.strictEqual(auth.getSocketSession(socket, token)?.phone, '+79001112233');
+    });
 });
