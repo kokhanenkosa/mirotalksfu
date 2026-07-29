@@ -329,3 +329,8 @@ body.super-admin-observer #bottomButtons button:not(#exitButton),
 body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton)) {
     display: none !important;
 }
+
+/* В кабинет только после выхода из лекции */
+#bottomButtons #phoneCabinetButton {
+    display: none !important;
+}

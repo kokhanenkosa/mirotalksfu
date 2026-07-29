@@ -133,12 +133,15 @@ const CUSTOM_BREAKPOINT = 680;
 // ####################################################
 
 function resizeChatRoom() {
-    if (!rc || rc.isMobileDevice || !rc.isChatOpen || rc.isChatPinned) return;
+    if (!rc || rc.isMobileDevice || !rc.isChatOpen || rc.isChatPinned || rc.isChatMaximized) return;
 
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
 
-    windowWidth <= DESKTOP_BREAKPOINT || windowHeight <= DESKTOP_BREAKPOINT ? rc.chatMaximize() : rc.chatMinimize();
+    // Не дергаем maximize/minimize по resize, если пользователь уже развернул чат вручную
+    if (windowWidth <= DESKTOP_BREAKPOINT || windowHeight <= DESKTOP_BREAKPOINT) {
+        rc.chatMaximize();
+    }
 }
 
 // ####################################################

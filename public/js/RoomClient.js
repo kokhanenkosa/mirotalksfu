@@ -722,6 +722,14 @@ class RoomClient {
         // ##########################################
         this.peers = new Map(JSON.parse(room.peers));
         // ##########################################
+        // Нормализуем peer_cam_bubble из снимка комнаты (поздний join студента)
+        try {
+            this.peers.forEach((peer, peerId) => {
+                if (peer?.peer_info) this.syncPeerCamBubbleState(peerId, peer.peer_info);
+            });
+        } catch {
+            /* ignore */
+        }
 
         console.log('07.0 ----> Room Survey', room.survey);
         survey = room.survey;
@@ -911,6 +919,9 @@ class RoomClient {
         }
 
         this.refreshParticipantsCount();
+        // Кружок лектора после join/getProducers (тайлы появляются асинхронно)
+        setTimeout(() => this.refreshAllCamBubbles(), 300);
+        setTimeout(() => this.refreshAllCamBubbles(), 1200);
 
         console.log('07.2 Participants Count ---->', participantsCount);
 
@@ -1429,11 +1440,14 @@ class RoomClient {
                     console.warn('Skipping own producer to prevent echo', { producer_id, type });
                     continue;
                 }
+                // Актуальный peer_info с сервера (в т.ч. peer_cam_bubble) — в map
+                if (peer_info?.peer_id) this.syncPeerCamBubbleState(peer_info.peer_id, peer_info);
                 // Активный producer = ведущий дал слово / слушатель шарит — всегда принимаем.
                 // Пассивных слушателей без media по-прежнему не рисуем (setVideoOff).
                 await this.consume(producer_id, peer_name, peer_info, type);
             }
 
+            this.refreshAllCamBubbles();
             this.applyPendingFollowMe();
         }
     };
@@ -1501,29 +1515,29 @@ class RoomClient {
         console.log('SocketOn Peer info update:', data);
         this.updatePeerInfo(data.peer_name, data.peer_id, data.type, data.status, false, data.peer_presenter);
         if (data.type === 'camBubble') {
-            const peer = this.peers?.get?.(data.peer_id);
-            if (peer?.peer_info) {
-                peer.peer_info.peer_cam_bubble = Boolean(data.status);
-                if (!data.status) peer.peer_info.peer_cam_bubble_layout = null;
-            }
+            this.syncPeerCamBubbleState(data.peer_id, {
+                peer_cam_bubble: Boolean(data.status),
+                peer_cam_bubble_layout: data.status ? undefined : null,
+            });
             this.refreshCamBubble(data.peer_id);
+            // Тайлы consumer'ов могут появиться чуть позже
+            this.scheduleCamBubbleRetry(data.peer_id);
         }
         if (data.type === 'camBubbleLayout') {
-            const peer = this.peers?.get?.(data.peer_id);
-            // Храним компактную строку — одинаковый decode у всех клиентов
             const encoded =
                 typeof data.status === 'string'
                     ? data.status
                     : this.encodeCamBubbleLayout(this.decodeCamBubbleLayout(data.status));
-            if (peer?.peer_info) {
-                peer.peer_info.peer_cam_bubble = true;
-                peer.peer_info.peer_cam_bubble_layout = encoded;
-            }
+            this.syncPeerCamBubbleState(data.peer_id, {
+                peer_cam_bubble: true,
+                peer_cam_bubble_layout: encoded,
+            });
             if (data.peer_id === this.peer_id) {
                 this.peer_info.peer_cam_bubble = true;
                 this.peer_info.peer_cam_bubble_layout = encoded;
             }
-            this.refreshCamBubble(data.peer_id);
+            // Сразу натягиваем layout на существующий кружок (масштаб/кадр), без ожидания
+            this.applyRemoteCamBubbleLayout(data.peer_id, encoded);
         }
     };
 
@@ -4067,7 +4081,10 @@ class RoomClient {
                 handleAspectRatio();
                 console.log('[addConsumer] Video-element-count', this.videoMediaContainer.childElementCount);
 
+                // peer_info из newProducers — live с сервера, там уже есть peer_cam_bubble
+                this.syncPeerCamBubbleState(remotePeerId, peer_info);
                 this.refreshCamBubble(remotePeerId);
+                this.scheduleCamBubbleRetry(remotePeerId);
                 this.sound('joined');
                 break;
             case mediaType.audio:
@@ -6010,6 +6027,16 @@ class RoomClient {
         function dragMouseDown(e) {
             e = e || window.event;
             e.preventDefault();
+            // Снимаем translate(-50%) и т.п., иначе окно уезжает за край
+            const rect = elmnt.getBoundingClientRect();
+            elmnt.classList.remove('panel-slide-in');
+            elmnt.style.position = 'fixed';
+            elmnt.style.transform = 'none';
+            elmnt.style.right = 'auto';
+            elmnt.style.bottom = 'auto';
+            elmnt.style.margin = '0';
+            elmnt.style.left = `${rect.left}px`;
+            elmnt.style.top = `${Math.max(0, rect.top)}px`;
             pos3 = e.clientX;
             pos4 = e.clientY;
             document.onmouseup = closeDragElement;
@@ -6022,11 +6049,17 @@ class RoomClient {
             pos2 = pos4 - e.clientY;
             pos3 = e.clientX;
             pos4 = e.clientY;
-            // set the element's new position with top boundary check (min 0px):
-            let newTop = elmnt.offsetTop - pos2;
+            const rect = elmnt.getBoundingClientRect();
+            let newTop = rect.top - pos2;
+            let newLeft = rect.left - pos1;
+            const maxTop = Math.max(0, window.innerHeight - rect.height);
+            const maxLeft = Math.max(0, window.innerWidth - Math.min(rect.width, window.innerWidth));
             if (newTop < 0) newTop = 0;
+            if (newTop > maxTop) newTop = maxTop;
+            if (newLeft < 0) newLeft = 0;
+            if (newLeft > maxLeft) newLeft = maxLeft;
             elmnt.style.top = newTop + 'px';
-            elmnt.style.left = elmnt.offsetLeft - pos1 + 'px';
+            elmnt.style.left = newLeft + 'px';
         }
         function closeDragElement() {
             document.onmouseup = null;
@@ -6040,8 +6073,7 @@ class RoomClient {
         } else {
             elmnt.onmousedown = null;
         }
-        elmnt.style.top = '';
-        elmnt.style.left = '';
+        // Не трогаем top/left — позицию задают chatPin / chatMaximize / chatCenter
     }
 
     // ####################################################
@@ -6083,7 +6115,16 @@ class RoomClient {
         isParticipantsListOpen = !isParticipantsListOpen;
         this.isChatOpen = !this.isChatOpen;
 
-        if (!this.isChatOpen) this.isParticipantsOpen = false;
+        if (!this.isChatOpen) {
+            this.isParticipantsOpen = false;
+            // Сброс maximize, чтобы при следующем открытии не остался fullscreen за углом
+            if (this.isChatMaximized) {
+                this.isChatMaximized = false;
+                hide(chatMinButton);
+                document.documentElement.style.setProperty('--msger-width', '800px');
+                document.documentElement.style.setProperty('--msger-height', '700px');
+            }
+        }
         this.syncChatToolbarButtons();
         this.updateUnreadCountBadge(this.chatPeerId || 'all');
 
@@ -6213,7 +6254,9 @@ class RoomClient {
         this.isChatMaximized = true;
         hide(chatMaxButton);
         BUTTONS.chat.chatMaxButton && show(chatMinButton);
-        this.chatCenter();
+        if (!this.isMobileDevice) this.makeUnDraggable(chatRoom, chatHeader);
+        // На весь экран без translate(-50%) — иначе ломается из‑за panel-slide-in / pin right:0
+        this.chatFillViewport();
         document.documentElement.style.setProperty('--msger-width', '100%');
         document.documentElement.style.setProperty('--msger-height', '100%');
         this.toggleChatHistorySize(true);
@@ -6230,6 +6273,7 @@ class RoomClient {
             document.documentElement.style.setProperty('--msger-width', '800px');
             document.documentElement.style.setProperty('--msger-height', '700px');
             this.toggleChatHistorySize(false);
+            if (!this.isMobileDevice) this.makeDraggable(chatRoom, chatHeader);
         }
     }
 
@@ -6274,22 +6318,51 @@ class RoomClient {
         resizeChatRoom();
     }
 
-    chatCenter() {
+    /** Сброс позиционирования чата (pin/maximize/drag конфликтуют через transform/right). */
+    resetChatRoomPositionStyles() {
+        chatRoom.classList.remove('panel-slide-in');
         chatRoom.style.position = 'fixed';
-        chatRoom.style.transform = 'translate(-50%, -50%)';
+        chatRoom.style.inset = '';
+        chatRoom.style.top = '';
+        chatRoom.style.left = '';
+        chatRoom.style.right = '';
+        chatRoom.style.bottom = '';
+        chatRoom.style.transform = '';
+        chatRoom.style.margin = '';
+    }
+
+    /** Развёрнутый чат: на весь viewport, без translate. */
+    chatFillViewport() {
+        this.resetChatRoomPositionStyles();
+        chatRoom.style.position = 'fixed';
+        chatRoom.style.top = '0';
+        chatRoom.style.left = '0';
+        chatRoom.style.right = '0';
+        chatRoom.style.bottom = '0';
+        chatRoom.style.transform = 'none';
+        chatRoom.style.margin = '0';
+        chatRoom.style.zIndex = '12';
+    }
+
+    chatCenter() {
+        this.resetChatRoomPositionStyles();
+        chatRoom.style.position = 'fixed';
         chatRoom.style.top = '50%';
         chatRoom.style.left = '50%';
+        chatRoom.style.transform = 'translate(-50%, -50%)';
+        chatRoom.style.zIndex = '5';
     }
 
     chatPinned() {
+        this.resetChatRoomPositionStyles();
         chatRoom.style.position = 'absolute';
-        chatRoom.style.top = 0;
-        chatRoom.style.right = 0;
-        chatRoom.style.left = null;
-        chatRoom.style.transform = null;
+        chatRoom.style.top = '0';
+        chatRoom.style.right = '0';
+        chatRoom.style.left = 'auto';
+        chatRoom.style.bottom = '0';
+        chatRoom.style.transform = 'none';
         document.documentElement.style.setProperty('--msger-width', '25%');
         document.documentElement.style.setProperty('--msger-height', '100%');
-        chatRoom.classList.remove('panel-slide-in');
         void chatRoom.offsetWidth; // force reflow so the animation always restarts
         chatRoom.classList.add('panel-slide-in');
     }
@@ -12366,6 +12439,25 @@ class RoomClient {
         };
     }
 
+    /** Синк флага/layout кружка в this.peers (join / newProducers / updatePeerInfo). */
+    syncPeerCamBubbleState(peerId, info) {
+        if (!peerId || !info) return;
+        let peer = this.peers?.get?.(peerId);
+        if (!peer) {
+            peer = { peer_info: { peer_id: peerId } };
+            this.peers.set(peerId, peer);
+        }
+        if (!peer.peer_info) peer.peer_info = { peer_id: peerId };
+        if (info.peer_cam_bubble !== undefined) {
+            peer.peer_info.peer_cam_bubble = Boolean(info.peer_cam_bubble);
+            if (!info.peer_cam_bubble) peer.peer_info.peer_cam_bubble_layout = null;
+        }
+        if (info.peer_cam_bubble_layout !== undefined && info.peer_cam_bubble_layout !== null) {
+            peer.peer_info.peer_cam_bubble_layout = info.peer_cam_bubble_layout;
+            peer.peer_info.peer_cam_bubble = true;
+        }
+    }
+
     isCamBubbleActiveForPeer(peerId) {
         if (peerId === this.peer_id) return Boolean(this.peer_info?.peer_cam_bubble);
         const peer = this.peers?.get?.(peerId);
@@ -12385,13 +12477,53 @@ class RoomClient {
         for (const tile of tiles) {
             if (tile.dataset.peerId === peerId) return tile;
         }
-        // fallback: локальная камера по name=peerId
+        // fallback: камера по name=peerId (локальная и remote)
         if (mediaKind === 'video') {
             const video = document.querySelector(`video[name="${peerId}"]`);
-            const cam = video?.closest('div');
-            if (cam) return cam;
+            const cam = video?.closest('.Camera, .has-cam-bubble, div');
+            if (cam) {
+                if (!cam.dataset.peerId) cam.dataset.peerId = peerId;
+                if (!cam.dataset.mediaKind) cam.dataset.mediaKind = 'video';
+                return cam;
+            }
         }
         return null;
+    }
+
+    scheduleCamBubbleRetry(peerId, attempts = 8) {
+        if (!peerId) return;
+        if (!this._camBubbleRetryTimers) this._camBubbleRetryTimers = new Map();
+        const prev = this._camBubbleRetryTimers.get(peerId);
+        if (prev) clearTimeout(prev);
+        let left = attempts;
+        const tick = () => {
+            if (!this.isCamBubbleActiveForPeer(peerId)) {
+                this._camBubbleRetryTimers.delete(peerId);
+                return;
+            }
+            const ok = this.applyCamBubble(peerId);
+            left -= 1;
+            if (ok || left <= 0) {
+                this._camBubbleRetryTimers.delete(peerId);
+                return;
+            }
+            const t = setTimeout(tick, 200);
+            this._camBubbleRetryTimers.set(peerId, t);
+        };
+        const t = setTimeout(tick, 80);
+        this._camBubbleRetryTimers.set(peerId, t);
+    }
+
+    refreshAllCamBubbles() {
+        try {
+            if (this.peer_info?.peer_cam_bubble) this.scheduleCamBubbleRetry(this.peer_id);
+            this.peers?.forEach?.((peer, peerId) => {
+                if (peerId === this.peer_id) return;
+                if (peer?.peer_info?.peer_cam_bubble) this.scheduleCamBubbleRetry(peerId);
+            });
+        } catch (err) {
+            console.warn('refreshAllCamBubbles', err);
+        }
     }
 
     applyCamBubbleStageLayout(active) {
@@ -12445,8 +12577,17 @@ class RoomClient {
 
     encodeCamBubbleLayout(layout) {
         const L = this.normalizeCamBubbleLayout(layout);
-        // Компактная строка — переживает XSS-sanitize лучше, чем JSON с кавычками.
-        return [L.x, L.y, L.size, L.scale, L.ox, L.oy, L.border ? 1 : 0].join(',');
+        // Целые + underscore: переживают XSS/sanitize надёжнее, чем "0.1,0.2,..."
+        return [
+            'v1',
+            Math.round(L.x * 1000),
+            Math.round(L.y * 1000),
+            Math.round(L.size * 1000),
+            Math.round(L.scale * 1000),
+            Math.round(L.ox * 1000),
+            Math.round(L.oy * 1000),
+            L.border ? 1 : 0,
+        ].join('_');
     }
 
     decodeCamBubbleLayout(raw) {
@@ -12460,7 +12601,24 @@ class RoomClient {
                 /* fallthrough */
             }
         }
-        const p = s.split(',').map((v) => Number(v));
+        // v1_x_y_size_scale_ox_oy_border (тысячные)
+        if (s.startsWith('v1_') || s.includes('_')) {
+            const parts = s.split('_');
+            const nums = (parts[0] === 'v1' ? parts.slice(1) : parts).map((v) => Number(v));
+            if (nums.length >= 6 && !nums.some((n) => Number.isNaN(n))) {
+                return this.normalizeCamBubbleLayout({
+                    x: nums[0] / 1000,
+                    y: nums[1] / 1000,
+                    size: nums[2] / 1000,
+                    scale: nums[3] / 1000,
+                    ox: nums[4] / 1000,
+                    oy: nums[5] / 1000,
+                    border: nums[6] === undefined ? true : nums[6] !== 0,
+                });
+            }
+        }
+        // legacy: x,y,size,scale,ox,oy,border
+        const p = s.split(/[,|;]/).map((v) => Number(v));
         if (p.length < 6 || p.some((n) => Number.isNaN(n))) return this.getDefaultCamBubbleLayout();
         return this.normalizeCamBubbleLayout({
             x: p[0],
@@ -12469,7 +12627,7 @@ class RoomClient {
             scale: p[3],
             ox: p[4],
             oy: p[5],
-            border: p[6] === undefined ? true : Boolean(p[6]),
+            border: p[6] === undefined ? true : Number(p[6]) !== 0,
         });
     }
 
@@ -12484,22 +12642,41 @@ class RoomClient {
         bubble.classList.toggle('no-border', !L.border);
         bubble.classList.toggle('is-editable', Boolean(editable));
 
-        // Кадр: translate по X/Y + scale. object-position по Y у cover/16:9 почти не работает.
+        // Кадр: translate по X/Y + scale
         const panX = L.ox * 100;
         const panY = L.oy * 100;
+        const transform = `translate(${panX}%, ${panY}%) scale(${L.scale})`;
         bubbleVideo.style.objectFit = 'cover';
-        bubbleVideo.style.objectPosition = '50% 50%';
-        bubbleVideo.style.transform = `translate(${panX}%, ${panY}%) scale(${L.scale})`;
-        bubbleVideo.style.transformOrigin = 'center center';
+        bubbleVideo.style.setProperty('object-position', '50% 50%', 'important');
+        bubbleVideo.style.setProperty('transform', transform, 'important');
+        bubbleVideo.style.setProperty('transform-origin', 'center center', 'important');
         bubbleVideo.classList.remove('mirror');
 
         bubble.dataset.layout = this.encodeCamBubbleLayout(L);
         if (editable) {
             this._camBubbleEl = bubble;
-            this.positionCamBubbleChrome();
+            this.positionCamBubbleEditBtn();
             if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(L);
         }
         return L;
+    }
+
+    /** Применить пришедший layout к уже существующему кружку у зрителя. */
+    applyRemoteCamBubbleLayout(peerId, layoutRaw) {
+        if (!peerId) return;
+        const layout = this.decodeCamBubbleLayout(layoutRaw);
+        const screenTile = this.getPeerMediaTile(peerId, 'screen');
+        const bubble = screenTile?.querySelector?.('.cam-bubble');
+        const bubbleVideo = bubble?.querySelector?.('video');
+        if (bubble && bubbleVideo) {
+            const editable = peerId === this.peer_id && Boolean(isPresenter);
+            this.applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, editable);
+            return true;
+        }
+        // Кружка ещё нет — полная сборка + retry
+        this.refreshCamBubble(peerId);
+        this.scheduleCamBubbleRetry(peerId);
+        return false;
     }
 
     ensureCamBubbleEditBtn() {
@@ -12527,11 +12704,11 @@ class RoomClient {
         if (panel) return panel;
         panel = document.createElement('div');
         panel.id = 'camBubbleControlPanel';
-        panel.setAttribute('role', 'toolbar');
+        panel.setAttribute('role', 'dialog');
         panel.setAttribute('aria-label', 'Настройки кружка камеры');
         panel.innerHTML = `
-            <div class="cam-bubble-panel-head">
-                <span>Кружок камеры</span>
+            <div class="cam-bubble-panel-head" title="Перетащите панель">
+                <span class="cam-bubble-panel-drag"><i class="fas fa-grip-vertical"></i> Кружок камеры</span>
                 <button type="button" class="cam-bubble-panel-close" title="Закрыть" aria-label="Закрыть">×</button>
             </div>
             <div class="cam-bubble-panel-modes">
@@ -12548,9 +12725,10 @@ class RoomClient {
                 <span>Масштаб</span>
                 <input type="range" id="camBubbleScaleRange" min="115" max="250" step="5" value="135" />
             </label>
-            <div class="cam-bubble-panel-hint">«Кадр»: тяните лицо · колёсико — зум</div>
+            <div class="cam-bubble-panel-hint">«Кадр»: тяните лицо · колёсико — зум · панель можно перетащить</div>
         `;
         document.body.appendChild(panel);
+        this.bindCamBubblePanelDrag(panel);
 
         panel.addEventListener('pointerdown', (e) => e.stopPropagation());
         panel.addEventListener('click', (e) => {
@@ -12559,10 +12737,10 @@ class RoomClient {
                 this.setCamBubblePanelOpen(false);
                 return;
             }
-            const btn = e.target.closest('[data-cam-mode]');
-            if (!btn || !this._camBubbleEditor) return;
+            const modeBtn = e.target.closest('[data-cam-mode]');
+            if (!modeBtn || !this._camBubbleEditor) return;
             e.preventDefault();
-            this._camBubbleEditor.onToolbarAction(btn.getAttribute('data-cam-mode'));
+            this._camBubbleEditor.onToolbarAction(modeBtn.getAttribute('data-cam-mode'));
         });
 
         const sizeRange = panel.querySelector('#camBubbleSizeRange');
@@ -12588,20 +12766,92 @@ class RoomClient {
                 },
                 true
             );
-            window.addEventListener('resize', () => this.positionCamBubbleChrome());
-            window.addEventListener('scroll', () => this.positionCamBubbleChrome(), true);
+            // Только иконка у кружка — панель независима
+            window.addEventListener('resize', () => this.positionCamBubbleEditBtn());
+            window.addEventListener('scroll', () => this.positionCamBubbleEditBtn(), true);
         }
 
         return panel;
     }
 
-    positionCamBubbleChrome() {
+    bindCamBubblePanelDrag(panel) {
+        if (panel.dataset.dragBound === '1') return;
+        panel.dataset.dragBound = '1';
+        const head = panel.querySelector('.cam-bubble-panel-head');
+        if (!head) return;
+
+        let dragging = false;
+        let startX = 0;
+        let startY = 0;
+        let originLeft = 0;
+        let originTop = 0;
+
+        head.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            if (e.target.closest('.cam-bubble-panel-close')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const rect = panel.getBoundingClientRect();
+            dragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            originLeft = rect.left;
+            originTop = rect.top;
+            panel.classList.add('is-dragging');
+            head.setPointerCapture?.(e.pointerId);
+        });
+
+        const onMove = (e) => {
+            if (!dragging) return;
+            const pw = panel.offsetWidth || 240;
+            const ph = panel.offsetHeight || 200;
+            let left = originLeft + (e.clientX - startX);
+            let top = originTop + (e.clientY - startY);
+            left = Math.min(Math.max(8, left), window.innerWidth - pw - 8);
+            top = Math.min(Math.max(8, top), window.innerHeight - ph - 8);
+            panel.style.left = `${left}px`;
+            panel.style.top = `${top}px`;
+            panel.style.right = 'auto';
+            panel.style.bottom = 'auto';
+        };
+
+        const onEnd = (e) => {
+            if (!dragging) return;
+            dragging = false;
+            panel.classList.remove('is-dragging');
+            try {
+                head.releasePointerCapture?.(e.pointerId);
+            } catch {
+                /* ignore */
+            }
+        };
+
+        head.addEventListener('pointermove', onMove);
+        head.addEventListener('pointerup', onEnd);
+        head.addEventListener('pointercancel', onEnd);
+    }
+
+    centerCamBubblePanel() {
+        const panel = this.ensureCamBubbleControlPanel();
+        panel.classList.add('show');
+        // После display:flex нужен кадр для размеров
+        const pw = panel.offsetWidth || 240;
+        const ph = panel.offsetHeight || 200;
+        const left = Math.max(8, Math.round((window.innerWidth - pw) / 2));
+        const top = Math.max(8, Math.round((window.innerHeight - ph) / 2));
+        panel.style.left = `${left}px`;
+        panel.style.top = `${top}px`;
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+    }
+
+    /** Только иконка карандаша у кружка — панель к кружку не привязана. */
+    positionCamBubbleEditBtn() {
         const bubble = this._camBubbleEl;
         const btn = document.getElementById('camBubbleEditBtn');
-        const panel = document.getElementById('camBubbleControlPanel');
-        if (!bubble?.isConnected || !btn) {
-            btn?.classList.remove('show');
-            panel?.classList.remove('show');
+        if (!btn) return;
+        if (!bubble?.isConnected) {
+            btn.classList.remove('show');
             return;
         }
 
@@ -12614,30 +12864,17 @@ class RoomClient {
         btn.classList.add('show');
         btn.classList.toggle('is-open', Boolean(this._camBubblePanelOpen));
 
-        // Иконка у правого верхнего края кружка
         let btnLeft = r.right - 10;
         let btnTop = r.top - 6;
         btnLeft = Math.min(Math.max(8, btnLeft), window.innerWidth - 42);
         btnTop = Math.min(Math.max(8, btnTop), window.innerHeight - 42);
         btn.style.left = `${btnLeft}px`;
         btn.style.top = `${btnTop}px`;
+    }
 
-        if (!panel || !this._camBubblePanelOpen) return;
-        panel.classList.add('show');
-
-        // Панель рядом с кружком (справа, иначе слева / снизу)
-        const pw = panel.offsetWidth || 240;
-        const ph = panel.offsetHeight || 200;
-        let left = r.right + 10;
-        let top = r.top;
-        if (left + pw > window.innerWidth - 8) left = r.left - pw - 10;
-        if (left < 8) left = 8;
-        if (top + ph > window.innerHeight - 8) top = window.innerHeight - ph - 8;
-        if (top < 8) top = 8;
-        panel.style.left = `${left}px`;
-        panel.style.top = `${top}px`;
-        panel.style.right = 'auto';
-        panel.style.bottom = 'auto';
+    // alias для старых вызовов
+    positionCamBubbleChrome() {
+        this.positionCamBubbleEditBtn();
     }
 
     syncCamBubbleControlPanel(layout) {
@@ -12652,13 +12889,12 @@ class RoomClient {
         if (scaleRange && document.activeElement !== scaleRange) {
             scaleRange.value = String(Math.round(L.scale * 100));
         }
-        panel.querySelectorAll('[data-cam-mode]').forEach((btn) => {
-            const mode = btn.getAttribute('data-cam-mode');
+        panel.querySelectorAll('[data-cam-mode]').forEach((modeBtn) => {
+            const mode = modeBtn.getAttribute('data-cam-mode');
             if (mode === 'move' || mode === 'crop') {
-                btn.classList.toggle('is-active', (this._camBubbleEditMode || 'move') === mode);
+                modeBtn.classList.toggle('is-active', (this._camBubbleEditMode || 'move') === mode);
             }
         });
-        this.positionCamBubbleChrome();
     }
 
     setCamBubblePanelOpen(open) {
@@ -12667,10 +12903,25 @@ class RoomClient {
         const btn = this.ensureCamBubbleEditBtn();
         panel.classList.toggle('show', this._camBubblePanelOpen);
         btn.classList.toggle('is-open', this._camBubblePanelOpen);
-        if (this._camBubblePanelOpen && this._camBubbleEl?.dataset?.layout) {
-            this.syncCamBubbleControlPanel(this.decodeCamBubbleLayout(this._camBubbleEl.dataset.layout));
+
+        const bubble = this._camBubbleEl;
+        if (bubble) {
+            bubble.classList.toggle('panel-open', this._camBubblePanelOpen);
+            if (!this._camBubblePanelOpen) {
+                // Закрыли панель — выходим из «Кадр», нельзя двигать лицо/зум
+                bubble.dataset.editMode = 'move';
+                this._camBubbleEditMode = 'move';
+                bubble.classList.remove('mode-crop', 'is-dragging');
+            }
         }
-        this.positionCamBubbleChrome();
+
+        if (this._camBubblePanelOpen) {
+            if (bubble?.dataset?.layout) {
+                this.syncCamBubbleControlPanel(this.decodeCamBubbleLayout(bubble.dataset.layout));
+            }
+            this.centerCamBubblePanel();
+        }
+        this.positionCamBubbleEditBtn();
     }
 
     toggleCamBubbleControlPanel() {
@@ -12690,14 +12941,11 @@ class RoomClient {
         const screenTile = this.getPeerMediaTile(peerId, 'screen');
         const videoTile = this.getPeerMediaTile(peerId, 'video');
         if (!screenTile || !videoTile) {
-            if (peerId === this.peer_id) {
-                clearTimeout(this._camBubbleRetry);
-                this._camBubbleRetry = setTimeout(() => this.refreshCamBubble(peerId), 120);
-            }
             return false;
         }
 
-        const sourceVideo = videoTile.querySelector('video');
+        const sourceVideo =
+            videoTile.querySelector('video') || document.querySelector(`video[name="${peerId}"]`);
         if (!sourceVideo?.srcObject) return false;
 
         screenTile.classList.add('Camera', 'has-cam-bubble');
@@ -12763,7 +13011,13 @@ class RoomClient {
             this.ensureCamBubbleControlPanel();
             this.bindCamBubbleEditor(bubble, bubbleVideo, screenTile);
             this._camBubbleEl = bubble;
-            this.positionCamBubbleChrome();
+            bubble.classList.toggle('panel-open', Boolean(this._camBubblePanelOpen));
+            if (!this._camBubblePanelOpen) {
+                bubble.dataset.editMode = 'move';
+                this._camBubbleEditMode = 'move';
+                bubble.classList.remove('mode-crop');
+            }
+            this.positionCamBubbleEditBtn();
             if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(layout);
         } else {
             bubble.querySelector('.cam-bubble-resize')?.remove();
@@ -12813,11 +13067,11 @@ class RoomClient {
 
         const readLayout = () => this.decodeCamBubbleLayout(bubble.dataset.layout || '');
 
-        const commit = (layout, broadcast) => {
+        const commit = (layout, broadcast, immediate = true) => {
             const L = this.applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, true);
             this.peer_info.peer_cam_bubble_layout = this.encodeCamBubbleLayout(L);
             this.peer_info.peer_cam_bubble = true;
-            if (broadcast) this.broadcastCamBubbleLayout(L);
+            if (broadcast) this.broadcastCamBubbleLayout(L, immediate);
         };
 
         const setEditMode = (mode) => {
@@ -12836,12 +13090,12 @@ class RoomClient {
             if (mode === 'border') {
                 const cur = readLayout();
                 cur.border = !cur.border;
-                commit(cur, true);
+                commit(cur, true, true);
                 this.userLog('info', cur.border ? 'Рамка включена' : 'Рамка выключена', 'top-end', 2000);
                 return;
             }
             if (mode === 'reset') {
-                commit(this.getDefaultCamBubbleLayout(), true);
+                commit(this.getDefaultCamBubbleLayout(), true, true);
                 setEditMode('move');
                 this.userLog('info', 'Кружок сброшен', 'top-end', 2000);
                 return;
@@ -12854,24 +13108,30 @@ class RoomClient {
             setSize: (size) => {
                 const cur = readLayout();
                 cur.size = size;
-                commit(cur, false);
+                // live → студенты видят размер/масштаб сразу (троттл)
+                commit(cur, true, false);
             },
             setScale: (scale) => {
                 const cur = readLayout();
                 cur.scale = scale;
-                commit(cur, false);
+                commit(cur, true, false);
             },
-            broadcast: () => commit(readLayout(), true),
+            broadcast: () => commit(readLayout(), true, true),
         };
 
         bubble.addEventListener('pointerdown', (e) => {
             if (e.button !== 0) return;
             if (e.target.closest('.cam-bubble-toolbar')) return;
+            // Редактирование только при открытой панели
+            if (!this._camBubblePanelOpen) return;
             e.preventDefault();
             e.stopPropagation();
             const isResize = e.target.classList?.contains('cam-bubble-resize');
             const editMode = bubble.dataset.editMode || 'move';
-            dragMode = isResize ? 'resize' : editMode === 'crop' ? 'crop' : 'move';
+            // Кадр (pan) — только в режиме «Кадр»; иначе двигаем/ресайзим кружок
+            if (isResize) dragMode = 'resize';
+            else if (editMode === 'crop') dragMode = 'crop';
+            else dragMode = 'move';
             startX = e.clientX;
             startY = e.clientY;
             startLayout = readLayout();
@@ -12880,7 +13140,7 @@ class RoomClient {
         });
 
         bubble.addEventListener('pointermove', (e) => {
-            if (!dragMode || !startLayout) return;
+            if (!this._camBubblePanelOpen || !dragMode || !startLayout) return;
             const screenRect = screenTile.getBoundingClientRect();
             const bubbleRect = bubble.getBoundingClientRect();
             if (!screenRect.width || !screenRect.height || !bubbleRect.width) return;
@@ -12912,7 +13172,7 @@ class RoomClient {
             } catch {
                 /* ignore */
             }
-            commit(readLayout(), true);
+            commit(readLayout(), true, true);
             this.positionCamBubbleChrome();
         };
         bubble.addEventListener('pointerup', endDrag);
@@ -12921,12 +13181,15 @@ class RoomClient {
         bubble.addEventListener(
             'wheel',
             (e) => {
-                if ((bubble.dataset.editMode || 'move') !== 'crop' && !e.ctrlKey) return;
+                // Зум лица — только панель открыта + режим «Кадр»
+                if (!this._camBubblePanelOpen) return;
+                if ((bubble.dataset.editMode || 'move') !== 'crop') return;
                 e.preventDefault();
                 e.stopPropagation();
                 const cur = readLayout();
                 cur.scale = cur.scale * (e.deltaY > 0 ? 0.94 : 1.06);
-                commit(cur, true);
+                commit(cur, true, true);
+                if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(cur);
             },
             { passive: false }
         );
@@ -12934,24 +13197,25 @@ class RoomClient {
 
     _makeCamBubbleEditorApi(bubble, bubbleVideo, screenTile) {
         const readLayout = () => this.decodeCamBubbleLayout(bubble.dataset.layout || '');
-        const commit = (layout, broadcast) => {
+        const commit = (layout, broadcast, immediate = true) => {
             const L = this.applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, true);
             this.peer_info.peer_cam_bubble_layout = this.encodeCamBubbleLayout(L);
             this.peer_info.peer_cam_bubble = true;
-            if (broadcast) this.broadcastCamBubbleLayout(L);
+            if (broadcast) this.broadcastCamBubbleLayout(L, immediate);
         };
         return {
             onToolbarAction: (mode) => {
                 if (mode === 'border') {
                     const cur = readLayout();
                     cur.border = !cur.border;
-                    commit(cur, true);
+                    commit(cur, true, true);
                     return;
                 }
                 if (mode === 'reset') {
-                    commit(this.getDefaultCamBubbleLayout(), true);
+                    commit(this.getDefaultCamBubbleLayout(), true, true);
                     bubble.dataset.editMode = 'move';
                     this._camBubbleEditMode = 'move';
+                    bubble.classList.remove('mode-crop');
                     if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(readLayout());
                     return;
                 }
@@ -12963,31 +13227,38 @@ class RoomClient {
             setSize: (size) => {
                 const cur = readLayout();
                 cur.size = size;
-                commit(cur, false);
+                commit(cur, true, false);
             },
             setScale: (scale) => {
                 const cur = readLayout();
                 cur.scale = scale;
-                commit(cur, false);
+                commit(cur, true, false);
             },
-            broadcast: () => commit(readLayout(), true),
+            broadcast: () => commit(readLayout(), true, true),
         };
     }
 
-    broadcastCamBubbleLayout(layout) {
-        clearTimeout(this._camBubbleLayoutTimer);
-        this._camBubbleLayoutTimer = setTimeout(() => {
+    broadcastCamBubbleLayout(layout, immediate = false) {
+        const send = () => {
             const L = this.normalizeCamBubbleLayout(layout);
             const encoded = this.encodeCamBubbleLayout(L);
             this.peer_info.peer_cam_bubble_layout = encoded;
             this.updatePeerInfo(this.peer_name, this.peer_id, 'camBubbleLayout', encoded, true);
-        }, 60);
+        };
+        clearTimeout(this._camBubbleLayoutTimer);
+        if (immediate) {
+            send();
+            return;
+        }
+        // Троттл на drag; финальный commit всегда шлёт immediate=true
+        this._camBubbleLayoutTimer = setTimeout(send, 40);
     }
 
     refreshCamBubble(peerId) {
         if (!peerId) return;
         if (this.isCamBubbleActiveForPeer(peerId)) {
-            this.applyCamBubble(peerId);
+            const ok = this.applyCamBubble(peerId);
+            if (!ok) this.scheduleCamBubbleRetry(peerId);
         } else {
             this.clearCamBubble(peerId);
         }
@@ -13022,12 +13293,16 @@ class RoomClient {
         this.peer_info.peer_cam_bubble = on;
         this.updatePeerInfo(this.peer_name, this.peer_id, 'camBubble', on, true);
         if (on) {
-            this.broadcastCamBubbleLayout(this.peer_info.peer_cam_bubble_layout);
+            this.broadcastCamBubbleLayout(this.peer_info.peer_cam_bubble_layout, true);
+            // Повторная рассылка — на случай, если студент ещё не успел создать тайлы
+            setTimeout(() => {
+                this.updatePeerInfo(this.peer_name, this.peer_id, 'camBubble', true, true);
+                this.broadcastCamBubbleLayout(this.peer_info.peer_cam_bubble_layout, true);
+            }, 400);
         }
         // После pin тайлы стабилизируются с задержкой.
         this.refreshCamBubble(this.peer_id);
-        setTimeout(() => this.refreshCamBubble(this.peer_id), 50);
-        setTimeout(() => this.refreshCamBubble(this.peer_id), 250);
+        this.scheduleCamBubbleRetry(this.peer_id);
         this.syncCamBubbleButton();
         this.userLog(
             'info',
