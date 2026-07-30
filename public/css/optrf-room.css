@@ -405,25 +405,35 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         scroll-snap-align: unset;
     }
 
-    /* Порядок: мик · кам · рука · чат · люди · ещё · выход */
+    /* Порядок: мик · кам · экран/кружок · рука · чат · люди · ещё · выход */
     #startAudioSplit {
         order: 1;
     }
     #startVideoSplit {
         order: 2;
     }
-    #raiseHandButton,
-    #lowerHandButton {
+    #swapCameraButton {
         order: 3;
     }
-    #chatButton {
+    #startScreenButton,
+    #stopScreenButton {
         order: 4;
     }
-    #participantsButton {
+    #camBubbleButton {
         order: 5;
     }
-    #settingsSplit {
+    #raiseHandButton,
+    #lowerHandButton {
         order: 6;
+    }
+    #chatButton {
+        order: 7;
+    }
+    #participantsButton {
+        order: 8;
+    }
+    #settingsSplit {
+        order: 9;
     }
     #exitDropdown {
         order: 20;
@@ -431,24 +441,25 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
     }
 
     /* Вторичное — только через меню «Ещё» */
-    #startScreenButton,
-    #camBubbleButton,
     #hearOnlyPresenterButton,
     #roomThemeHost,
     #phoneCabinetButton {
         display: none !important;
     }
 
-    /* Смена камеры — в доке, если доступна */
-    #swapCameraButton:not(.hidden) {
+    /* Смена камеры / стоп экрана / кружок — в доке, если доступны */
+    #swapCameraButton:not(.hidden),
+    #stopScreenButton:not(.hidden),
+    #camBubbleButton:not(.hidden) {
         display: inline-flex !important;
-        order: 2;
     }
 
-    /* Демонстрация активна — стоп остаётся в доке */
-    #stopScreenButton:not(.hidden) {
-        display: inline-flex !important;
-        order: 2;
+    /*
+     * Старт экрана на узком viewport обычно прячем (на телефоне редко шарят),
+     * но если кнопка уже показана JS (десктоп-эмуляция / планшет) — оставляем.
+     */
+    #startScreenButton.hidden {
+        display: none !important;
     }
 
     /* Убрать стрелки выбора устройств — экономят ~56px */
