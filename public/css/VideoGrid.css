@@ -691,25 +691,27 @@
 /* Иконка редактирования и панель — fixed, привязаны к кружку через JS */
 #camBubbleEditBtn {
     position: fixed;
-    z-index: 1201;
+    z-index: 1400;
     display: none;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
     margin: 0;
     padding: 0;
-    border: 2px solid rgba(255, 255, 255, 0.9);
+    border: 2px solid #fff;
     border-radius: 50%;
-    background: rgba(12, 16, 22, 0.92);
-    color: #e8eef5;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    background: var(--optrf-accent, #00a8e8);
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
     cursor: pointer;
     pointer-events: auto;
 }
 
 #camBubbleEditBtn.show {
-    display: flex;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 #camBubbleEditBtn.is-open {

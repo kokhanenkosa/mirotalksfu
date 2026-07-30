@@ -13067,19 +13067,29 @@ class RoomClient {
         return L;
     }
 
+    /** Свой кружок всегда редактируем (isPresenter часто false после join/reconnect). */
+    isCamBubbleEditable(peerId) {
+        return Boolean(peerId && peerId === this.peer_id);
+    }
+
     /** После resize плиток — восстановить кадр всех кружков */
     reapplyCamBubbleLayouts() {
         document.querySelectorAll('.cam-bubble').forEach((bubble) => {
             const video = bubble.querySelector('video');
             if (!video || !bubble.dataset.layout) return;
             const peerId = bubble.closest('[data-peer-id]')?.dataset?.peerId;
-            const editable = peerId === this.peer_id && Boolean(isPresenter);
+            const editable = this.isCamBubbleEditable(peerId);
             this.applyCamBubbleLayoutStyles(
                 bubble,
                 video,
                 this.decodeCamBubbleLayout(bubble.dataset.layout),
                 editable
             );
+            if (editable) {
+                this._camBubbleEl = bubble;
+                this.ensureCamBubbleEditBtn();
+                this.positionCamBubbleEditBtn();
+            }
         });
     }
 
@@ -13091,8 +13101,15 @@ class RoomClient {
         const bubble = screenTile?.querySelector?.('.cam-bubble');
         const bubbleVideo = bubble?.querySelector?.('video');
         if (bubble && bubbleVideo) {
-            const editable = peerId === this.peer_id && Boolean(isPresenter);
+            const editable = this.isCamBubbleEditable(peerId);
             this.applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, editable);
+            if (editable) {
+                this._camBubbleEl = bubble;
+                this.ensureCamBubbleEditBtn();
+                this.ensureCamBubbleControlPanel();
+                this.bindCamBubbleEditor(bubble, bubbleVideo, screenTile);
+                this.positionCamBubbleEditBtn();
+            }
             return true;
         }
         // Кружка ещё нет — полная сборка + retry
@@ -13154,6 +13171,7 @@ class RoomClient {
                 <button type="button" data-cam-mode="move" class="is-active" title="Переместить кружок по экрану">Кружок</button>
                 <button type="button" data-cam-mode="crop" title="Сдвинуть и масштабировать лицо в круге">Кадр</button>
                 <button type="button" data-cam-mode="reset" title="Сбросить">Сброс</button>
+                <button type="button" data-cam-mode="off" title="Выключить кружок">Выкл</button>
             </div>
             <label class="cam-bubble-panel-slider">
                 <span>Размер</span>
@@ -13538,7 +13556,7 @@ class RoomClient {
             screenVideo.dataset.camBubbleFit = '1';
         }
 
-        const editable = peerId === this.peer_id && Boolean(isPresenter);
+        const editable = this.isCamBubbleEditable(peerId);
         let layout = this.getCamBubbleLayoutForPeer(peerId);
         if (peerId !== this.peer_id) {
             const peer = this.peers?.get?.(peerId);
@@ -13568,12 +13586,16 @@ class RoomClient {
                 this._camBubbleEditMode = 'move';
                 bubble.classList.remove('mode-crop');
             }
+            // После layout/pin rect может быть 0 — повторить позиционирование карандаша
             this.positionCamBubbleEditBtn();
+            requestAnimationFrame(() => this.positionCamBubbleEditBtn());
+            setTimeout(() => this.positionCamBubbleEditBtn(), 120);
+            setTimeout(() => this.positionCamBubbleEditBtn(), 400);
             if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(layout);
         } else {
             bubble.querySelector('.cam-bubble-resize')?.remove();
             bubble.querySelector('.cam-bubble-toolbar')?.remove();
-            if (peerId === this.peer_id) this.hideCamBubbleControlPanel();
+            // Чужой кружок — не трогаем свою панель/карандаш
         }
 
         videoTile.classList.add('cam-bubble-source-hidden');
@@ -13638,6 +13660,11 @@ class RoomClient {
         };
 
         const onToolbarAction = (mode) => {
+            if (mode === 'off') {
+                this.setCamBubblePanelOpen(false);
+                this.setCamBubbleEnabled(false);
+                return;
+            }
             if (mode === 'reset') {
                 commit(this.getDefaultCamBubbleLayout(), true, true);
                 setEditMode('move');
@@ -13785,6 +13812,11 @@ class RoomClient {
         };
         return {
             onToolbarAction: (mode) => {
+                if (mode === 'off') {
+                    this.setCamBubblePanelOpen(false);
+                    this.setCamBubbleEnabled(false);
+                    return;
+                }
                 if (mode === 'reset') {
                     commit(this.getDefaultCamBubbleLayout(), true, true);
                     bubble.dataset.editMode = 'move';
@@ -13900,10 +13932,19 @@ class RoomClient {
         this.refreshCamBubble(this.peer_id);
         this.scheduleCamBubbleRetry(this.peer_id);
         this.syncCamBubbleButton();
+        if (on) {
+            // Сразу показать карандаш / панель — не ждать isPresenter
+            this.ensureCamBubbleEditBtn();
+            this.ensureCamBubbleControlPanel();
+            requestAnimationFrame(() => {
+                this.positionCamBubbleEditBtn();
+                this.setCamBubblePanelOpen(true);
+            });
+        }
         this.userLog(
             'info',
             on
-                ? 'Кружок включён. Настройки — по иконке карандаша у кружка.'
+                ? 'Кружок включён. Настройки — карандаш у кружка или снова кнопка кружка в панели.'
                 : 'Камера поверх экрана выключена',
             'top-end',
             5000

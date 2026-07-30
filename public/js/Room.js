@@ -2819,8 +2819,20 @@ function handleButtons() {
     };
     camBubbleButton.onclick = async () => {
         if (!rc) return;
-        const next = !rc.peer_info?.peer_cam_bubble;
-        await rc.setCamBubbleEnabled(next);
+        // Уже включён → открыть настройки (карандаш мог не успеть отрисоваться)
+        if (rc.peer_info?.peer_cam_bubble) {
+            rc.ensureCamBubbleEditBtn();
+            rc.positionCamBubbleEditBtn();
+            rc.toggleCamBubbleControlPanel();
+            return;
+        }
+        await rc.setCamBubbleEnabled(true);
+    };
+    // Выключить кружок — ПКМ по кнопке
+    camBubbleButton.oncontextmenu = async (e) => {
+        e.preventDefault();
+        if (!rc?.peer_info?.peer_cam_bubble) return;
+        await rc.setCamBubbleEnabled(false);
     };
     copyRtmpUrlButton.onclick = () => {
         rc.copyRTMPUrl(rtmpLiveUrl.value);
