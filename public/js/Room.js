@@ -373,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initCursorLightEffect();
     initDocumentListener();
     syncOPTRFTheme();
+    setupCompactUi();
     socket.once('connect', () => {
         initClient();
     });
@@ -4621,6 +4622,136 @@ function handleButtonsBar() {
     isDesktopDevice
         ? document.body.addEventListener('mousemove', showButtonsHandler)
         : document.body.addEventListener('touchstart', showButtonsHandler);
+    setupCompactUi();
+}
+
+/** Viewport-based compact UI (не путать с UA isMobileDevice). */
+function isCompactUiViewport() {
+    return window.matchMedia('(max-width: 640px)').matches;
+}
+
+function setupCompactUi() {
+    if (setupCompactUi._bound) {
+        applyCompactUi(isCompactUiViewport());
+        return;
+    }
+    setupCompactUi._bound = true;
+
+    const mq = window.matchMedia('(max-width: 640px)');
+    const onChange = () => applyCompactUi(mq.matches);
+    if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onChange);
+    else mq.addListener(onChange);
+
+    document.getElementById('settingsExtraMenu')?.addEventListener('click', (e) => {
+        const proxy = e.target.closest?.('[data-proxy-click]');
+        if (!proxy) return;
+        e.preventDefault();
+        const sel = proxy.getAttribute('data-proxy-click');
+        // stopScreen: если экран уже шарится — жмём stop
+        if (sel === '#startScreenButton') {
+            const stop = document.getElementById('stopScreenButton');
+            if (stop && !stop.classList.contains('hidden')) {
+                stop.click();
+                return;
+            }
+        }
+        const target = sel ? document.querySelector(sel) : null;
+        if (!target) return;
+        if (target.classList?.contains?.('hidden') && sel !== '#hearOnlyPresenterButton') return;
+        target.click();
+    });
+
+    // Когда мик/экран/кружок/тема появляются — обновить пункты «Ещё»
+    const resync = () => {
+        clearTimeout(setupCompactUi._resyncTimer);
+        setupCompactUi._resyncTimer = setTimeout(() => applyCompactUi(isCompactUiViewport()), 80);
+    };
+    if (typeof MutationObserver !== 'undefined') {
+        const obs = new MutationObserver(resync);
+        const scroller = document.getElementById('bottomButtonsScroller');
+        if (scroller) {
+            obs.observe(scroller, {
+                attributes: true,
+                subtree: true,
+                attributeFilter: ['class', 'style'],
+            });
+        }
+        const themeHost = document.getElementById('roomThemeHost');
+        if (themeHost) obs.observe(themeHost, { childList: true, subtree: true });
+    }
+
+    applyCompactUi(mq.matches);
+}
+
+function applyCompactUi(on) {
+    document.body.classList.toggle('optrf-compact-ui', Boolean(on));
+
+    const toggle = document.getElementById('settingsExtraToggle');
+    if (toggle) {
+        const icon = toggle.querySelector('i');
+        if (on) {
+            toggle.setAttribute('aria-label', 'Ещё');
+            toggle.title = 'Ещё';
+            if (icon) icon.className = 'fas fa-ellipsis';
+        } else {
+            toggle.setAttribute('aria-label', 'Меню настроек');
+            toggle.title = '';
+            if (icon) icon.className = 'fas fa-chevron-up';
+        }
+    }
+
+    // Синхронизировать видимость proxy-пунктов с реальными кнопками
+    const syncProxy = (proxyId, realSel) => {
+        const proxy = document.getElementById(proxyId);
+        const real = document.querySelector(realSel);
+        if (!proxy) return;
+        if (!on) {
+            proxy.classList.add('hidden');
+            return;
+        }
+        // Тема всегда доступна; остальные — если кнопка есть и не hidden
+        if (proxyId === 'compactThemeBtn') {
+            proxy.classList.toggle('hidden', !document.querySelector('#roomThemeHost .optrf-theme-option'));
+            return;
+        }
+        if (proxyId === 'compactScreenBtn') {
+            const start = document.getElementById('startScreenButton');
+            const stop = document.getElementById('stopScreenButton');
+            const can =
+                (start && !start.classList.contains('hidden')) || (stop && !stop.classList.contains('hidden'));
+            proxy.classList.toggle('hidden', !can);
+            proxy.innerHTML =
+                stop && !stop.classList.contains('hidden')
+                    ? '<i class="fas fa-stop-circle"></i> Остановить демонстрацию'
+                    : '<i class="fas fa-desktop"></i> Демонстрация экрана';
+            return;
+        }
+        if (proxyId === 'compactHearOnlyBtn') {
+            proxy.classList.toggle('hidden', !real);
+            return;
+        }
+        proxy.classList.toggle('hidden', !real || real.classList.contains('hidden'));
+    };
+
+    syncProxy('compactScreenBtn', '#startScreenButton');
+    syncProxy('compactCamBubbleBtn', '#camBubbleButton');
+    syncProxy('compactHearOnlyBtn', '#hearOnlyPresenterButton');
+    syncProxy('compactThemeBtn', '#roomThemeHost .optrf-theme-option');
+
+    if (typeof updateSettingsExtraGroups === 'function') {
+        try {
+            updateSettingsExtraGroups();
+        } catch {
+            /* ignore */
+        }
+    }
+
+    // Узкий viewport: док всегда виден (как на phone UA)
+    if (on && bottomButtons) {
+        bottomButtons.style.display = 'flex';
+        isButtonsBarOver = true;
+        isButtonsVisible = true;
+    }
 }
 
 function handleDropdownHover(dropdownElement = null) {
@@ -4679,9 +4810,11 @@ function showButtons() {
 }
 
 function checkButtonsBar() {
-    // На мобилке панель всегда на экране — иначе кнопки пропадают через 10с.
-    if (isMobileDevice || localStorageSettings.keep_buttons_visible) {
-        if (isMobileDevice) isButtonsBarOver = true;
+    // На мобилке / compact viewport панель всегда на экране — иначе кнопки пропадают через 10с.
+    const keepVisible =
+        isMobileDevice || isCompactUiViewport() || localStorageSettings.keep_buttons_visible;
+    if (keepVisible) {
+        if (isMobileDevice || isCompactUiViewport()) isButtonsBarOver = true;
         bottomButtons.style.display = 'flex';
         toggleClassElements('username', 'flex');
         isButtonsVisible = true;

@@ -450,6 +450,29 @@
                             <i class="fas fa-satellite-dish"></i> Перезапустить соединение
                         </button>
                         <button id="aboutButton" class="hidden"><i class="fas fa-question"></i> О сервисе</button>
+
+                        <!-- Compact UI: пункты вместо вторичных кнопок дока -->
+                        <div class="optrf-compact-extra">
+                            <div class="device-menu-divider extra-menu-divider" data-group="compact"></div>
+                            <div
+                                class="device-menu-header extra-menu-group"
+                                data-buttons="compactScreenBtn,compactCamBubbleBtn,compactHearOnlyBtn,compactThemeBtn"
+                            >
+                                ЕЩЁ НА ТЕЛЕФОНЕ
+                            </div>
+                            <button type="button" id="compactScreenBtn" data-proxy-click="#startScreenButton">
+                                <i class="fas fa-desktop"></i> Демонстрация экрана
+                            </button>
+                            <button type="button" id="compactCamBubbleBtn" data-proxy-click="#camBubbleButton">
+                                <i class="fas fa-circle-user"></i> Камера поверх экрана
+                            </button>
+                            <button type="button" id="compactHearOnlyBtn" data-proxy-click="#hearOnlyPresenterButton">
+                                <i class="fas fa-chalkboard-user"></i> Слышать только лектора
+                            </button>
+                            <button type="button" id="compactThemeBtn" data-proxy-click="#roomThemeHost .optrf-theme-option">
+                                <i class="fas fa-circle-half-stroke"></i> Тема оформления
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -94,13 +94,23 @@ function resizeVideoMedia() {
     if (typeof VideoDrawingOverlay !== 'undefined') {
         VideoDrawingOverlay.resizeAll();
     }
+
+    // После ресайза плиток заново применить layout кружка (иначе кадр «съезжает»)
+    try {
+        if (typeof rc !== 'undefined' && rc?.reapplyCamBubbleLayouts) rc.reapplyCamBubbleLayouts();
+    } catch {
+        /* ignore */
+    }
 }
 
 function resetZoom() {
     const videoElements = document.querySelectorAll('video');
     videoElements.forEach((video) => {
+        // Кадр кружка камеры — свой pan/zoom, не трогаем
+        if (video.closest('.cam-bubble')) return;
         video.style.transform = '';
         video.style.transformOrigin = 'center';
+        video.style.scale = '';
     });
 }
 

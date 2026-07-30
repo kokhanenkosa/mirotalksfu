@@ -334,3 +334,245 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
 #bottomButtons #phoneCabinetButton {
     display: none !important;
 }
+
+/* =========================================================
+   Mobile-first compact UI (viewport ≤640px / body.optrf-compact-ui)
+   ========================================================= */
+.optrf-compact-extra {
+    display: none;
+}
+
+@media screen and (max-width: 640px) {
+    :root {
+        --optrf-dock-h: calc(58px + env(safe-area-inset-bottom, 0px));
+        --optrf-topbar-h: calc(48px + env(safe-area-inset-top, 0px));
+    }
+
+    .optrf-compact-extra {
+        display: contents;
+    }
+
+    /* Сцена: место под топбар видео и нижний док */
+    #videoMediaContainer {
+        top: var(--optrf-topbar-h) !important;
+        height: calc(100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) !important;
+    }
+
+    #videoPinMediaContainer {
+        top: var(--optrf-topbar-h) !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: calc(100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) !important;
+    }
+
+    /* Нижний док: primary strip без горизонтального скролла */
+    #bottomButtons {
+        top: auto !important;
+        right: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        max-width: 100vw;
+        transform: none !important;
+        flex-direction: row !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        border-radius: 16px 16px 0 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        box-sizing: border-box;
+        background: color-mix(in srgb, var(--optrf-surface, #1a1d24) 94%, transparent);
+        padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    }
+
+    #bottomButtonsScroller {
+        display: flex;
+        width: 100%;
+        box-sizing: border-box;
+        padding: 6px 8px;
+        gap: 2px;
+        justify-content: space-between;
+        align-items: center;
+        overflow-x: hidden;
+        overflow-y: visible;
+        scroll-snap-type: none;
+        -webkit-overflow-scrolling: auto;
+    }
+
+    #bottomButtonsScroller > * {
+        flex: 0 0 auto;
+        scroll-snap-align: unset;
+    }
+
+    /* Порядок: мик · кам · рука · чат · люди · ещё · выход */
+    #startAudioSplit {
+        order: 1;
+    }
+    #startVideoSplit {
+        order: 2;
+    }
+    #raiseHandButton,
+    #lowerHandButton {
+        order: 3;
+    }
+    #chatButton {
+        order: 4;
+    }
+    #participantsButton {
+        order: 5;
+    }
+    #settingsSplit {
+        order: 6;
+    }
+    #exitDropdown {
+        order: 20;
+        margin-left: auto;
+    }
+
+    /* Вторичное — только через меню «Ещё» */
+    #startScreenButton,
+    #camBubbleButton,
+    #hearOnlyPresenterButton,
+    #roomThemeHost,
+    #phoneCabinetButton {
+        display: none !important;
+    }
+
+    /* Смена камеры — в доке, если доступна */
+    #swapCameraButton:not(.hidden) {
+        display: inline-flex !important;
+        order: 2;
+    }
+
+    /* Демонстрация активна — стоп остаётся в доке */
+    #stopScreenButton:not(.hidden) {
+        display: inline-flex !important;
+        order: 2;
+    }
+
+    /* Убрать стрелки выбора устройств — экономят ~56px */
+    #startAudioDeviceDropdown,
+    #startVideoDeviceDropdown {
+        display: none !important;
+    }
+
+    #bottomButtons .split-btn > button:not(.device-dropdown-toggle) {
+        border-radius: 12px !important;
+    }
+
+    #bottomButtons button {
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+        min-height: 44px;
+        font-size: 1.15rem;
+        padding: 8px;
+        border-radius: 12px;
+    }
+
+    /* Шестерёнка + «Ещё» компактнее */
+    #settingsSplit {
+        gap: 0;
+    }
+
+    #settingsExtraToggle {
+        width: 36px !important;
+        min-width: 36px !important;
+        height: 44px !important;
+        border-left: none !important;
+        border-radius: 0 12px 12px 0 !important;
+    }
+
+    #settingsButton {
+        border-radius: 12px 0 0 12px !important;
+    }
+
+    #settingsExtraToggle i {
+        font-size: 1rem;
+    }
+
+    /* Меню «Ещё» / exit — sheet над доком */
+    #bottomButtons #settingsExtraMenu,
+    #bottomButtons #exitMenu,
+    #bottomButtons #startAudioDeviceMenu,
+    #bottomButtons #startVideoDeviceMenu {
+        position: fixed !important;
+        left: 8px !important;
+        right: 8px !important;
+        bottom: calc(var(--optrf-dock-h) + 6px) !important;
+        top: auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        max-height: min(60vh, 420px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 14px !important;
+        z-index: 1300;
+    }
+
+    #bottomButtons #exitMenu {
+        left: auto !important;
+        right: 8px !important;
+        min-width: 220px !important;
+        width: max-content !important;
+    }
+
+    #bottomButtons .optrf-theme-menu {
+        position: fixed !important;
+        left: 8px !important;
+        right: 8px !important;
+        bottom: calc(var(--optrf-dock-h) + 6px) !important;
+        top: auto !important;
+        width: auto !important;
+    }
+
+    /* Чат / настройки — над доком, на весь экран */
+    #chatRoom {
+        z-index: 1100 !important;
+    }
+
+    #mySettings {
+        z-index: 1200 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        left: 0 !important;
+        top: 0 !important;
+    }
+
+    #camBubbleControlPanel {
+        max-width: min(320px, calc(100vw - 24px));
+        max-height: calc(100dvh - var(--optrf-dock-h) - 24px);
+        overflow-y: auto;
+        z-index: 1400;
+    }
+
+    #camBubbleEditBtn {
+        z-index: 1410;
+    }
+}
+
+/* Класс с JS (matchMedia) — то же поведение, если UA desktop в узком окне */
+body.optrf-compact-ui .optrf-compact-extra {
+    display: contents;
+}
+
+@media screen and (max-width: 390px) {
+    #bottomButtons button {
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+        min-height: 40px;
+        font-size: 1.05rem;
+        padding: 6px;
+    }
+
+    #settingsExtraToggle {
+        width: 32px !important;
+        min-width: 32px !important;
+        height: 40px !important;
+    }
+}

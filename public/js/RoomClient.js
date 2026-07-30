@@ -12559,6 +12559,7 @@ class RoomClient {
             bc: 0, // индекс цвета
             fx: 1, // soft shadow
             shape: 0, // круг
+            feather: 0, // мягкий край % (0 = выкл)
         };
     }
 
@@ -12573,7 +12574,7 @@ class RoomClient {
             x: clamp(src.x ?? d.x, 0, 0.95),
             y: clamp(src.y ?? d.y, 0, 0.95),
             size: clamp(src.size ?? d.size, 0.08, 0.55),
-            scale: clamp(src.scale ?? d.scale, 1.15, 3),
+            scale: clamp(src.scale ?? d.scale, 1, 3),
             ox: clamp(src.ox ?? d.ox, -0.5, 0.5),
             oy: clamp(src.oy ?? d.oy, -0.5, 0.5),
             border: src.border === undefined ? d.border : Boolean(src.border),
@@ -12581,7 +12582,38 @@ class RoomClient {
             bc: clamp(src.bc ?? d.bc, 0, colors.length - 1),
             fx: clamp(src.fx ?? d.fx, 0, fxs.length - 1),
             shape: clamp(src.shape ?? d.shape, 0, shapes.length - 1),
+            feather: clamp(src.feather ?? d.feather, 0, 50),
         };
+    }
+
+    /** aura (свечение) + stroke (рамка) + clip (видео + мягкий край) */
+    ensureCamBubbleLayers(bubble) {
+        let clip = bubble.querySelector(':scope > .cam-bubble-clip');
+        let stroke = bubble.querySelector(':scope > .cam-bubble-stroke');
+        let aura = bubble.querySelector(':scope > .cam-bubble-aura');
+        if (!clip) {
+            clip = document.createElement('div');
+            clip.className = 'cam-bubble-clip';
+            const looseVideos = [...bubble.querySelectorAll(':scope > video')];
+            const first = bubble.firstChild;
+            bubble.insertBefore(clip, first);
+            looseVideos.forEach((v) => clip.appendChild(v));
+        }
+        if (!stroke) {
+            stroke = document.createElement('div');
+            stroke.className = 'cam-bubble-stroke';
+            stroke.setAttribute('aria-hidden', 'true');
+            bubble.insertBefore(stroke, clip);
+        }
+        if (!aura) {
+            aura = document.createElement('div');
+            aura.className = 'cam-bubble-aura';
+            aura.setAttribute('aria-hidden', 'true');
+            bubble.insertBefore(aura, stroke);
+        }
+        let video = clip.querySelector('video') || bubble.querySelector('video');
+        if (video && video.parentElement !== clip) clip.appendChild(video);
+        return { aura, stroke, clip, video };
     }
 
     /** Синк флага/layout кружка в this.peers (join / newProducers / updatePeerInfo). */
@@ -12722,9 +12754,9 @@ class RoomClient {
 
     encodeCamBubbleLayout(layout) {
         const L = this.normalizeCamBubbleLayout(layout);
-        // v3: + shape
+        // v4: + feather (мягкий край)
         return [
-            'v3',
+            'v4',
             Math.round(L.x * 1000),
             Math.round(L.y * 1000),
             Math.round(L.size * 1000),
@@ -12736,6 +12768,7 @@ class RoomClient {
             Math.round(L.bc),
             Math.round(L.fx),
             Math.round(L.shape),
+            Math.round(L.feather),
         ].join('_');
     }
 
@@ -12750,10 +12783,19 @@ class RoomClient {
                 /* fallthrough */
             }
         }
-        // v3_..._fx_shape | v2_..._fx | v1_..._border
-        if (s.startsWith('v3_') || s.startsWith('v2_') || s.startsWith('v1_') || s.includes('_')) {
+        // v4_..._shape_feather | v3_..._shape | v2_..._fx | v1_..._border
+        if (
+            s.startsWith('v4_') ||
+            s.startsWith('v3_') ||
+            s.startsWith('v2_') ||
+            s.startsWith('v1_') ||
+            s.includes('_')
+        ) {
             const parts = s.split('_');
-            const ver = parts[0] === 'v1' || parts[0] === 'v2' || parts[0] === 'v3' ? parts[0] : null;
+            const ver =
+                parts[0] === 'v1' || parts[0] === 'v2' || parts[0] === 'v3' || parts[0] === 'v4'
+                    ? parts[0]
+                    : null;
             const nums = (ver ? parts.slice(1) : parts).map((v) => Number(v));
             if (nums.length >= 6 && !nums.some((n) => Number.isNaN(n))) {
                 return this.normalizeCamBubbleLayout({
@@ -12768,6 +12810,7 @@ class RoomClient {
                     bc: nums[8],
                     fx: nums[9],
                     shape: nums[10],
+                    feather: nums[11],
                 });
             }
         }
@@ -12785,27 +12828,55 @@ class RoomClient {
         });
     }
 
-    /** filter для clip-path форм (box-shadow/border режутся clip-path) */
-    buildCamBubbleClipFilter(L, color, fxName) {
-        const parts = [];
-        if (L.border) {
-            const n = Math.max(1, Math.round(L.bw));
-            for (let i = 0; i < n; i++) parts.push(`drop-shadow(0 0 0.55px ${color})`);
-            if (fxName === 'soft') parts.push('drop-shadow(0 8px 12px rgba(0,0,0,0.55))');
-            if (fxName === 'glow' || fxName === 'pulse') {
-                parts.push(`drop-shadow(0 0 6px ${color})`);
-                parts.push(`drop-shadow(0 0 14px ${color})`);
-            }
-            if (fxName === 'ring') {
-                parts.push('drop-shadow(0 0 1px rgba(255,255,255,0.55))');
-                parts.push('drop-shadow(0 0 4px rgba(255,255,255,0.25))');
-                parts.push('drop-shadow(0 8px 14px rgba(0,0,0,0.4))');
-            }
+    /** Сильный drop-shadow по силуэту клипа (тонкий stroke почти не даёт тени) */
+    buildCamBubbleFxFilter(color, fxName) {
+        if (fxName === 'soft') {
+            return [
+                'drop-shadow(0 6px 6px rgba(0,0,0,0.45))',
+                'drop-shadow(0 14px 18px rgba(0,0,0,0.55))',
+                'drop-shadow(0 28px 40px rgba(0,0,0,0.5))',
+            ].join(' ');
         }
-        return parts.join(' ');
+        if (fxName === 'glow' || fxName === 'pulse') {
+            return [
+                `drop-shadow(0 0 3px ${color})`,
+                `drop-shadow(0 0 10px ${color})`,
+                `drop-shadow(0 0 22px ${color})`,
+                `drop-shadow(0 0 40px ${color})`,
+                `drop-shadow(0 0 64px ${color})`,
+            ].join(' ');
+        }
+        if (fxName === 'ring') {
+            return [
+                'drop-shadow(0 0 1px rgba(255,255,255,0.95))',
+                'drop-shadow(0 0 1px rgba(255,255,255,0.95))',
+                'drop-shadow(0 0 2px rgba(255,255,255,0.85))',
+                'drop-shadow(0 0 3px rgba(255,255,255,0.55))',
+                'drop-shadow(0 0 8px rgba(255,255,255,0.35))',
+                'drop-shadow(0 12px 22px rgba(0,0,0,0.55))',
+            ].join(' ');
+        }
+        return '';
+    }
+
+    buildCamBubbleFxPulseFilter(color) {
+        return [
+            `drop-shadow(0 0 6px ${color})`,
+            `drop-shadow(0 0 18px ${color})`,
+            `drop-shadow(0 0 36px ${color})`,
+            `drop-shadow(0 0 56px ${color})`,
+            `drop-shadow(0 0 80px ${color})`,
+        ].join(' ');
     }
 
     applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, editable) {
+        const layers = this.ensureCamBubbleLayers(bubble);
+        const aura = layers.aura;
+        const stroke = layers.stroke;
+        const clip = layers.clip;
+        const video = bubbleVideo || layers.video;
+        if (!video) return this.normalizeCamBubbleLayout(layout);
+
         const L = this.normalizeCamBubbleLayout(layout);
         const colors = this.getCamBubbleBorderColors();
         const fxs = this.getCamBubbleFxNames();
@@ -12820,9 +12891,8 @@ class RoomClient {
         bubble.style.top = `${L.y * 100}%`;
         bubble.style.right = 'auto';
         bubble.style.bottom = 'auto';
-        bubble.style.width = `${L.size * 100}%`;
-        bubble.style.height = 'auto';
         bubble.classList.toggle('no-border', !L.border);
+        bubble.classList.toggle('has-feather', L.feather > 0 && !inCrop);
         bubble.classList.toggle('is-editable', Boolean(editable));
 
         shapes.forEach((s) => bubble.classList.remove(`shape-${s.id}`));
@@ -12838,62 +12908,155 @@ class RoomClient {
                 : shapeStyle.clip;
         bubble.style.setProperty('--cam-shape-clip', guideClip);
         bubble.style.setProperty('--cam-shape-radius', shapeStyle.radius);
-
-        // В «Кадр» — квадрат-превью; clip только у направляющей. Иначе — итоговая форма.
-        const useClip = shapeStyle.clipped && !inCrop;
-        bubble.classList.toggle('shape-clipped', useClip);
-        if (inCrop) {
-            bubble.style.clipPath = 'none';
-            bubble.style.borderRadius = '16px';
-        } else {
-            bubble.style.clipPath = shapeStyle.clip === 'none' ? 'none' : shapeStyle.clip;
-            bubble.style.borderRadius = shapeStyle.radius;
-        }
-
         bubble.style.setProperty('--cam-bubble-glow', color);
+        bubble.style.setProperty('--cam-bw', `${L.bw}px`);
 
-        // Рамка / эффекты: у clip-path — drop-shadow, иначе border + box-shadow
-        fxs.forEach((name) => bubble.classList.remove(`fx-${name}`));
-        if (useClip) {
-            bubble.style.borderStyle = 'none';
-            bubble.style.borderWidth = '0';
-            bubble.style.borderColor = 'transparent';
-            bubble.style.boxShadow = 'none';
-            const baseFilter = this.buildCamBubbleClipFilter(L, color, fxName === 'pulse' ? 'glow' : fxName);
-            bubble.style.filter = baseFilter || 'none';
-            bubble.style.setProperty('--cam-bubble-filter', baseFilter || 'none');
-            bubble.style.setProperty(
-                '--cam-bubble-filter-pulse',
-                this.buildCamBubbleClipFilter(L, color, 'glow') || 'none'
-            );
-            if (L.border && fxName === 'pulse') bubble.classList.add('fx-pulse');
-            else bubble.classList.add('fx-none');
+        // Явный квадрат в px
+        const parentW = bubble.parentElement?.clientWidth || 0;
+        const sizePx = parentW ? Math.max(48, Math.round(parentW * L.size)) : 0;
+        if (sizePx) {
+            bubble.style.width = `${sizePx}px`;
+            bubble.style.height = `${sizePx}px`;
+            bubble.style.aspectRatio = '';
         } else {
-            bubble.style.filter = '';
-            bubble.style.removeProperty('--cam-bubble-filter');
-            bubble.style.removeProperty('--cam-bubble-filter-pulse');
-            if (L.border) {
-                bubble.style.borderStyle = 'solid';
-                bubble.style.borderWidth = `${L.bw}px`;
-                bubble.style.borderColor = color;
-            } else {
-                bubble.style.borderStyle = 'none';
-                bubble.style.borderWidth = '0';
-                bubble.style.borderColor = 'transparent';
-            }
-            if (L.border && fxName !== 'none') bubble.classList.add(`fx-${fxName}`);
-            else bubble.classList.add('fx-none');
+            bubble.style.width = `${L.size * 100}%`;
+            bubble.style.height = 'auto';
+            bubble.style.aspectRatio = '1 / 1';
         }
 
-        // Кадр: translate по X/Y + scale
-        const panX = L.ox * 100;
-        const panY = L.oy * 100;
-        const transform = `translate(${panX}%, ${panY}%) scale(${L.scale})`;
-        bubbleVideo.style.objectFit = 'cover';
-        bubbleVideo.style.setProperty('object-position', '50% 50%', 'important');
-        bubbleVideo.style.setProperty('transform', transform, 'important');
-        bubbleVideo.style.setProperty('transform-origin', 'center center', 'important');
-        bubbleVideo.classList.remove('mirror');
+        // Оболочка: форма на слоях, не на самом bubble (иначе рамка режется)
+        const formClip = inCrop ? 'none' : shapeStyle.clip === 'none' ? 'none' : shapeStyle.clip;
+        const formRadius = inCrop ? '16px' : shapeStyle.radius;
+        bubble.style.clipPath = 'none';
+        bubble.style.border = 'none';
+        bubble.style.borderWidth = '0';
+        bubble.style.boxShadow = 'none';
+        bubble.style.background = 'transparent';
+        bubble.style.overflow = inCrop ? 'hidden' : 'visible';
+        bubble.style.borderRadius = inCrop ? '16px' : '0';
+        bubble.classList.toggle('shape-clipped', shapeStyle.clipped && !inCrop);
+
+        // Рамка: увеличенный слой того же clip-path — на ВСЕХ формах
+        if (L.border && !inCrop) {
+            stroke.style.display = 'block';
+            stroke.style.inset = `-${L.bw}px`;
+            stroke.style.background = color;
+            stroke.style.clipPath = formClip;
+            stroke.style.borderRadius = formRadius;
+        } else {
+            stroke.style.display = 'none';
+            stroke.style.clipPath = 'none';
+            stroke.style.filter = '';
+        }
+        // В «Кадр» — простая CSS-рамка на квадрате-превью
+        if (inCrop && L.border) {
+            bubble.style.border = `${L.bw}px solid ${color}`;
+        }
+
+        clip.style.inset = '0';
+        clip.style.clipPath = formClip;
+        clip.style.borderRadius = formRadius;
+        clip.style.overflow = 'hidden';
+        clip.style.background = '#111';
+
+        // Мягкий край: градиент прозрачности к фону (отдельно от рамки)
+        if (L.feather > 0 && !inCrop) {
+            const solid = Math.max(8, 100 - L.feather);
+            const mask = `radial-gradient(closest-side, #000 ${solid}%, transparent 100%)`;
+            clip.style.setProperty('-webkit-mask-image', mask);
+            clip.style.setProperty('mask-image', mask);
+            clip.style.setProperty('-webkit-mask-repeat', 'no-repeat');
+            clip.style.setProperty('mask-repeat', 'no-repeat');
+            clip.style.setProperty('-webkit-mask-size', '100% 100%');
+            clip.style.setProperty('mask-size', '100% 100%');
+            // Рамку тоже смягчаем, чтобы не было жёсткого кольца поверх фейда
+            if (L.border) {
+                stroke.style.setProperty('-webkit-mask-image', mask);
+                stroke.style.setProperty('mask-image', mask);
+                stroke.style.setProperty('-webkit-mask-size', '100% 100%');
+                stroke.style.setProperty('mask-size', '100% 100%');
+            }
+        } else {
+            clip.style.removeProperty('-webkit-mask-image');
+            clip.style.removeProperty('mask-image');
+            clip.style.removeProperty('-webkit-mask-repeat');
+            clip.style.removeProperty('mask-repeat');
+            clip.style.removeProperty('-webkit-mask-size');
+            clip.style.removeProperty('mask-size');
+            stroke.style.removeProperty('-webkit-mask-image');
+            stroke.style.removeProperty('mask-image');
+            stroke.style.removeProperty('-webkit-mask-size');
+            stroke.style.removeProperty('mask-size');
+        }
+
+        // Эффекты — по полному силуэту (clip) + aura-слой; не зависят от рамки
+        fxs.forEach((name) => bubble.classList.remove(`fx-${name}`));
+        stroke.style.filter = '';
+        clip.style.filter = '';
+        bubble.style.filter = '';
+        aura.style.display = 'none';
+        aura.style.filter = '';
+        aura.style.opacity = '';
+        bubble.style.removeProperty('--cam-bubble-filter');
+        bubble.style.removeProperty('--cam-bubble-filter-pulse');
+
+        const fxFilter = !inCrop && fxName !== 'none' ? this.buildCamBubbleFxFilter(color, fxName) : '';
+        if (fxFilter) {
+            clip.style.filter = fxFilter;
+            bubble.style.setProperty('--cam-bubble-filter', fxFilter);
+            bubble.style.setProperty('--cam-bubble-filter-pulse', this.buildCamBubbleFxPulseFilter(color));
+
+            // Заливка-ореол за формой — заметно сильнее тонкого drop-shadow
+            aura.style.display = 'block';
+            aura.style.clipPath = formClip;
+            aura.style.borderRadius = formRadius;
+            if (fxName === 'soft') {
+                aura.style.inset = '-8px';
+                aura.style.background = '#000';
+                aura.style.opacity = '0.55';
+                aura.style.filter = 'blur(22px)';
+            } else if (fxName === 'ring') {
+                aura.style.inset = '-11px';
+                aura.style.background = 'rgba(255,255,255,0.92)';
+                aura.style.opacity = '0.7';
+                aura.style.filter = 'blur(1.5px)';
+            } else {
+                // glow / pulse
+                aura.style.inset = '-20px';
+                aura.style.background = color;
+                aura.style.opacity = fxName === 'pulse' ? '0.75' : '0.65';
+                aura.style.filter = 'blur(22px)';
+            }
+
+            if (fxName === 'pulse') bubble.classList.add('fx-pulse');
+            else bubble.classList.add(`fx-${fxName}`);
+        } else {
+            bubble.classList.add('fx-none');
+        }
+
+        // Кадр: размер/позиция video
+        const s = L.scale;
+        const leftPct = 50 + L.ox * 100 - (s * 100) / 2;
+        const topPct = 50 + L.oy * 100 - (s * 100) / 2;
+        video.classList.remove('mirror');
+        video.style.scale = '';
+        video.style.setProperty('position', 'absolute', 'important');
+        video.style.setProperty('inset', 'auto', 'important');
+        video.style.setProperty('right', 'auto', 'important');
+        video.style.setProperty('bottom', 'auto', 'important');
+        video.style.setProperty('width', `${s * 100}%`, 'important');
+        video.style.setProperty('height', `${s * 100}%`, 'important');
+        video.style.setProperty('min-width', `${s * 100}%`, 'important');
+        video.style.setProperty('min-height', `${s * 100}%`, 'important');
+        video.style.setProperty('max-width', 'none', 'important');
+        video.style.setProperty('max-height', 'none', 'important');
+        video.style.setProperty('left', `${leftPct}%`, 'important');
+        video.style.setProperty('top', `${topPct}%`, 'important');
+        video.style.setProperty('object-fit', 'cover', 'important');
+        video.style.setProperty('object-position', '50% 50%', 'important');
+        video.style.setProperty('transform', 'none', 'important');
+        video.style.setProperty('transform-origin', 'center center', 'important');
+        video.style.setProperty('border-radius', '0', 'important');
 
         bubble.dataset.layout = this.encodeCamBubbleLayout(L);
         if (editable) {
@@ -12902,6 +13065,22 @@ class RoomClient {
             if (this._camBubblePanelOpen) this.syncCamBubbleControlPanel(L);
         }
         return L;
+    }
+
+    /** После resize плиток — восстановить кадр всех кружков */
+    reapplyCamBubbleLayouts() {
+        document.querySelectorAll('.cam-bubble').forEach((bubble) => {
+            const video = bubble.querySelector('video');
+            if (!video || !bubble.dataset.layout) return;
+            const peerId = bubble.closest('[data-peer-id]')?.dataset?.peerId;
+            const editable = peerId === this.peer_id && Boolean(isPresenter);
+            this.applyCamBubbleLayoutStyles(
+                bubble,
+                video,
+                this.decodeCamBubbleLayout(bubble.dataset.layout),
+                editable
+            );
+        });
     }
 
     /** Применить пришедший layout к уже существующему кружку у зрителя. */
@@ -12944,7 +13123,24 @@ class RoomClient {
 
     ensureCamBubbleControlPanel() {
         let panel = document.getElementById('camBubbleControlPanel');
-        if (panel) return panel;
+        if (panel) {
+            // Горячий апдейт: слайдер мягкого края мог появиться позже
+            if (!panel.querySelector('#camBubbleFeatherRange')) {
+                const hint = panel.querySelector('.cam-bubble-panel-hint');
+                const wrap = document.createElement('label');
+                wrap.className = 'cam-bubble-panel-slider';
+                wrap.title = 'Плавный переход камеры в фон трансляции';
+                wrap.innerHTML =
+                    '<span>Мягкий край</span><input type="range" id="camBubbleFeatherRange" min="0" max="50" step="1" value="0" />';
+                hint?.parentNode?.insertBefore(wrap, hint);
+                const featherRange = wrap.querySelector('#camBubbleFeatherRange');
+                featherRange?.addEventListener('input', () => {
+                    this._camBubbleEditor?.setFeather(Number(featherRange.value));
+                });
+                featherRange?.addEventListener('change', () => this._camBubbleEditor?.broadcast());
+            }
+            return panel;
+        }
         panel = document.createElement('div');
         panel.id = 'camBubbleControlPanel';
         panel.setAttribute('role', 'dialog');
@@ -12965,7 +13161,7 @@ class RoomClient {
             </label>
             <label class="cam-bubble-panel-slider">
                 <span>Масштаб</span>
-                <input type="range" id="camBubbleScaleRange" min="115" max="250" step="5" value="135" />
+                <input type="range" id="camBubbleScaleRange" min="100" max="250" step="5" value="135" />
             </label>
             <label class="cam-bubble-panel-fx">
                 <span>Форма</span>
@@ -12994,7 +13190,13 @@ class RoomClient {
                     </select>
                 </label>
             </div>
-            <div class="cam-bubble-panel-hint">«Кадр»: квадрат = превью, пунктир = итоговая форма для студентов</div>
+            <label class="cam-bubble-panel-slider" title="Плавный переход камеры в фон трансляции">
+                <span>Мягкий край</span>
+                <input type="range" id="camBubbleFeatherRange" min="0" max="50" step="1" value="0" />
+            </label>
+            <div class="cam-bubble-panel-hint">
+                «Кадр»: квадрат = превью, пунктир = форма. «Мягкий край» — градиент прозрачности к фону
+            </div>
         `;
         document.body.appendChild(panel);
         this.bindCamBubblePanelDrag(panel);
@@ -13037,6 +13239,7 @@ class RoomClient {
         const scaleRange = panel.querySelector('#camBubbleScaleRange');
         const bwRange = panel.querySelector('#camBubbleBorderWidth');
         const fxSelect = panel.querySelector('#camBubbleBorderFx');
+        const featherRange = panel.querySelector('#camBubbleFeatherRange');
         sizeRange.addEventListener('input', () => {
             this._camBubbleEditor?.setSize(Number(sizeRange.value) / 100);
         });
@@ -13057,6 +13260,10 @@ class RoomClient {
             this._camBubbleEditor?.setBorderFx(Number(fxSelect.value));
             this._camBubbleEditor?.broadcast();
         });
+        featherRange?.addEventListener('input', () => {
+            this._camBubbleEditor?.setFeather(Number(featherRange.value));
+        });
+        featherRange?.addEventListener('change', () => this._camBubbleEditor?.broadcast());
 
         if (!this._camBubbleOutsideCloseBound) {
             this._camBubbleOutsideCloseBound = true;
@@ -13190,6 +13397,7 @@ class RoomClient {
         const shapeSelect = panel.querySelector('#camBubbleShapeSelect');
         const bwRange = panel.querySelector('#camBubbleBorderWidth');
         const fxSelect = panel.querySelector('#camBubbleBorderFx');
+        const featherRange = panel.querySelector('#camBubbleFeatherRange');
         const borderToggle = panel.querySelector('#camBubbleBorderToggle');
         if (sizeRange && document.activeElement !== sizeRange) {
             sizeRange.value = String(Math.round(L.size * 100));
@@ -13206,7 +13414,10 @@ class RoomClient {
         }
         if (fxSelect && document.activeElement !== fxSelect) {
             fxSelect.value = String(L.fx);
-            fxSelect.disabled = !L.border;
+            fxSelect.disabled = false;
+        }
+        if (featherRange && document.activeElement !== featherRange) {
+            featherRange.value = String(L.feather);
         }
         if (borderToggle) {
             borderToggle.classList.toggle('is-active', L.border);
@@ -13300,14 +13511,15 @@ class RoomClient {
             screenTile.appendChild(bubble);
         }
 
-        let bubbleVideo = bubble.querySelector('video');
+        const layers = this.ensureCamBubbleLayers(bubble);
+        let bubbleVideo = layers.video;
         if (!bubbleVideo) {
             bubbleVideo = document.createElement('video');
             bubbleVideo.autoplay = true;
             bubbleVideo.playsInline = true;
             bubbleVideo.muted = true;
             bubbleVideo.disablePictureInPicture = true;
-            bubble.appendChild(bubbleVideo);
+            layers.clip.appendChild(bubbleVideo);
         }
 
         if (bubbleVideo.srcObject !== sourceVideo.srcObject) {
@@ -13468,7 +13680,16 @@ class RoomClient {
             },
             setBorderWidth: (bw) => patchBorder({ bw, border: true }, false),
             setBorderColor: (bc) => patchBorder({ bc, border: true }, true),
-            setBorderFx: (fx) => patchBorder({ fx, border: true }, true),
+            setBorderFx: (fx) => {
+                const cur = readLayout();
+                cur.fx = fx;
+                commit(cur, true, true);
+            },
+            setFeather: (feather) => {
+                const cur = readLayout();
+                cur.feather = feather;
+                commit(cur, true, false);
+            },
             broadcast: () => commit(readLayout(), true, true),
         };
 
@@ -13599,7 +13820,16 @@ class RoomClient {
             },
             setBorderWidth: (bw) => patchBorder({ bw, border: true }, false),
             setBorderColor: (bc) => patchBorder({ bc, border: true }, true),
-            setBorderFx: (fx) => patchBorder({ fx, border: true }, true),
+            setBorderFx: (fx) => {
+                const cur = readLayout();
+                cur.fx = fx;
+                commit(cur, true, true);
+            },
+            setFeather: (feather) => {
+                const cur = readLayout();
+                cur.feather = feather;
+                commit(cur, true, false);
+            },
             broadcast: () => commit(readLayout(), true, true),
         };
     }
