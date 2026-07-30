@@ -13914,11 +13914,15 @@ class RoomClient {
     syncCamBubbleButton() {
         const btn = typeof camBubbleButton !== 'undefined' ? camBubbleButton : this.getId('camBubbleButton');
         if (!btn) return;
-        const screenOn = this.producerLabel?.has?.(mediaType.screen);
-        const canUse = Boolean(isPresenter) && Boolean(screenOn);
+        // Кнопка у того, кто шарит свой экран (не только formal isPresenter —
+        // иначе после join/reconnect peer_presenter часто false и кнопки нет).
+        const screenOn = Boolean(this.producerLabel?.has?.(mediaType.screen) || this.screenProducerId);
+        const canUse = screenOn;
+        btn.dataset.camBubbleReady = canUse ? '1' : '0';
         if (canUse) {
+            btn.classList.remove('hidden');
+            btn.style.removeProperty('display');
             if (typeof show === 'function') show(btn);
-            else btn.classList.remove('hidden');
         } else {
             if (typeof hide === 'function') hide(btn);
             else btn.classList.add('hidden');
@@ -13926,6 +13930,18 @@ class RoomClient {
         const active = Boolean(this.peer_info?.peer_cam_bubble) && screenOn;
         btn.classList.toggle('is-active', active);
         btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        btn.title = active
+            ? 'Выключить камеру поверх экрана'
+            : 'Камера кружком поверх демонстрации экрана';
+        btn.setAttribute('aria-label', btn.title);
+        // Proxy в меню «Ещё»
+        const proxy = document.getElementById('compactCamBubbleBtn');
+        if (proxy) {
+            proxy.classList.toggle('hidden', !canUse);
+            proxy.innerHTML = active
+                ? '<i class="fas fa-circle-user"></i> Выключить кружок камеры'
+                : '<i class="fas fa-circle-user"></i> Камера поверх экрана';
+        }
     }
 
     checkPeerInfoStatus(peer_info) {

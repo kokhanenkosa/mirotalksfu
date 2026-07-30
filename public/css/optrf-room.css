@@ -450,7 +450,8 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
     /* Смена камеры / стоп экрана / кружок — в доке, если доступны */
     #swapCameraButton:not(.hidden),
     #stopScreenButton:not(.hidden),
-    #camBubbleButton:not(.hidden) {
+    #camBubbleButton:not(.hidden),
+    #camBubbleButton[data-cam-bubble-ready='1'] {
         display: inline-flex !important;
     }
 

@@ -4364,7 +4364,10 @@ function handleRoomClientEvents() {
         hideClassElements('videoMenuBar');
         // if (isParticipantsListOpen) getRoomParticipants();
         screen = true;
+        // Несколько тиков — producerLabel/screenProducerId успевают проставиться
         rc.syncCamBubbleButton();
+        setTimeout(() => rc.syncCamBubbleButton(), 100);
+        setTimeout(() => rc.syncCamBubbleButton(), 500);
     });
     rc.on(RoomClient.EVENTS.pauseScreen, () => {
         console.log('Room event: Client pause screen');
@@ -4376,11 +4379,12 @@ function handleRoomClientEvents() {
     });
     rc.on(RoomClient.EVENTS.resumeScreen, () => {
         console.log('Room event: Client resume screen');
-        hide(stopScreenButton);
-        show(startScreenButton);
+        hide(startScreenButton);
+        show(stopScreenButton);
         hideClassElements('videoMenuBar');
         screen = true;
         rc.syncCamBubbleButton();
+        setTimeout(() => rc.syncCamBubbleButton(), 100);
     });
     rc.on(RoomClient.EVENTS.stopScreen, () => {
         console.log('Room event: Client stop screen');
@@ -4705,6 +4709,8 @@ function applyCompactUi(on) {
         const proxy = document.getElementById(proxyId);
         const real = document.querySelector(realSel);
         if (!proxy) return;
+        // Кружок камеры синхронизирует RoomClient.syncCamBubbleButton (и на десктопе)
+        if (proxyId === 'compactCamBubbleBtn') return;
         if (!on) {
             proxy.classList.add('hidden');
             return;
@@ -4734,9 +4740,13 @@ function applyCompactUi(on) {
     };
 
     syncProxy('compactScreenBtn', '#startScreenButton');
-    syncProxy('compactCamBubbleBtn', '#camBubbleButton');
     syncProxy('compactHearOnlyBtn', '#hearOnlyPresenterButton');
     syncProxy('compactThemeBtn', '#roomThemeHost .optrf-theme-option');
+    try {
+        rc?.syncCamBubbleButton?.();
+    } catch {
+        /* ignore */
+    }
 
     if (typeof updateSettingsExtraGroups === 'function') {
         try {

@@ -926,9 +926,21 @@
     font-weight: 600;
 }
 
-#camBubbleButton.is-active {
+/* Кружок камеры: всегда явно в доке, когда экран шарится */
+#camBubbleButton[data-cam-bubble-ready='1'] {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #fff;
+    background: rgba(0, 168, 232, 0.35);
+    outline: 1px solid rgba(0, 168, 232, 0.75);
+}
+
+#camBubbleButton.is-active,
+#camBubbleButton[data-cam-bubble-ready='1'].is-active {
     color: #fff;
     background: var(--optrf-accent, #00a8e8);
+    outline-color: #fff;
 }
 
 .videoDefault {
