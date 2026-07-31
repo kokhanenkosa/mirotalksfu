@@ -306,7 +306,7 @@ class RoomClient {
             audio_cant_unmute: false,
             video_cant_unhide: false,
             screen_cant_share: false,
-            chat_cant_privately: false,
+            chat_cant_privately: true, // only public chat
             chat_cant_publicly: false,
             chat_cant_chatgpt: false,
             chat_cant_deep_seek: false,
@@ -11377,6 +11377,105 @@ class RoomClient {
     }
 
     // ####################################################
+    // START DIALOG (invite guests' A/V into the shared call)
+    // ####################################################
+
+    toggleSelectAllDialogPeers() {
+        const checks = document.querySelectorAll('.dialog-peer-check');
+        if (!checks.length) {
+            return this.userLog('info', 'Нет гостей для выбора', 'top-end');
+        }
+        const allChecked = Array.from(checks).every((c) => c.checked);
+        checks.forEach((c) => {
+            c.checked = !allChecked;
+        });
+    }
+
+    startDialogWithSelectedPeers() {
+        if (!isPresenter) {
+            return this.userLog('warning', 'Только модератор может начать диалог', 'top-end');
+        }
+        const ids = Array.from(document.querySelectorAll('.dialog-peer-check:checked'))
+            .map((c) => c.getAttribute('data-peer-id'))
+            .filter(Boolean);
+        if (!ids.length) {
+            return this.userLog('info', 'Выберите участников для диалога', 'top-end');
+        }
+        return this.startDialogWithPeers(ids);
+    }
+
+    startDialogWithPeers(peerIds = []) {
+        if (!isPresenter) {
+            return this.userLog('warning', 'Только модератор может начать диалог', 'top-end');
+        }
+        const ids = (peerIds || []).filter(Boolean);
+        if (!ids.length) {
+            return this.userLog('info', 'Выберите участников для диалога', 'top-end');
+        }
+
+        Swal.fire({
+            background: swalBackground,
+            position: 'center',
+            imageUrl: image.users,
+            title: 'Начать диалог',
+            html: `Запросить микрофон и камеру у <b>${ids.length}</b> участник(ов)?<br/>Они должны подтвердить запрос.`,
+            showDenyButton: true,
+            confirmButtonText: 'Да',
+            denyButtonText: 'Нет',
+            showClass: { popup: 'animate__animated animate__fadeInDown' },
+            hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            for (const peer_id of ids) {
+                this.emitPeerMediaAction(peer_id, 'unmute');
+                this.emitPeerMediaAction(peer_id, 'unhide');
+            }
+            this.userLog('success', 'Запросы на диалог отправлены', 'top-end', 4000);
+        });
+    }
+
+    emitPeerMediaAction(peer_id, action) {
+        this.socket.emit('peerAction', {
+            from_peer_name: this.peer_name,
+            from_peer_id: this.peer_id,
+            from_peer_uuid: this.peer_uuid,
+            to_peer_uuid: '',
+            peer_id,
+            action,
+            message: '',
+            broadcast: false,
+        });
+    }
+
+    setPeerPresenter(peer_id) {
+        if (!isPresenter) {
+            return this.userLog('warning', 'Только модератор может назначать модераторов', 'top-end');
+        }
+        if (!peer_id || peer_id === this.peer_id) return;
+
+        Swal.fire({
+            background: swalBackground,
+            position: 'center',
+            imageUrl: image.user,
+            title: 'Сделать модератором',
+            text: 'Участник получит права ведущего: управление медиа, диалог, настройки комнаты.',
+            showDenyButton: true,
+            confirmButtonText: 'Да',
+            denyButtonText: 'Нет',
+            showClass: { popup: 'animate__animated animate__fadeInDown' },
+            hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            this.socket.emit('setPeerPresenter', {
+                peer_id,
+                peer_name: this.peer_name,
+                peer_uuid: this.peer_uuid,
+            });
+            this.userLog('success', 'Запрос на назначение модератора отправлен', 'top-end', 3000);
+        });
+    }
+
+    // ####################################################
     // PEER ACTION
     // ####################################################
 
@@ -11981,8 +12080,13 @@ class RoomClient {
         if (peer_id === 'all' && this._moderator.chat_cant_publicly) {
             return userLog('warning', 'The moderator does not allow you to chat publicly', 'top-end', 6000);
         }
-        if (!['all', 'ChatGPT', 'DeepSeek'].includes(peer_id) && this._moderator.chat_cant_privately) {
-            return userLog('warning', 'The moderator does not allow you to chat privately', 'top-end', 6000);
+        // Private DMs disabled — redirect peer clicks to public chat
+        if (!['all', 'ChatGPT', 'DeepSeek'].includes(peer_id)) {
+            if (this._moderator.chat_cant_privately) {
+                peer_id = 'all';
+                peer_name = 'all';
+                peer_avatar = false;
+            }
         }
 
         this.hidePeerMessages();
@@ -11995,8 +12099,8 @@ class RoomClient {
         const participant = this.getId(peer_id);
         const participantsList = this.getId('participantsList');
         const chatPrivateMessages = this.getId('chatPrivateMessages');
-        const messagePrivateListItems = chatPrivateMessages.getElementsByTagName('li');
-        const participantsListItems = participantsList.getElementsByTagName('li');
+        const messagePrivateListItems = chatPrivateMessages ? chatPrivateMessages.getElementsByTagName('li') : [];
+        const participantsListItems = participantsList ? participantsList.getElementsByTagName('li') : [];
         const avatarImg = getParticipantAvatar(peer_name, peer_avatar);
 
         const generateChatAboutHTML = (imgSrc, title, status = 'online', participants = '', category = '') => {
@@ -12040,7 +12144,7 @@ class RoomClient {
         this.unreadMessageCounts[peer_id] = 0;
         this.updateUnreadCountBadge(peer_id);
 
-        participant.classList.add('active');
+        if (participant) participant.classList.add('active');
 
         isChatGPTOn = false;
         isDeepSeekOn = false;
@@ -12425,6 +12529,26 @@ class RoomClient {
                     break;
                 case 'avatar':
                     this.setVideoAvatarImgName(peer_id + '__img', peer_name, status);
+                    break;
+                case 'presenter':
+                    try {
+                        const mapped = this.peers?.get?.(peer_id);
+                        if (mapped?.peer_info) mapped.peer_info.peer_presenter = Boolean(status);
+                    } catch {
+                        /* ignore */
+                    }
+                    if (peer_id === this.peer_id && status) {
+                        isPresenter = true;
+                        this.peer_info.peer_presenter = true;
+                        try {
+                            this.getId('isUserPresenter').innerText = true;
+                        } catch {
+                            /* ignore */
+                        }
+                        handleRules(true);
+                        this.sound('notify');
+                        this.userLog('success', 'Вас назначили модератором', 'top-end', 6000);
+                    }
                     break;
                 default:
                     break;

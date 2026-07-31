@@ -215,7 +215,17 @@ function handleRules(isPresenter) {
         switchEveryoneCantUnmute.checked = localStorageSettings.moderator_audio_cant_unmute;
         switchEveryoneCantUnhide.checked = localStorageSettings.moderator_video_cant_unhide;
         switchEveryoneCantShareScreen.checked = localStorageSettings.moderator_screen_cant_share;
-        switchEveryoneCantChatPrivately.checked = localStorageSettings.moderator_chat_cant_privately;
+        // Private DMs disabled — only public room chat
+        localStorageSettings.moderator_chat_cant_privately = true;
+        switchEveryoneCantChatPrivately.checked = true;
+        if (typeof switchEveryoneCantChatPrivately !== 'undefined' && switchEveryoneCantChatPrivately) {
+            switchEveryoneCantChatPrivately.disabled = true;
+        }
+        try {
+            lS.setSettings(localStorageSettings);
+        } catch {
+            /* ignore */
+        }
         switchEveryoneCantChatPublicly.checked = localStorageSettings.moderator_chat_cant_publicly;
         switchEveryoneCantChatChatGPT.checked = localStorageSettings.moderator_chat_cant_chatgpt;
         switchEveryoneCantChatDeepSeek.checked = localStorageSettings.moderator_chat_cant_deep_seek;

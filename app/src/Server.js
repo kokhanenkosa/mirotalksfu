@@ -3967,6 +3967,64 @@ async function startServer() {
                 : room.sendTo(data.peer_id, 'peerAction', data);
         });
 
+        // Promote guest to presenter (moderator) — room creator / current presenter only
+        socket.on('setPeerPresenter', (dataObject) => {
+            if (!roomExists(socket)) return;
+
+            const data = checkXSS(dataObject);
+            if (!Validator.isValidData(data)) return;
+
+            const { room, peer: requester } = getRoomAndPeer(socket);
+            if (!room || !requester) return;
+
+            const requesterIsPresenter = isPeerPresenter(
+                socket.room_id,
+                socket.id,
+                requester.peer_info?.peer_name,
+                requester.peer_info?.peer_uuid
+            );
+            if (!requesterIsPresenter) {
+                log.warn('[setPeerPresenter] denied — requester is not presenter', { socket_id: socket.id });
+                return;
+            }
+
+            const targetId = data.peer_id;
+            if (!targetId || targetId === socket.id) return;
+
+            const targetPeer = room.getPeer(targetId);
+            if (!targetPeer) {
+                log.warn('[setPeerPresenter] target peer not found', { targetId });
+                return;
+            }
+
+            if (!(socket.room_id in presenters)) presenters[socket.room_id] = {};
+            presenters[socket.room_id][targetId] = {
+                peer_name: targetPeer.peer_info.peer_name,
+                peer_uuid: targetPeer.peer_info.peer_uuid,
+                is_presenter: true,
+            };
+
+            targetPeer.updatePeerInfo({ type: 'presenter', status: true });
+
+            const payload = {
+                room_id: socket.room_id,
+                peer_id: targetId,
+                peer_name: targetPeer.peer_info.peer_name,
+                type: 'presenter',
+                status: true,
+                broadcast: true,
+            };
+
+            log.debug('[setPeerPresenter] promoted', {
+                room_id: socket.room_id,
+                by: socket.id,
+                targetId,
+                peer_name: targetPeer.peer_info.peer_name,
+            });
+
+            room.sendToAll('updatePeerInfo', payload);
+        });
+
         socket.on('updatePeerInfo', (dataObject) => {
             if (!roomExists(socket)) return;
 

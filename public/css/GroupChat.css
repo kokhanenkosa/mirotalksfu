@@ -243,7 +243,53 @@
 
 .people-list .about-buttons {
     margin-top: 35px;
-    max-height: 64px;
+    max-height: none;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.dialog-peer-check-wrap {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 4px;
+    cursor: pointer;
+}
+
+.dialog-peer-check {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--body-bg, #0aa8e8);
+}
+
+.dialog-toolbar-btn {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: inherit;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.dialog-toolbar-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.dialog-start-btn {
+    background: rgba(10, 168, 232, 0.25);
+    border-color: rgba(10, 168, 232, 0.5);
+    font-weight: 600;
+}
+
+.dialog-start-btn:hover {
+    background: rgba(10, 168, 232, 0.4);
+}
+
+#chatPrivateMessages {
+    display: none !important;
 }
 
 .people-list .dropdown {

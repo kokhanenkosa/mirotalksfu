@@ -65,7 +65,7 @@ module.exports = class Room {
             audio_cant_unmute: false,
             video_cant_unhide: false,
             screen_cant_share: false,
-            chat_cant_privately: false,
+            chat_cant_privately: true, // only public chat
             chat_cant_publicly: false,
             chat_cant_chatgpt: false,
             chat_cant_deep_seek: false,

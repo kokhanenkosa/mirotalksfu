@@ -27,7 +27,7 @@ class LocalStorage {
             moderator_audio_cant_unmute: false, // Everyone can't unmute themselves
             moderator_video_cant_unhide: false, // Everyone can't unhide themselves
             moderator_screen_cant_share: false, // Everyone can't share screen
-            moderator_chat_cant_privately: false, // Everyone can't chat privately, only Public chat allowed
+            moderator_chat_cant_privately: true, // Only public chat allowed
             moderator_chat_cant_publicly: false, // Everyone can't chat publicly, only Private chat allowed
             moderator_chat_cant_chatgpt: false, // Everyone can't chat with ChatGPT
             moderator_chat_cant_deep_seek: false, // Everyone can't chat with DeepSeek

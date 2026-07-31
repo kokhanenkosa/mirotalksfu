@@ -2039,6 +2039,18 @@ function roomIsReady() {
     if (room_password) {
         lockRoomButton.click();
     }
+    // Desktop: open public chat pinned to the right
+    if (!isMobileDevice && rc && typeof rc.canBePinned === 'function' && rc.canBePinned()) {
+        setTimeout(() => {
+            try {
+                if (!rc.isChatOpen) rc.toggleChat(true);
+                rc.showPeerAboutAndMessages('all', 'all');
+                if (!rc.isChatPinned && isChatPinEnabled) rc.chatPin();
+            } catch (e) {
+                console.warn('Auto-pin public chat failed', e);
+            }
+        }, 600);
+    }
     //show(restartICEButton); // TEST
 }
 
@@ -6697,7 +6709,9 @@ function getParticipantsList(peers) {
                     buttonId: 'stopAllButton',
                     onClick: `rc.peerAction('me','${socket.id}','stop',true,true)`,
                     iconHtml: _PEER.screenOff,
-                })
+                }) +
+                `<button type="button" id="selectAllDialogPeersBtn" class="btn-sm ml5 dialog-toolbar-btn" onclick="event.stopPropagation();rc.toggleSelectAllDialogPeers()">Выбрать всех</button>` +
+                `<button type="button" id="startDialogButton" class="btn-sm ml5 dialog-toolbar-btn dialog-start-btn" onclick="event.stopPropagation();rc.startDialogWithSelectedPeers()">Начать диалог</button>`
         );
     }
 
@@ -6800,6 +6814,17 @@ function getParticipantsList(peers) {
                         })
                     );
                 }
+                if (!peer_info.peer_presenter) {
+                    menuItems += renderParticipantMenuItem(
+                        renderParticipantActionButton({
+                            buttonClass: 'btn-sm ml5',
+                            buttonId: `${peer_id}___makeModerator`,
+                            onClick: `rc.setPeerPresenter('${peer_id}')`,
+                            iconHtml: '<i class="fas fa-user-shield"></i>',
+                            label: 'Сделать модератором',
+                        })
+                    );
+                }
                 if (BUTTONS.participantsList.banButton) {
                     menuItems += renderParticipantMenuItem(
                         renderParticipantActionButton({
@@ -6824,7 +6849,13 @@ function getParticipantsList(peers) {
                 }
                 const dropdownHtml = renderParticipantDropdown(`${peer_id}-chatDropDownMenu`, menuItems);
 
-                let buttons =
+                let buttons = '';
+                if (!peer_info.peer_presenter) {
+                    buttons += `<label class="dialog-peer-check-wrap" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="dialog-peer-check" data-peer-id="${peer_id}" aria-label="Выбрать для диалога" />
+                    </label>`;
+                }
+                buttons +=
                     renderParticipantActionButton({
                         buttonId: `${peer_id}___pAudio`,
                         onClick: `rc.peerAction('me',this.id,'mute')`,
@@ -6845,51 +6876,23 @@ function getParticipantsList(peers) {
                     buttons += renderParticipantActionButton({ iconHtml: peer_hand });
                 }
 
+                const roleStatus = peer_info.peer_presenter ? 'Модератор' : 'Участник';
                 li += renderParticipantItem({
                     itemId: peer_id,
                     toId: peer_id,
                     toName: peer_name,
                     itemClass: `clearfix${peer_chat_active}`,
-                    onClick: `rc.showPeerAboutAndMessages(this.id, ${JSON.stringify(peer_name)}, ${JSON.stringify(peer_avatar || '')}, event)`,
+                    onClick: `event.stopPropagation()`,
                     avatarSrc: avatarImg,
                     name: peer_name_limited,
                     nameSuffix: ` <span id="${peer_id}-unread-count" class="unread-count hidden"></span>`,
-                    statusHtml: renderParticipantStatus('Личные сообщения'),
+                    statusHtml: renderParticipantStatus(roleStatus),
                     dropdownHtml,
                     buttonsHtml: renderParticipantButtons(buttons),
                 });
             } else {
-                // GUEST USER
+                // GUEST USER — no private chat; status only
                 let dropdownHtml = '';
-
-                // NO ROOM BROADCASTING
-                if (!isBroadcastingEnabled) {
-                    let menuItems = '';
-
-                    if (BUTTONS.participantsList.sendFileButton) {
-                        menuItems += renderParticipantMenuItem(
-                            renderParticipantActionButton({
-                                buttonClass: 'btn-sm ml5',
-                                buttonId: `${peer_id}___shareFile`,
-                                onClick: `rc.selectFileToShare('${peer_id}', false, ${JSON.stringify(peer_name)})`,
-                                iconHtml: peer_sendFile,
-                                label: 'Отправить файл',
-                            })
-                        );
-                    }
-
-                    menuItems += renderParticipantMenuItem(
-                        renderParticipantActionButton({
-                            buttonClass: 'btn-sm ml5',
-                            buttonId: `${peer_id}___sendVideoTo`,
-                            onClick: `rc.shareVideo('${peer_id}', ${JSON.stringify(peer_name)});`,
-                            iconHtml: _PEER.sendVideo,
-                            label: 'Показать аудио / видео',
-                        })
-                    );
-
-                    dropdownHtml = renderParticipantDropdown(`${peer_id}-chatDropDownMenu`, menuItems);
-                }
 
                 let buttons =
                     renderParticipantActionButton({
@@ -6912,16 +6915,17 @@ function getParticipantsList(peers) {
                     buttons += renderParticipantActionButton({ iconHtml: peer_hand });
                 }
 
+                const roleStatus = peer_info.peer_presenter ? 'Модератор' : 'Участник';
                 li += renderParticipantItem({
                     itemId: peer_id,
                     toId: peer_id,
                     toName: peer_name,
                     itemClass: `clearfix${peer_chat_active}`,
-                    onClick: `rc.showPeerAboutAndMessages(this.id, ${JSON.stringify(peer_name)}, ${JSON.stringify(peer_avatar || '')}, event)`,
+                    onClick: `event.stopPropagation()`,
                     avatarSrc: avatarImg,
                     name: peer_name_limited,
                     nameSuffix: ` <span id="${peer_id}-unread-count" class="unread-count hidden"></span>`,
-                    statusHtml: renderParticipantStatus('Личные сообщения'),
+                    statusHtml: renderParticipantStatus(roleStatus),
                     dropdownHtml,
                     buttonsHtml: renderParticipantButtons(buttons),
                 });
@@ -6937,6 +6941,8 @@ function setParticipantsTippy(peers) {
         setTippy('muteAllButton', 'Выключить микрофоны у всех участников', 'top');
         setTippy('hideAllButton', 'Выключить камеры у всех участников', 'top');
         setTippy('stopAllButton', 'Остановить демонстрацию экрана у всех участников', 'top');
+        setTippy('startDialogButton', 'Начать диалог с выбранными участниками', 'top');
+        setTippy('selectAllDialogPeersBtn', 'Выбрать всех гостей для диалога', 'top');
         //
         for (let peer of Array.from(peers.keys())) {
             const peer_info = peers.get(peer).peer_info;
