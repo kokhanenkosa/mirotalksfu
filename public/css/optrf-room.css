@@ -31,6 +31,114 @@ button.swal2-confirm:hover {
     display: none !important;
 }
 
+/* Theme picker removed — dark theme forced */
+#roomThemeHost,
+#compactThemeBtn,
+[data-optrf-theme-switcher],
+.optrf-theme-switcher {
+    display: none !important;
+}
+
+/* Sticky hand-raise alerts on presenter video */
+.hand-raise-alerts-host {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.hand-raise-alerts-host--floating {
+    position: fixed;
+    top: 72px;
+    left: 16px;
+    right: auto;
+    max-width: min(420px, calc(100vw - 32px));
+}
+
+.hand-raise-alerts-host.hidden {
+    display: none !important;
+}
+
+.hand-raise-banner {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(12, 16, 22, 0.92);
+    border: 1px solid rgba(0, 168, 232, 0.45);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    animation: handRaisePulse 1.6s ease-in-out infinite;
+}
+
+.hand-raise-banner-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.hand-raise-banner-text .fa-hand-paper {
+    color: #ffc107;
+}
+
+.hand-raise-invite-btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #00a8e8;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.hand-raise-invite-btn:hover {
+    background: #019ad5;
+}
+
+@keyframes handRaisePulse {
+    0%,
+    100% {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+    50% {
+        box-shadow: 0 8px 28px rgba(0, 168, 232, 0.35);
+    }
+}
+
+/* Dialog split 50/50 */
+body.dialog-split-active #videoPinMediaContainer {
+    display: block !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 50% !important;
+    height: 100% !important;
+}
+
+body.dialog-split-active #videoMediaContainer {
+    top: 0 !important;
+    left: 50% !important;
+    width: 50% !important;
+    height: 100% !important;
+}
+
+body.dialog-split-active .dialog-split-left,
+body.dialog-split-active .dialog-split-right {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+}
+
 /* Bridge the Room-specific variables to the global OPTRF theme. */
 html[data-theme] {
     --body-bg: var(--optrf-bg);

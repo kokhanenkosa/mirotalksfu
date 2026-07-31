@@ -3612,6 +3612,17 @@ async function startServer() {
                     const isPresenter = isPeerPresenter(socket.room_id, socket.id, peer_name, peer_uuid);
                     if (!isPresenter) return;
                     break;
+                case 'dialogSplit':
+                case 'dialogSplitEnd': {
+                    const presenterOk = isPeerPresenter(
+                        socket.room_id,
+                        socket.id,
+                        data.peer_name,
+                        data.peer_uuid
+                    );
+                    if (!presenterOk) return;
+                    break;
+                }
                 case 'peerAudio':
                     // Keep producer volume to update consumer on join room...
                     if (data.audioProducerId) {

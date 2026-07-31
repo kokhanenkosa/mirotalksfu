@@ -137,8 +137,15 @@ function handleRules(isPresenter) {
         // ##################################
         // GUEST
         // ##################################
+        BUTTONS.main.participantsButton = false;
         BUTTONS.main.breakoutRoomButton = false;
         BUTTONS.participantsList.saveInfoButton = false;
+        try {
+            hide(participantsButton);
+            hide(chatShowParticipantsListBtn);
+        } catch {
+            /* ignore */
+        }
         BUTTONS.settings.lockRoomButton = false;
         BUTTONS.settings.unlockRoomButton = false;
         BUTTONS.settings.broadcastingButton = false;
@@ -163,8 +170,15 @@ function handleRules(isPresenter) {
         // ##################################
         // PRESENTER
         // ##################################
+        BUTTONS.main.participantsButton = true;
         BUTTONS.main.shareButton = true;
         BUTTONS.settings.tabRTMPStreamingBtn = true;
+        try {
+            show(participantsButton);
+            show(chatShowParticipantsListBtn);
+        } catch {
+            /* ignore */
+        }
         BUTTONS.settings.lockRoomButton = BUTTONS.settings.lockRoomButton && !isRoomLocked;
         BUTTONS.settings.unlockRoomButton = BUTTONS.settings.lockRoomButton && isRoomLocked;
         BUTTONS.settings.sendEmailInvitation = true;

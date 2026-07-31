@@ -478,7 +478,7 @@
                             <button type="button" id="compactHearOnlyBtn" data-proxy-click="#hearOnlyPresenterButton">
                                 <i class="fas fa-chalkboard-user"></i> Слышать только лектора
                             </button>
-                            <button type="button" id="compactThemeBtn" data-proxy-click="#roomThemeHost .optrf-theme-option">
+                            <button type="button" id="compactThemeBtn" class="hidden" data-proxy-click="#roomThemeHost .optrf-theme-option" hidden aria-hidden="true">
                                 <i class="fas fa-circle-half-stroke"></i> Тема оформления
                             </button>
                         </div>
@@ -499,9 +499,11 @@
             </button>
             <div
                 id="roomThemeHost"
-                class="room-theme-host"
+                class="room-theme-host hidden"
                 data-optrf-theme-host
                 aria-label="Настройки темы"
+                hidden
+                aria-hidden="true"
             ></div>
             <div id="exitDropdown">
                 <button id="exitButton" class="hidden"><i class="fa-solid fa-phone-slash red"></i></button>

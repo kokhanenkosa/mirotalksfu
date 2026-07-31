@@ -1900,7 +1900,14 @@ function roomIsReady() {
         hide(tabRecordingBtn);
     }
     BUTTONS.main.chatButton && show(chatButton);
-    BUTTONS.main.participantsButton && show(participantsButton);
+    // Participants list: presenter/moderator only
+    if (BUTTONS.main.participantsButton && isPresenter) {
+        show(participantsButton);
+        show(chatShowParticipantsListBtn);
+    } else {
+        hide(participantsButton);
+        hide(chatShowParticipantsListBtn);
+    }
     BUTTONS.main.pollButton && show(pollButton);
     BUTTONS.main.editorButton && show(editorButton);
     BUTTONS.main.raiseHandButton && show(raiseHandButton);
@@ -1908,7 +1915,6 @@ function roomIsReady() {
     show(fileShareExtraButton);
     !BUTTONS.chat.chatSaveButton && hide(chatSaveButton);
     BUTTONS.chat.chatEmojiButton && show(chatEmojiButton);
-    show(chatShowParticipantsListBtn);
     BUTTONS.chat.chatMarkdownButton && show(chatMarkdownButton);
     show(fileShareChatButton);
 
@@ -2050,6 +2056,14 @@ function roomIsReady() {
                 console.warn('Auto-pin public chat failed', e);
             }
         }, 600);
+    }
+
+    // Force-hide theme picker
+    try {
+        hide(document.getElementById('roomThemeHost'));
+        hide(document.getElementById('compactThemeBtn'));
+    } catch {
+        /* ignore */
     }
     //show(restartICEButton); // TEST
 }
@@ -6711,7 +6725,7 @@ function getParticipantsList(peers) {
                     iconHtml: _PEER.screenOff,
                 }) +
                 `<button type="button" id="selectAllDialogPeersBtn" class="btn-sm ml5 dialog-toolbar-btn" onclick="event.stopPropagation();rc.toggleSelectAllDialogPeers()">Выбрать всех</button>` +
-                `<button type="button" id="startDialogButton" class="btn-sm ml5 dialog-toolbar-btn dialog-start-btn" onclick="event.stopPropagation();rc.startDialogWithSelectedPeers()">Начать диалог</button>`
+                `<button type="button" id="startDialogButton" class="btn-sm ml5 dialog-toolbar-btn dialog-start-btn" onclick="event.stopPropagation();rc.startDialogWithSelectedPeers()">Пригласить в диалог</button>`
         );
     }
 
@@ -6854,6 +6868,7 @@ function getParticipantsList(peers) {
                     buttons += `<label class="dialog-peer-check-wrap" onclick="event.stopPropagation()">
                         <input type="checkbox" class="dialog-peer-check" data-peer-id="${peer_id}" aria-label="Выбрать для диалога" />
                     </label>`;
+                    buttons += `<button type="button" class="btn-sm ml5 dialog-toolbar-btn dialog-start-btn" onclick="event.stopPropagation();rc.invitePeerToDialog('${peer_id}')">Пригласить в диалог</button>`;
                 }
                 buttons +=
                     renderParticipantActionButton({
@@ -6941,7 +6956,7 @@ function setParticipantsTippy(peers) {
         setTippy('muteAllButton', 'Выключить микрофоны у всех участников', 'top');
         setTippy('hideAllButton', 'Выключить камеры у всех участников', 'top');
         setTippy('stopAllButton', 'Остановить демонстрацию экрана у всех участников', 'top');
-        setTippy('startDialogButton', 'Начать диалог с выбранными участниками', 'top');
+        setTippy('startDialogButton', 'Пригласить выбранных гостей в диалог', 'top');
         setTippy('selectAllDialogPeersBtn', 'Выбрать всех гостей для диалога', 'top');
         //
         for (let peer of Array.from(peers.keys())) {

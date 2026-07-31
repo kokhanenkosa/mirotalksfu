@@ -377,6 +377,10 @@ class RoomClient {
         this.isVideoPinned = false;
         this.isFollowMeActive = false;
         this.isChatPinned = false;
+        this._handRaiseAlerts = new Map(); // peerId -> { name }
+        this._dialogSplitActive = false;
+        this._dialogGuestId = null;
+        this._dialogPresenterId = null;
         this.isChatMaximized = false;
         this.isToggleUnreadMsg = false;
         this.isToggleRaiseHand = false;
@@ -6117,10 +6121,12 @@ class RoomClient {
 
     async toggleChat(fromParticipants = false) {
         if (!fromParticipants && !BUTTONS.main.chatButton) return;
+        // Guests cannot open participants list
+        if (!isPresenter && fromParticipants) return;
         const chatRoom = this.getId('chatRoom');
         chatRoom.classList.toggle('show');
         if (!this.isChatOpen) {
-            await getRoomParticipants();
+            if (isPresenter) await getRoomParticipants();
             hide(chatMinButton);
 
             if (!this.isMobileDevice) {
@@ -6128,7 +6134,21 @@ class RoomClient {
             }
             this.chatCenter();
             this.sound('open');
-            this.showPeerAboutAndMessages(this.chatPeerId, this.chatPeerName, this.chatPeerAvatar);
+            this.showPeerAboutAndMessages('all', 'all');
+            // Guests: hide people list, only public chat
+            if (!isPresenter) {
+                const plist = this.getId('plist');
+                const chat = this.getId('chat');
+                if (plist) {
+                    plist.classList.add('hidden');
+                    plist.style.display = 'none';
+                }
+                if (chat) {
+                    chat.style.marginLeft = '0';
+                    chat.style.borderLeft = 'none';
+                    elemDisplay(chat.id, true);
+                }
+            }
         }
         isParticipantsListOpen = !isParticipantsListOpen;
         this.isChatOpen = !this.isChatOpen;
@@ -6212,6 +6232,10 @@ class RoomClient {
     }
 
     async toggleParticipants() {
+        if (!isPresenter) {
+            this.userLog('warning', 'Список участников доступен только ведущему и модераторам', 'top-end');
+            return;
+        }
         this.isParticipantsOpen = !this.isParticipantsOpen;
         this.syncChatToolbarButtons();
         if (!this.isParticipantsOpen && this.isChatOpen) {
@@ -11214,6 +11238,12 @@ class RoomClient {
             case 'peerAudio':
                 this.handlePeerAudio(cmd);
                 break;
+            case 'dialogSplit':
+                this.applyDialogSplitLayout(cmd.presenterId, cmd.guestId);
+                break;
+            case 'dialogSplitEnd':
+                this.exitDialogSplitLayout();
+                break;
             default:
                 break;
             //...
@@ -11393,7 +11423,7 @@ class RoomClient {
 
     startDialogWithSelectedPeers() {
         if (!isPresenter) {
-            return this.userLog('warning', 'Только модератор может начать диалог', 'top-end');
+            return this.userLog('warning', 'Только модератор может пригласить в диалог', 'top-end');
         }
         const ids = Array.from(document.querySelectorAll('.dialog-peer-check:checked'))
             .map((c) => c.getAttribute('data-peer-id'))
@@ -11404,34 +11434,49 @@ class RoomClient {
         return this.startDialogWithPeers(ids);
     }
 
+    invitePeerToDialog(peerId) {
+        if (!peerId) return;
+        return this.startDialogWithPeers([peerId]);
+    }
+
     startDialogWithPeers(peerIds = []) {
         if (!isPresenter) {
-            return this.userLog('warning', 'Только модератор может начать диалог', 'top-end');
+            return this.userLog('warning', 'Только модератор может пригласить в диалог', 'top-end');
         }
         const ids = (peerIds || []).filter(Boolean);
         if (!ids.length) {
             return this.userLog('info', 'Выберите участников для диалога', 'top-end');
         }
 
-        Swal.fire({
-            background: swalBackground,
-            position: 'center',
-            imageUrl: image.users,
-            title: 'Начать диалог',
-            html: `Запросить микрофон и камеру у <b>${ids.length}</b> участник(ов)?<br/>Они должны подтвердить запрос.`,
-            showDenyButton: true,
-            confirmButtonText: 'Да',
-            denyButtonText: 'Нет',
-            showClass: { popup: 'animate__animated animate__fadeInDown' },
-            hideClass: { popup: 'animate__animated animate__fadeOutUp' },
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-            for (const peer_id of ids) {
-                this.emitPeerMediaAction(peer_id, 'unmute');
-                this.emitPeerMediaAction(peer_id, 'unhide');
-            }
-            this.userLog('success', 'Запросы на диалог отправлены', 'top-end', 4000);
+        // Primary dialog guest for split view (first selected)
+        const primaryGuestId = ids[0];
+
+        for (const peer_id of ids) {
+            this.emitPeerMediaAction(peer_id, 'unmute');
+            this.emitPeerMediaAction(peer_id, 'unhide');
+            this.clearHandRaiseAlert(peer_id);
+        }
+
+        this.applyDialogSplitLayout(this.peer_id, primaryGuestId);
+        this.emitCmd({
+            type: 'dialogSplit',
+            broadcast: true,
+            presenterId: this.peer_id,
+            guestId: primaryGuestId,
+            peer_name: this.peer_name,
+            peer_uuid: this.peer_uuid,
         });
+
+        // Retry layout after guest media appears
+        [400, 1200, 2500].forEach((ms) => {
+            setTimeout(() => {
+                if (this._dialogSplitActive && this._dialogGuestId === primaryGuestId) {
+                    this.applyDialogSplitLayout(this.peer_id, primaryGuestId);
+                }
+            }, ms);
+        });
+
+        this.userLog('success', 'Гость приглашён в диалог', 'top-end', 3000);
     }
 
     emitPeerMediaAction(peer_id, action) {
@@ -11445,6 +11490,176 @@ class RoomClient {
             message: '',
             broadcast: false,
         });
+    }
+
+    // ####################################################
+    // HAND RAISE ALERTS (sticky until dialog invite)
+    // ####################################################
+
+    ensureHandRaiseHost() {
+        let host = document.getElementById('handRaiseAlertsHost');
+        if (host) return host;
+        host = document.createElement('div');
+        host.id = 'handRaiseAlertsHost';
+        host.className = 'hand-raise-alerts-host';
+        const myWrap = this.getCameraWrapByPeerId(this.peer_id);
+        if (myWrap) {
+            if (getComputedStyle(myWrap).position === 'static') myWrap.style.position = 'relative';
+            myWrap.appendChild(host);
+        } else {
+            document.body.appendChild(host);
+            host.classList.add('hand-raise-alerts-host--floating');
+        }
+        return host;
+    }
+
+    showHandRaiseAlert(peerId, peerName) {
+        if (!isPresenter || !peerId || peerId === this.peer_id) return;
+        this._handRaiseAlerts.set(peerId, { name: peerName || 'Участник' });
+        this.renderHandRaiseAlerts();
+        this.sound('raiseHand');
+    }
+
+    clearHandRaiseAlert(peerId) {
+        if (!peerId) return;
+        this._handRaiseAlerts.delete(peerId);
+        this.renderHandRaiseAlerts();
+    }
+
+    renderHandRaiseAlerts() {
+        const host = this.ensureHandRaiseHost();
+        host.innerHTML = '';
+        if (!this._handRaiseAlerts.size) {
+            host.classList.add('hidden');
+            return;
+        }
+        host.classList.remove('hidden');
+        for (const [peerId, info] of this._handRaiseAlerts.entries()) {
+            const row = document.createElement('div');
+            row.className = 'hand-raise-banner';
+            row.dataset.peerId = peerId;
+            row.innerHTML = `
+                <span class="hand-raise-banner-text">
+                    <i class="fas fa-hand-paper"></i>
+                    <b>${filterXSS(info.name)}</b> поднял(а) руку
+                </span>
+                <button type="button" class="hand-raise-invite-btn">Пригласить в диалог</button>
+            `;
+            row.querySelector('.hand-raise-invite-btn')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.invitePeerToDialog(peerId);
+            });
+            host.appendChild(row);
+        }
+    }
+
+    // ####################################################
+    // DIALOG SPLIT LAYOUT (50/50 presenter | guest)
+    // ####################################################
+
+    getCameraWrapByPeerId(peerId) {
+        if (!peerId) return null;
+        const video = this.getVideoElementByPeerId(peerId);
+        if (video) {
+            const byId = this.getId(video.id + '__video');
+            if (byId) return byId;
+            const closest = video.closest('.Camera');
+            if (closest) return closest;
+        }
+        return this.getId(peerId + '__videoOff') || this.getId(peerId + '__video') || null;
+    }
+
+    applyDialogSplitLayout(presenterId, guestId) {
+        if (!presenterId || !guestId) return;
+        this._dialogSplitActive = true;
+        this._dialogPresenterId = presenterId;
+        this._dialogGuestId = guestId;
+
+        document.body.classList.add('dialog-split-active');
+
+        const presenterWrap = this.getCameraWrapByPeerId(presenterId);
+        const guestWrap = this.getCameraWrapByPeerId(guestId);
+
+        document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
+            if (el === presenterWrap || el === guestWrap) return;
+            el.dataset.dialogHidden = '1';
+            el.style.display = 'none';
+        });
+
+        if (presenterWrap) {
+            presenterWrap.dataset.dialogHidden = '0';
+            presenterWrap.style.display = 'block';
+            presenterWrap.classList.add('dialog-split-left');
+            presenterWrap.classList.remove('dialog-split-right');
+            if (presenterWrap.parentElement !== this.videoPinMediaContainer) {
+                this.videoPinMediaContainer.appendChild(presenterWrap);
+            }
+        }
+        if (guestWrap) {
+            guestWrap.dataset.dialogHidden = '0';
+            guestWrap.style.display = 'block';
+            guestWrap.classList.add('dialog-split-right');
+            guestWrap.classList.remove('dialog-split-left');
+            if (guestWrap.parentElement !== this.videoMediaContainer) {
+                this.videoMediaContainer.appendChild(guestWrap);
+            }
+        }
+
+        this.videoPinMediaContainer.style.display = 'block';
+        this.videoPinMediaContainer.style.top = '0';
+        this.videoPinMediaContainer.style.left = '0';
+        this.videoPinMediaContainer.style.right = 'auto';
+        this.videoPinMediaContainer.style.width = '50%';
+        this.videoPinMediaContainer.style.height = '100%';
+
+        this.videoMediaContainer.style.top = '0';
+        this.videoMediaContainer.style.left = '50%';
+        this.videoMediaContainer.style.right = '0';
+        this.videoMediaContainer.style.width = '50%';
+        this.videoMediaContainer.style.height = '100%';
+
+        this.isVideoPinned = true;
+        try {
+            resizeVideoMedia();
+            handleAspectRatio();
+        } catch {
+            /* ignore */
+        }
+    }
+
+    exitDialogSplitLayout() {
+        if (!this._dialogSplitActive) return;
+        this._dialogSplitActive = false;
+        document.body.classList.remove('dialog-split-active');
+
+        document.querySelectorAll('.Camera[data-dialog-hidden="1"]').forEach((el) => {
+            el.style.display = '';
+            delete el.dataset.dialogHidden;
+        });
+        document.querySelectorAll('.dialog-split-left, .dialog-split-right').forEach((el) => {
+            el.classList.remove('dialog-split-left', 'dialog-split-right');
+            if (el.parentElement === this.videoPinMediaContainer) {
+                this.videoMediaContainer.appendChild(el);
+            }
+        });
+
+        this.videoPinMediaContainer.style.display = 'none';
+        this.videoPinMediaContainer.style.width = '';
+        this.videoPinMediaContainer.style.height = '';
+        this.videoMediaContainer.style.top = '';
+        this.videoMediaContainer.style.left = '';
+        this.videoMediaContainer.style.right = '';
+        this.videoMediaContainer.style.width = '';
+        this.videoMediaContainer.style.height = '';
+        this.isVideoPinned = false;
+        this._dialogGuestId = null;
+        this._dialogPresenterId = null;
+        try {
+            resizeVideoMedia();
+            handleAspectRatio();
+        } catch {
+            /* ignore */
+        }
     }
 
     setPeerPresenter(peer_id) {
@@ -11623,12 +11838,11 @@ class RoomClient {
                     break;
                 case 'unmute':
                     if (peerActionAllowed) {
-                        this.peerMediaStartConfirm(
-                            mediaType.audio,
-                            image.unmute,
-                            'Включить микрофон',
-                            'Разрешить ведущему включить ваш микрофон?'
-                        );
+                        // No guest consent popup — moderator invite starts media immediately
+                        await this.peerMediaStartForced(mediaType.audio);
+                        if (this.peer_info?.peer_hand) {
+                            this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
+                        }
                     }
                     break;
                 case 'hide':
@@ -11644,12 +11858,10 @@ class RoomClient {
                     break;
                 case 'unhide':
                     if (peerActionAllowed) {
-                        this.peerMediaStartConfirm(
-                            mediaType.video,
-                            image.unhide,
-                            'Включить камеру',
-                            'Разрешить ведущему включить вашу камеру?'
-                        );
+                        await this.peerMediaStartForced(mediaType.video);
+                        if (this.peer_info?.peer_hand) {
+                            this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
+                        }
                     }
                     break;
                 case 'stop':
@@ -11710,7 +11922,55 @@ class RoomClient {
         elemDisplay('settingsButton', true);
     }
 
+    async peerMediaStartForced(type) {
+        try {
+            this.unlockBroadcastSpotlitControls(type);
+            switch (type) {
+                case mediaType.audio:
+                    if (this.producerExist(mediaType.audio)) {
+                        await this.resumeProducer(mediaType.audio);
+                    } else {
+                        await this.produce(mediaType.audio, microphoneSelect?.value);
+                    }
+                    this.updatePeerInfo(this.peer_name, this.peer_id, 'audio', true);
+                    this.event(_EVENTS.startAudio);
+                    elemDisplay('startAudioButton', false);
+                    elemDisplay('stopAudioButton', true);
+                    break;
+                case mediaType.video:
+                    if (this.producerExist(mediaType.video)) {
+                        await this.resumeProducer(mediaType.video);
+                    } else {
+                        await this.produce(mediaType.video, videoSelect?.value);
+                    }
+                    this.updatePeerInfo(this.peer_name, this.peer_id, 'video', true);
+                    this.event(_EVENTS.startVideo);
+                    elemDisplay('startVideoButton', false);
+                    elemDisplay('stopVideoButton', true);
+                    break;
+                case mediaType.screen:
+                    await this.produce(mediaType.screen);
+                    this.updatePeerInfo(this.peer_name, this.peer_id, 'screen', true);
+                    this.event(_EVENTS.startScreen);
+                    elemDisplay('startScreenButton', false);
+                    elemDisplay('stopScreenButton', true);
+                    break;
+                default:
+                    break;
+            }
+        } catch (err) {
+            console.error('peerMediaStartForced failed', { type, err });
+            this.userLog(
+                'error',
+                'Не удалось включить медиа. Проверьте разрешения браузера и попробуйте снова.',
+                'top-end',
+                8000
+            );
+        }
+    }
+
     peerMediaStartConfirm(type, imageUrl, title, text) {
+        // Keep for screen-share requests; audio/video dialog invites use peerMediaStartForced
         sound('notify');
         Swal.fire({
             background: swalBackground,
@@ -11725,50 +11985,7 @@ class RoomClient {
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then(async (result) => {
             if (!result.isConfirmed) return;
-            try {
-                this.unlockBroadcastSpotlitControls(type);
-                switch (type) {
-                    case mediaType.audio:
-                        if (this.producerExist(mediaType.audio)) {
-                            await this.resumeProducer(mediaType.audio);
-                        } else {
-                            await this.produce(mediaType.audio, microphoneSelect?.value);
-                        }
-                        this.updatePeerInfo(this.peer_name, this.peer_id, 'audio', true);
-                        this.event(_EVENTS.startAudio);
-                        elemDisplay('startAudioButton', false);
-                        elemDisplay('stopAudioButton', true);
-                        break;
-                    case mediaType.video:
-                        if (this.producerExist(mediaType.video)) {
-                            await this.resumeProducer(mediaType.video);
-                        } else {
-                            await this.produce(mediaType.video, videoSelect?.value);
-                        }
-                        this.updatePeerInfo(this.peer_name, this.peer_id, 'video', true);
-                        this.event(_EVENTS.startVideo);
-                        elemDisplay('startVideoButton', false);
-                        elemDisplay('stopVideoButton', true);
-                        break;
-                    case mediaType.screen:
-                        await this.produce(mediaType.screen);
-                        this.updatePeerInfo(this.peer_name, this.peer_id, 'screen', true);
-                        this.event(_EVENTS.startScreen);
-                        elemDisplay('startScreenButton', false);
-                        elemDisplay('stopScreenButton', true);
-                        break;
-                    default:
-                        break;
-                }
-            } catch (err) {
-                console.error('peerMediaStartConfirm failed', { type, err });
-                this.userLog(
-                    'error',
-                    'Не удалось включить медиа. Проверьте разрешения браузера и попробуйте снова.',
-                    'top-end',
-                    8000
-                );
-            }
+            await this.peerMediaStartForced(type);
         });
     }
 
@@ -12516,15 +12733,11 @@ class RoomClient {
                     const peer_hand = this.getPeerHandBtn(peer_id);
                     if (status) {
                         if (peer_hand) peer_hand.style.display = 'flex';
-                        this.userLog(
-                            'warning',
-                            peer_name + '  ' + _PEER.raiseHand + ' has raised the hand',
-                            'top-end',
-                            10000
-                        );
-                        this.sound('raiseHand');
+                        // Sticky alert for presenter/moderator until dialog invite
+                        this.showHandRaiseAlert(peer_id, peer_name);
                     } else {
                         if (peer_hand) peer_hand.style.display = 'none';
+                        this.clearHandRaiseAlert(peer_id);
                     }
                     break;
                 case 'avatar':
@@ -14110,6 +14323,14 @@ class RoomClient {
     }
 
     checkPeerInfoStatus(peer_info) {
+        // restore sticky hand-raise alert for presenter after late join / tile rebuild
+        try {
+            if (isPresenter && peer_info?.peer_hand && peer_info.peer_id !== this.peer_id) {
+                this.showHandRaiseAlert(peer_info.peer_id, peer_info.peer_name);
+            }
+        } catch {
+            /* ignore */
+        }
         let peer_id = peer_info.peer_id;
         let peer_hand_status = peer_info.peer_hand;
         if (peer_hand_status) {
