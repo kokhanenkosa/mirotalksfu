@@ -1292,7 +1292,7 @@ module.exports = {
                 html: `
                     <hr />
                     <span>
-                        &copy; ${new Date().getFullYear()} ${process.env.COPYRIGHT_TEXT || 'OPTRF. Все права точно защищены'}
+                        &copy; ${new Date().getFullYear()} ${process.env.COPYRIGHT_TEXT || 'OPTRF. Все права защищены. точно '}
                     </span>
                     <hr />
                     `,

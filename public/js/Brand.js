@@ -122,7 +122,7 @@ let BRAND = {
         title: '<strong>OPTRF</strong>',
         html: `
             <hr />
-            <span>&copy; ${new Date().getFullYear()} OPTRF. Все права точно защищены</span>
+            <span>&copy; ${new Date().getFullYear()} OPTRF. Все права защищены. точно </span>
             <hr />
         `,
     },
