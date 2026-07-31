@@ -71,7 +71,8 @@ services:
             - HOST_USER_AUTH=${HOST_USER_AUTH:-false}
             - HOST_USERS=${HOST_USERS:-}
 
-            - PHONE_AUTH_ENABLED=${PHONE_AUTH_ENABLED:-true}
+            # TEMP: phone OTP выключен (вернуть default true + enabled в config.template.js)
+            - PHONE_AUTH_ENABLED=${PHONE_AUTH_ENABLED:-false}
             - PHONE_AUTH_JWT_EXP=${PHONE_AUTH_JWT_EXP:-7d}
             - PHONE_CREATORS=${PHONE_CREATORS:-}
             - PHONE_SUPERADMINS=${PHONE_SUPERADMINS:-}

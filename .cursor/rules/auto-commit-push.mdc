@@ -1,0 +1,43 @@
+---
+description: Auto commit and push after substantial changes; short Latin commit messages
+alwaysApply: true
+---
+
+# Auto commit & push
+
+After finishing a **substantial** change (feature, bugfix, multi-file edit, config flip — not a one-line typo or a pure Q&A), do this in the same turn without waiting for the user to ask:
+
+1. `git status` / `git diff` / recent `git log` (parallel)
+2. Stage relevant files only (never `.env`, secrets, credentials)
+3. Commit with a **short message in Latin script only** (English preferred)
+4. `git push origin HEAD` (or the current tracking branch)
+5. Confirm with commit hash / that push succeeded
+
+## Commit message rules
+
+- Latin characters only (no Cyrillic)
+- Short: ~1 line, ideally under 72 chars
+- Imperative mood: `Disable phone auth temporarily`, not `Disabled...`
+- Focus on why/what in one phrase; no multi-paragraph bodies unless needed for safety
+
+Examples:
+
+```
+Disable phone auth for open room join
+Update footer copyright text
+Fix open join when phone auth is off
+```
+
+## Do not auto-commit when
+
+- User is only asking a question / reviewing / exploring
+- Working tree has unrelated WIP the user did not ask to include
+- Change is trivial (typo, comment-only) unless user asked to ship it
+- Commit would include secrets
+
+## Safety
+
+- Never `--force` push to `main`/`master`
+- Never amend a commit that was already pushed
+- Never update git config
+- Never skip hooks unless user explicitly asks

@@ -1506,7 +1506,9 @@ async function startServer() {
             }
 
             const phoneOk = phoneAuth.isEnabled() && Boolean(phoneAuth.getSession(req) || phoneAuth.verifyToken(token));
-            if (room && (hostCfg.authenticated || isPeerValid || phoneOk)) {
+            // Open access: phone auth off + host not protected → room UI (name prompt), no login page
+            const openJoin = !phoneAuth.isEnabled() && !hostCfg.protected && !OIDC.enabled;
+            if (room && (hostCfg.authenticated || isPeerValid || phoneOk || openJoin)) {
                 return htmlInjector.injectHtml(views.room, res);
             } else if (phoneAuth.isEnabled()) {
                 return res.redirect(phoneAuth.buildAuthRedirect(req, req.originalUrl));
