@@ -535,9 +535,7 @@ module.exports = {
          * - PROXY_URL обязателен для Telegram Gateway
          */
         phoneAuth: {
-            // TEMP: phone OTP выключен — вход по ссылке комнаты + имя.
-            // Вернуть: enabled: process.env.PHONE_AUTH_ENABLED === 'true',
-            enabled: false,
+            enabled: process.env.PHONE_AUTH_ENABLED === 'true',
             jwtExp: process.env.PHONE_AUTH_JWT_EXP || '7d',
             creators: process.env.PHONE_CREATORS
                 ? process.env.PHONE_CREATORS.split(splitChar)
