@@ -201,6 +201,42 @@ body.dialog-split-active .dialog-split-slot {
     min-height: 0 !important;
 }
 
+/* Desktop dialog grids — lecturer always first (left / top-left) */
+body.dialog-split-active:not(.dialog-split-mobile) #videoMediaContainer {
+    display: grid !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    box-sizing: border-box !important;
+    background: #000 !important;
+}
+
+body.dialog-split-active:not(.dialog-split-mobile) .dialog-split-slot {
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    box-sizing: border-box !important;
+}
+
+body.dialog-split-active.dialog-grid-n2 .dialog-slot-2 {
+    width: 50% !important;
+    justify-self: center !important;
+}
+
+body.dialog-split-active.dialog-grid-many #dialogFilmstrip,
+body.dialog-split-active #dialogFilmstrip.dialog-filmstrip {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 4px !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+}
+
+body.dialog-split-active.dialog-grid-many #dialogFilmstrip .dialog-split-slot {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    height: 100% !important;
+}
+
 body.dialog-split-active .dialog-split-slot > video,
 body.dialog-split-active .dialog-split-slot video.videoDefault {
     position: absolute !important;

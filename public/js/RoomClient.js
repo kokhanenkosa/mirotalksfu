@@ -382,6 +382,7 @@ class RoomClient {
         this._dialogGuestId = null;
         this._dialogGuestIds = [];
         this._dialogPresenterId = null;
+        this._dialogActiveSpeakerId = null; // for >5 guests focus layout
         this._forceSimpleMedia = false; // skip VB / use soft constraints on dialog invite
         this._dialogInviteInProgress = false;
         this._pendingChatReply = null; // { msgId, fromName, text }
@@ -11345,6 +11346,21 @@ class RoomClient {
         if (this.dominantSpeaker && switchDominantSpeakerFocus.checked) {
             this.handleDominantSpeakerFocus(producer_id);
         }
+        // Desktop dialog with >5 guests: promote speaking guest to large slot
+        if (
+            this._dialogSplitActive &&
+            !this.isMobileDevice &&
+            peer_id &&
+            peer_id !== this._dialogPresenterId &&
+            (this._dialogGuestIds || []).includes(peer_id) &&
+            (this._dialogGuestIds || []).length > 5 &&
+            this._dialogActiveSpeakerId !== peer_id
+        ) {
+            this._dialogActiveSpeakerId = peer_id;
+            if (!this._applyingDialogSplit) {
+                this.applyDialogSplitLayout(this._dialogPresenterId, this._dialogGuestIds);
+            }
+        }
     }
 
     // ####################################################
@@ -12331,6 +12347,37 @@ class RoomClient {
         }, 50);
     }
 
+    clearDialogGridClasses() {
+        document.body.classList.remove(
+            'dialog-grid-n1',
+            'dialog-grid-n2',
+            'dialog-grid-n3',
+            'dialog-grid-n4',
+            'dialog-grid-n5',
+            'dialog-grid-many'
+        );
+        document.querySelectorAll('.dialog-split-slot').forEach((el) => {
+            el.classList.remove('dialog-slot-index', 'dialog-slot-film');
+            [...el.classList].forEach((c) => {
+                if (/^dialog-slot-\d+$/.test(c)) el.classList.remove(c);
+            });
+        });
+    }
+
+    /** Lecturer first; for >5 guests: lecturer + active speaker + up to 4 others. */
+    getDialogDesktopPeerOrder(presenterId, guestIds) {
+        const guests = [...guestIds];
+        if (guests.length <= 5) return [presenterId, ...guests];
+
+        let speaker = this._dialogActiveSpeakerId;
+        if (!speaker || speaker === presenterId || !guests.includes(speaker)) {
+            speaker = guests[0];
+        }
+        this._dialogActiveSpeakerId = speaker;
+        const others = guests.filter((id) => id !== speaker).slice(0, 4);
+        return [presenterId, speaker, ...others];
+    }
+
     applyDialogSplitLayout(presenterId, guestIdsInput) {
         if (!presenterId) return;
         const guestIds = (Array.isArray(guestIdsInput) ? guestIdsInput : [guestIdsInput])
@@ -12357,16 +12404,26 @@ class RoomClient {
         this._applyingDialogSplit = true;
 
         document.body.classList.add('dialog-split-active');
+        this.clearDialogGridClasses();
 
-        const peerIds = [presenterId, ...guestIds];
+        const isMobileSplit = !!(this.isMobileDevice || window.innerWidth <= 768);
+        document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
+
+        // Visible peers: all on mobile / ≤5 guests; speaker-focus set when >5 on desktop
+        const allDialogPeerIds = [presenterId, ...guestIds];
+        const peerIds = isMobileSplit
+            ? allDialogPeerIds
+            : this.getDialogDesktopPeerOrder(presenterId, guestIds);
+        const visibleSet = new Set(peerIds);
+
         const wraps = peerIds.map((id) => this.getCameraWrapByPeerId(id) || this.ensureDialogPlaceholder(id));
         const wrapSet = new Set(wraps.filter(Boolean));
 
         // Protect ALL live tiles for dialog peers before hiding anything else
         document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
             const liveVideo = el.querySelector('video[name]');
-            const livePeerId = liveVideo?.getAttribute('name');
-            if (livePeerId && peerIds.includes(livePeerId) && !el.classList.contains('dialog-split-placeholder')) {
+            const livePeerId = liveVideo?.getAttribute('name') || el.dataset?.peerId;
+            if (livePeerId && visibleSet.has(livePeerId) && !el.classList.contains('dialog-split-placeholder')) {
                 wrapSet.add(el);
             }
         });
@@ -12375,19 +12432,18 @@ class RoomClient {
             if (wrapSet.has(el)) return;
             if (el.classList.contains('dialog-split-placeholder')) {
                 const pid = (el.id || '').replace('__dialogSlot', '');
-                if (peerIds.includes(pid)) return;
+                if (visibleSet.has(pid)) return;
             }
-            // Never hide a live dialog peer tile
             const liveVideo = el.querySelector('video[name]');
-            const livePeerId = liveVideo?.getAttribute('name');
-            if (livePeerId && peerIds.includes(livePeerId)) return;
+            const livePeerId = liveVideo?.getAttribute('name') || el.dataset?.peerId;
+            if (livePeerId && visibleSet.has(livePeerId)) return;
 
             el.dataset.dialogHidden = '1';
             el.style.display = 'none';
             el.classList.remove('dialog-split-slot', 'dialog-split-left', 'dialog-split-right');
         });
 
-        // Prefer live video tiles over placeholders for each dialog peer
+        // Prefer live video tiles over placeholders for each visible dialog peer
         const preferredWraps = peerIds.map((id) => {
             const live = this.getCameraWrapByPeerId(id);
             if (live && !live.classList.contains('dialog-split-placeholder') && !(live.id || '').endsWith('__videoOff')) {
@@ -12399,16 +12455,11 @@ class RoomClient {
         wraps.length = 0;
         preferredWraps.forEach((w) => wraps.push(w));
 
-        const isMobileSplit = !!(this.isMobileDevice || window.innerWidth <= 768);
-        document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
-
-        // Chat pinned = 25% → stage 75%; split stage equally between dialog peers
+        // Chat pinned = 25% → stage 75%
         const chatPct = !isMobileSplit && this.isChatPinned ? 25 : 0;
         const stagePct = 100 - chatPct;
-        const slotCount = Math.max(peerIds.length, 2);
-        const slotPct = stagePct / slotCount;
+        const guestCount = guestIds.length;
 
-        this.videoPinMediaContainer.style.display = 'block';
         this.videoPinMediaContainer.style.position = 'absolute';
         this.videoPinMediaContainer.style.right = 'auto';
         this.videoPinMediaContainer.style.bottom = 'auto';
@@ -12424,10 +12475,10 @@ class RoomClient {
             wrap.style.display = 'block';
             wrap.style.visibility = 'visible';
             wrap.style.opacity = '1';
-            wrap.classList.add('dialog-split-slot');
+            wrap.classList.add('dialog-split-slot', 'dialog-slot-index', `dialog-slot-${index}`);
             wrap.classList.toggle('dialog-split-left', index === 0);
             wrap.classList.toggle('dialog-split-right', index > 0);
-            // Full slot — source AR preserved via object-fit:contain (see CSS)
+            wrap.classList.toggle('dialog-slot-film', !isMobileSplit && guestCount > 5 && index >= 2);
             wrap.style.margin = '0';
             wrap.style.width = '100%';
             wrap.style.height = '100%';
@@ -12435,17 +12486,12 @@ class RoomClient {
             wrap.style.maxHeight = 'none';
             wrap.style.flex = '1 1 0';
             wrap.style.alignSelf = 'stretch';
+            wrap.style.gridColumn = '';
+            wrap.style.gridRow = '';
+            wrap.style.justifySelf = '';
 
-            if (isMobileSplit) {
-                // Mobile: all slots in one flex column (avoids overlapping absolute containers)
-                if (wrap.parentElement !== this.videoMediaContainer) {
-                    this.videoMediaContainer.appendChild(wrap);
-                }
-            } else if (index === 0) {
-                if (wrap.parentElement !== this.videoPinMediaContainer) {
-                    this.videoPinMediaContainer.appendChild(wrap);
-                }
-            } else if (wrap.parentElement !== this.videoMediaContainer) {
+            // All slots live in the stage container
+            if (wrap.parentElement !== this.videoMediaContainer) {
                 this.videoMediaContainer.appendChild(wrap);
             }
 
@@ -12460,6 +12506,8 @@ class RoomClient {
             setImp(this.videoMediaContainer, 'flex-wrap', 'nowrap');
             setImp(this.videoMediaContainer, 'align-items', 'stretch');
             setImp(this.videoMediaContainer, 'justify-content', 'stretch');
+            setImp(this.videoMediaContainer, 'grid-template-columns', '');
+            setImp(this.videoMediaContainer, 'grid-template-rows', '');
             setImp(this.videoMediaContainer, 'top', 'var(--optrf-topbar-h, 48px)');
             setImp(this.videoMediaContainer, 'left', '0');
             setImp(this.videoMediaContainer, 'right', '0');
@@ -12476,7 +12524,7 @@ class RoomClient {
                 setImp(wrap, 'position', 'relative');
                 setImp(wrap, 'flex', '1 1 0');
                 setImp(wrap, 'width', '100%');
-                setImp(wrap, 'height', '0'); // equal flex share
+                setImp(wrap, 'height', '0');
                 setImp(wrap, 'min-height', '0');
                 setImp(wrap, 'margin', '0');
                 const v = wrap.querySelector('video');
@@ -12495,39 +12543,100 @@ class RoomClient {
                     }
                 }
             });
-        } else if (slotCount === 2) {
-            // Desktop 2-way: equal halves of stage left of chat
-            this.videoPinMediaContainer.style.top = '0';
-            this.videoPinMediaContainer.style.left = '0';
-            this.videoPinMediaContainer.style.width = `${slotPct}%`;
-            this.videoPinMediaContainer.style.height = '100%';
-            this.videoPinMediaContainer.style.display = 'block';
-
+        } else {
+            // Desktop grids (lecturer always slot-0 / left)
+            this.videoPinMediaContainer.style.display = 'none';
             this.videoMediaContainer.style.top = '0';
-            this.videoMediaContainer.style.left = `${slotPct}%`;
-            this.videoMediaContainer.style.width = `${slotPct}%`;
+            this.videoMediaContainer.style.left = '0';
+            this.videoMediaContainer.style.width = `${stagePct}%`;
             this.videoMediaContainer.style.height = '100%';
-            this.videoMediaContainer.style.display = 'block';
+            this.videoMediaContainer.style.display = 'grid';
             this.videoMediaContainer.style.flexDirection = '';
             this.videoMediaContainer.style.flexWrap = '';
-            this.videoMediaContainer.style.alignItems = '';
-            this.videoMediaContainer.style.justifyContent = '';
-        } else {
-            this.videoPinMediaContainer.style.top = '0';
-            this.videoPinMediaContainer.style.left = '0';
-            this.videoPinMediaContainer.style.width = `${slotPct}%`;
-            this.videoPinMediaContainer.style.height = '100%';
-            this.videoPinMediaContainer.style.display = 'block';
-
-            this.videoMediaContainer.style.top = '0';
-            this.videoMediaContainer.style.left = `${slotPct}%`;
-            this.videoMediaContainer.style.width = `${stagePct - slotPct}%`;
-            this.videoMediaContainer.style.height = '100%';
-            this.videoMediaContainer.style.display = 'flex';
-            this.videoMediaContainer.style.flexDirection = 'row';
-            this.videoMediaContainer.style.flexWrap = 'nowrap';
             this.videoMediaContainer.style.alignItems = 'stretch';
             this.videoMediaContainer.style.justifyContent = 'stretch';
+            this.videoMediaContainer.style.gap = '4px';
+            this.videoMediaContainer.style.padding = '4px';
+            this.videoMediaContainer.style.boxSizing = 'border-box';
+
+            if (guestCount > 5) {
+                document.body.classList.add('dialog-grid-many');
+                this.videoMediaContainer.style.gridTemplateColumns = '1fr 1fr';
+                this.videoMediaContainer.style.gridTemplateRows = 'minmax(0, 2fr) minmax(0, 1fr)';
+                wraps.forEach((wrap, index) => {
+                    if (!wrap) return;
+                    if (index === 0) {
+                        wrap.style.gridColumn = '1';
+                        wrap.style.gridRow = '1';
+                    } else if (index === 1) {
+                        wrap.style.gridColumn = '2';
+                        wrap.style.gridRow = '1';
+                    } else {
+                        // Filmstrip: distribute across bottom row
+                        const filmCount = Math.max(wraps.length - 2, 1);
+                        const filmIndex = index - 2;
+                        wrap.style.gridRow = '2';
+                        wrap.style.gridColumn = '1 / -1';
+                        // Use a nested flex filmstrip via container — place all film in one cell via subgrid fallback:
+                        // absolute positioning within a shared film row host
+                    }
+                });
+                // Build filmstrip host for slots 2+
+                this.ensureDialogFilmstrip(wraps.slice(2));
+            } else {
+                document.body.classList.add(`dialog-grid-n${guestCount}`);
+                this.teardownDialogFilmstrip();
+                switch (guestCount) {
+                    case 1:
+                        this.videoMediaContainer.style.gridTemplateColumns = '1fr 1fr';
+                        this.videoMediaContainer.style.gridTemplateRows = '1fr';
+                        break;
+                    case 2:
+                        this.videoMediaContainer.style.gridTemplateColumns = '1fr 1fr';
+                        this.videoMediaContainer.style.gridTemplateRows = '1fr 1fr';
+                        if (wraps[2]) {
+                            wraps[2].style.gridColumn = '1 / -1';
+                            wraps[2].style.gridRow = '2';
+                            wraps[2].style.width = '50%';
+                            wraps[2].style.justifySelf = 'center';
+                        }
+                        break;
+                    case 3:
+                        this.videoMediaContainer.style.gridTemplateColumns = '1fr 1fr';
+                        this.videoMediaContainer.style.gridTemplateRows = '1fr 1fr';
+                        break;
+                    case 4:
+                        // 3 on top, 2 centered below (6-col grid)
+                        this.videoMediaContainer.style.gridTemplateColumns = 'repeat(6, 1fr)';
+                        this.videoMediaContainer.style.gridTemplateRows = '1fr 1fr';
+                        if (wraps[0]) {
+                            wraps[0].style.gridColumn = '1 / 3';
+                            wraps[0].style.gridRow = '1';
+                        }
+                        if (wraps[1]) {
+                            wraps[1].style.gridColumn = '3 / 5';
+                            wraps[1].style.gridRow = '1';
+                        }
+                        if (wraps[2]) {
+                            wraps[2].style.gridColumn = '5 / 7';
+                            wraps[2].style.gridRow = '1';
+                        }
+                        if (wraps[3]) {
+                            wraps[3].style.gridColumn = '2 / 4';
+                            wraps[3].style.gridRow = '2';
+                        }
+                        if (wraps[4]) {
+                            wraps[4].style.gridColumn = '4 / 6';
+                            wraps[4].style.gridRow = '2';
+                        }
+                        break;
+                    case 5:
+                    default:
+                        this.videoMediaContainer.style.gridTemplateColumns = '1fr 1fr 1fr';
+                        this.videoMediaContainer.style.gridTemplateRows = '1fr 1fr';
+                        break;
+                }
+            }
         }
 
         this.isVideoPinned = true;
@@ -12553,6 +12662,51 @@ class RoomClient {
                 /* ignore */
             }
         });
+    }
+
+    ensureDialogFilmstrip(filmWraps = []) {
+        let host = document.getElementById('dialogFilmstrip');
+        if (!host) {
+            host = document.createElement('div');
+            host.id = 'dialogFilmstrip';
+            host.className = 'dialog-filmstrip';
+        }
+        host.style.gridColumn = '1 / -1';
+        host.style.gridRow = '2';
+        host.style.display = 'flex';
+        host.style.flexDirection = 'row';
+        host.style.gap = '4px';
+        host.style.minHeight = '0';
+        host.style.height = '100%';
+        host.style.width = '100%';
+        if (host.parentElement !== this.videoMediaContainer) {
+            this.videoMediaContainer.appendChild(host);
+        }
+        filmWraps.forEach((wrap) => {
+            if (!wrap) return;
+            wrap.style.gridColumn = '';
+            wrap.style.gridRow = '';
+            wrap.style.flex = '1 1 0';
+            wrap.style.width = 'auto';
+            wrap.style.height = '100%';
+            wrap.style.minWidth = '0';
+            if (wrap.parentElement !== host) host.appendChild(wrap);
+        });
+        // Remove stale film children that are no longer in the set
+        [...host.children].forEach((child) => {
+            if (child.classList?.contains('dialog-split-slot') && !filmWraps.includes(child)) {
+                // leave orphans for next layout pass cleanup
+            }
+        });
+    }
+
+    teardownDialogFilmstrip() {
+        const host = document.getElementById('dialogFilmstrip');
+        if (!host) return;
+        [...host.children].forEach((child) => {
+            this.videoMediaContainer.appendChild(child);
+        });
+        host.remove();
     }
 
     /**
@@ -12587,6 +12741,8 @@ class RoomClient {
         if (!this._dialogSplitActive) return;
         this._dialogSplitActive = false;
         this._pendingRoomDialog = null;
+        this.teardownDialogFilmstrip();
+        this.clearDialogGridClasses();
         document.body.classList.remove('dialog-split-active', 'dialog-split-mobile');
 
         document.querySelectorAll('.Camera[data-dialog-hidden="1"]').forEach((el) => {
@@ -12594,7 +12750,16 @@ class RoomClient {
             delete el.dataset.dialogHidden;
         });
         document.querySelectorAll('.dialog-split-left, .dialog-split-right, .dialog-split-slot').forEach((el) => {
-            el.classList.remove('dialog-split-left', 'dialog-split-right', 'dialog-split-slot');
+            el.classList.remove(
+                'dialog-split-left',
+                'dialog-split-right',
+                'dialog-split-slot',
+                'dialog-slot-index',
+                'dialog-slot-film'
+            );
+            [...el.classList].forEach((c) => {
+                if (c.startsWith('dialog-slot-')) el.classList.remove(c);
+            });
             el.style.flex = '';
             el.style.maxWidth = '';
             el.style.maxHeight = '';
@@ -12602,7 +12767,10 @@ class RoomClient {
             el.style.height = '';
             el.style.margin = '';
             el.style.alignSelf = '';
-            if (el.parentElement === this.videoPinMediaContainer) {
+            el.style.gridColumn = '';
+            el.style.gridRow = '';
+            el.style.justifySelf = '';
+            if (el.parentElement === this.videoPinMediaContainer || el.parentElement?.id === 'dialogFilmstrip') {
                 this.videoMediaContainer.appendChild(el);
             }
         });
@@ -12622,10 +12790,15 @@ class RoomClient {
         this.videoMediaContainer.style.height = '';
         this.videoMediaContainer.style.display = '';
         this.videoMediaContainer.style.flexDirection = '';
+        this.videoMediaContainer.style.gridTemplateColumns = '';
+        this.videoMediaContainer.style.gridTemplateRows = '';
+        this.videoMediaContainer.style.gap = '';
+        this.videoMediaContainer.style.padding = '';
         this.isVideoPinned = false;
         this._dialogGuestId = null;
         this._dialogGuestIds = [];
         this._dialogPresenterId = null;
+        this._dialogActiveSpeakerId = null;
 
         // Restore stage width next to pinned chat
         if (this.isChatPinned && !this.isMobileDevice) {

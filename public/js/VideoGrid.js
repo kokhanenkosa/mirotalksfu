@@ -48,7 +48,10 @@ function resizeVideoMedia() {
     // Dialog split owns tile geometry — do not let the grid resizer shrink/hide slots.
     if (typeof rc !== 'undefined' && rc?._dialogSplitActive) {
         document.querySelectorAll('.dialog-split-slot').forEach((el) => {
-            el.style.width = '100%';
+            // 2-guest layout: bottom slot is centered at 50% width
+            const centeredBottom =
+                document.body.classList.contains('dialog-grid-n2') && el.classList.contains('dialog-slot-2');
+            el.style.width = centeredBottom ? '50%' : '100%';
             el.style.height = '100%';
             el.style.margin = '0';
             el.style.maxWidth = 'none';
