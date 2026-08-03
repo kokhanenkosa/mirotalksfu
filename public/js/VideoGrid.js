@@ -45,16 +45,18 @@ function Area(Increment, Count, Width, Height, Margin = 10) {
 function resizeVideoMedia() {
     if (isHideALLVideosActive) return;
 
-    // Dialog split owns tile geometry (source aspect ratio) — do not run grid resizer.
+    // Dialog split owns tile geometry — do not let the grid resizer shrink/hide slots.
     if (typeof rc !== 'undefined' && rc?._dialogSplitActive) {
-        try {
-            const isMobileSplit = !!(rc.isMobileDevice || window.innerWidth <= 768);
-            document.querySelectorAll('.dialog-split-slot').forEach((el) => {
-                rc.bindDialogSourceAspect?.(el, isMobileSplit);
-            });
-        } catch {
-            /* ignore */
-        }
+        document.querySelectorAll('.dialog-split-slot').forEach((el) => {
+            el.style.width = '100%';
+            el.style.height = '100%';
+            el.style.margin = '0';
+            el.style.maxWidth = 'none';
+            el.style.maxHeight = 'none';
+            el.style.display = 'block';
+            el.style.visibility = 'visible';
+            el.style.opacity = '1';
+        });
         return;
     }
 

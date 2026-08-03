@@ -12072,7 +12072,13 @@ class RoomClient {
 
         document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
             if (wrapSet.has(el)) return;
-            // Keep orphan placeholders only for dialog peers
+            // Never hide a live video belonging to a dialog peer (lookup may have picked placeholder)
+            const liveVideo = el.querySelector('video[name]');
+            const livePeerId = liveVideo?.getAttribute('name');
+            if (livePeerId && peerIds.includes(livePeerId)) {
+                wrapSet.add(el);
+                return;
+            }
             if (el.classList.contains('dialog-split-placeholder')) {
                 const pid = (el.id || '').replace('__dialogSlot', '');
                 if (peerIds.includes(pid)) return;
@@ -12081,6 +12087,18 @@ class RoomClient {
             el.style.display = 'none';
             el.classList.remove('dialog-split-slot', 'dialog-split-left', 'dialog-split-right');
         });
+
+        // Prefer live video tiles over placeholders for each dialog peer
+        const preferredWraps = peerIds.map((id) => {
+            const live = this.getCameraWrapByPeerId(id);
+            if (live && !live.classList.contains('dialog-split-placeholder')) {
+                this.removeDialogPlaceholder(id);
+                return live;
+            }
+            return live || this.ensureDialogPlaceholder(id);
+        });
+        wraps.length = 0;
+        preferredWraps.forEach((w) => wraps.push(w));
 
         const isMobileSplit = !!(this.isMobileDevice || window.innerWidth <= 768);
         document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
@@ -12110,8 +12128,14 @@ class RoomClient {
             wrap.classList.add('dialog-split-slot');
             wrap.classList.toggle('dialog-split-left', index === 0);
             wrap.classList.toggle('dialog-split-right', index > 0);
+            // Full slot — source AR preserved via object-fit:contain (see CSS)
             wrap.style.margin = '0';
-            wrap.style.alignSelf = 'center';
+            wrap.style.width = '100%';
+            wrap.style.height = '100%';
+            wrap.style.maxWidth = 'none';
+            wrap.style.maxHeight = 'none';
+            wrap.style.flex = '1 1 0';
+            wrap.style.alignSelf = 'stretch';
 
             if (index === 0) {
                 if (wrap.parentElement !== this.videoPinMediaContainer) {
@@ -12121,7 +12145,6 @@ class RoomClient {
                 this.videoMediaContainer.appendChild(wrap);
             }
 
-            // Desktop: frame aspect ratio follows the source stream (16:9 / 9:16 / …)
             this.bindDialogSourceAspect(wrap, isMobileSplit);
         });
 
@@ -12131,13 +12154,13 @@ class RoomClient {
                 this.videoPinMediaContainer.style.left = '0';
                 this.videoPinMediaContainer.style.width = '100%';
                 this.videoPinMediaContainer.style.height = '50%';
+                this.videoPinMediaContainer.style.display = 'block';
 
                 this.videoMediaContainer.style.top = '50%';
                 this.videoMediaContainer.style.left = '0';
                 this.videoMediaContainer.style.width = '100%';
                 this.videoMediaContainer.style.height = '50%';
-                this.videoMediaContainer.style.display = 'flex';
-                this.videoMediaContainer.style.flexDirection = 'row';
+                this.videoMediaContainer.style.display = 'block';
             } else {
                 this.videoPinMediaContainer.style.display = 'none';
                 this.videoMediaContainer.style.top = '0';
@@ -12151,9 +12174,6 @@ class RoomClient {
                     if (wrap.parentElement !== this.videoMediaContainer) {
                         this.videoMediaContainer.appendChild(wrap);
                     }
-                    wrap.style.width = '100%';
-                    wrap.style.height = 'auto';
-                    wrap.style.flex = '1 1 0';
                 });
             }
         } else if (slotCount === 2) {
@@ -12162,27 +12182,23 @@ class RoomClient {
             this.videoPinMediaContainer.style.left = '0';
             this.videoPinMediaContainer.style.width = `${slotPct}%`;
             this.videoPinMediaContainer.style.height = '100%';
-            this.videoPinMediaContainer.style.display = 'flex';
-            this.videoPinMediaContainer.style.alignItems = 'center';
-            this.videoPinMediaContainer.style.justifyContent = 'center';
+            this.videoPinMediaContainer.style.display = 'block';
 
             this.videoMediaContainer.style.top = '0';
             this.videoMediaContainer.style.left = `${slotPct}%`;
             this.videoMediaContainer.style.width = `${slotPct}%`;
             this.videoMediaContainer.style.height = '100%';
-            this.videoMediaContainer.style.display = 'flex';
-            this.videoMediaContainer.style.flexDirection = 'row';
-            this.videoMediaContainer.style.flexWrap = 'nowrap';
-            this.videoMediaContainer.style.alignItems = 'center';
-            this.videoMediaContainer.style.justifyContent = 'center';
+            this.videoMediaContainer.style.display = 'block';
+            this.videoMediaContainer.style.flexDirection = '';
+            this.videoMediaContainer.style.flexWrap = '';
+            this.videoMediaContainer.style.alignItems = '';
+            this.videoMediaContainer.style.justifyContent = '';
         } else {
             this.videoPinMediaContainer.style.top = '0';
             this.videoPinMediaContainer.style.left = '0';
             this.videoPinMediaContainer.style.width = `${slotPct}%`;
             this.videoPinMediaContainer.style.height = '100%';
-            this.videoPinMediaContainer.style.display = 'flex';
-            this.videoPinMediaContainer.style.alignItems = 'center';
-            this.videoPinMediaContainer.style.justifyContent = 'center';
+            this.videoPinMediaContainer.style.display = 'block';
 
             this.videoMediaContainer.style.top = '0';
             this.videoMediaContainer.style.left = `${slotPct}%`;
@@ -12191,8 +12207,8 @@ class RoomClient {
             this.videoMediaContainer.style.display = 'flex';
             this.videoMediaContainer.style.flexDirection = 'row';
             this.videoMediaContainer.style.flexWrap = 'nowrap';
-            this.videoMediaContainer.style.alignItems = 'center';
-            this.videoMediaContainer.style.justifyContent = 'center';
+            this.videoMediaContainer.style.alignItems = 'stretch';
+            this.videoMediaContainer.style.justifyContent = 'stretch';
         }
 
         this.isVideoPinned = true;
@@ -12208,76 +12224,30 @@ class RoomClient {
     }
 
     /**
-     * Desktop dialog: size the Camera frame from the real stream AR (16:9, 9:16, …).
-     * Mobile keeps full-bleed slots.
+     * Keep video playing; object-fit:contain preserves source AR inside the full slot.
      */
     bindDialogSourceAspect(wrap, isMobileSplit) {
         if (!wrap) return;
         const video = wrap.querySelector('video');
-
-        if (isMobileSplit) {
-            wrap.style.flex = '1 1 0';
-            wrap.style.width = '100%';
-            wrap.style.height = '100%';
-            wrap.style.maxWidth = 'none';
-            wrap.style.maxHeight = 'none';
-            if (video) {
-                video.style.width = '100%';
-                video.style.height = '100%';
-                video.style.objectFit = 'cover';
-                video.classList.add('videoDefault');
-                try {
-                    video.play?.();
-                } catch {
-                    /* ignore */
-                }
+        wrap.style.width = '100%';
+        wrap.style.height = '100%';
+        wrap.style.flex = '1 1 0';
+        if (!video) return;
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.objectFit = isMobileSplit ? 'cover' : 'contain';
+        video.classList.add('videoDefault');
+        const markAr = () => {
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+                wrap.dataset.sourceAr = `${video.videoWidth}:${video.videoHeight}`;
             }
-            return;
-        }
-
-        const applyAr = () => {
-            const parent = wrap.parentElement;
-            const maxW = Math.max(1, parent?.clientWidth || wrap.clientWidth || 1);
-            const maxH = Math.max(1, parent?.clientHeight || wrap.clientHeight || 1);
-            const w = video?.videoWidth || 0;
-            const h = video?.videoHeight || 0;
-            const ar = w > 0 && h > 0 ? w / h : 16 / 9;
-            if (w > 0 && h > 0) wrap.dataset.sourceAr = `${w}:${h}`;
-
-            let boxW = maxW;
-            let boxH = boxW / ar;
-            if (boxH > maxH) {
-                boxH = maxH;
-                boxW = boxH * ar;
-            }
-            wrap.style.flex = '0 0 auto';
-            wrap.style.width = `${Math.floor(boxW)}px`;
-            wrap.style.height = `${Math.floor(boxH)}px`;
-            wrap.style.maxWidth = '100%';
-            wrap.style.maxHeight = '100%';
         };
-
-        if (video) {
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.objectFit = 'contain';
-            video.classList.add('videoDefault');
-            if (wrap._dialogArHandler) {
-                video.removeEventListener('loadedmetadata', wrap._dialogArHandler);
-                video.removeEventListener('resize', wrap._dialogArHandler);
-            }
-            wrap._dialogArHandler = applyAr;
-            video.addEventListener('loadedmetadata', applyAr);
-            video.addEventListener('resize', applyAr);
-            if (video.readyState >= 1) applyAr();
-            else applyAr(); // placeholder size until metadata
-            try {
-                video.play?.();
-            } catch {
-                /* ignore */
-            }
-        } else {
-            applyAr();
+        video.addEventListener('loadedmetadata', markAr);
+        if (video.readyState >= 1) markAr();
+        try {
+            video.play?.();
+        } catch {
+            /* ignore */
         }
     }
 

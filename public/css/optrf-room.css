@@ -121,13 +121,13 @@ button.swal2-confirm:hover {
     }
 }
 
-/* Dialog split — stage left of chat; desktop frames follow source AR */
+/* Dialog split — stage left of chat; slots fill half-stage, video keeps source AR via contain */
 body.dialog-split-active #videoPinMediaContainer,
 body.dialog-split-active #videoMediaContainer {
     gap: 0 !important;
-    align-content: center !important;
-    align-items: center !important;
-    justify-content: center !important;
+    align-content: stretch !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
     flex-wrap: nowrap !important;
     overflow: hidden !important;
     background: #0b0f14;
@@ -137,30 +137,21 @@ body.dialog-split-active .dialog-split-left,
 body.dialog-split-active .dialog-split-right,
 body.dialog-split-active .dialog-split-slot {
     position: relative !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
     margin: 0 !important;
-    border-radius: 10px !important;
+    flex: 1 1 0 !important;
+    align-self: stretch !important;
+    border-radius: 0 !important;
     overflow: hidden !important;
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
     background: #0b0f14;
-}
-
-body.dialog-split-active:not(.dialog-split-mobile) .dialog-split-slot {
-    width: auto !important;
-    height: auto !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    flex: 0 1 auto !important;
-    align-self: center !important;
-}
-
-body.dialog-split-active.dialog-split-mobile .dialog-split-slot {
-    width: 100% !important;
-    height: 100% !important;
-    max-width: none !important;
-    max-height: none !important;
-    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
 }
 
 body.dialog-split-active .dialog-split-slot > video,
@@ -169,6 +160,7 @@ body.dialog-split-active .dialog-split-slot video.videoDefault {
     inset: 0 !important;
     width: 100% !important;
     height: 100% !important;
+    /* contain = keep source AR (16:9 / 9:16) with letterbox; never crop */
     object-fit: contain !important;
     display: block !important;
     background: #0b0f14;
