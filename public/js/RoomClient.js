@@ -2333,7 +2333,9 @@ class RoomClient {
                 video = true;
                 break;
             case mediaType.screen:
-                if (!BUTTONS.main.startScreenButton && !this._broadcastSpotlit) return;
+                // Presenters/moderators always allowed; guests need button or spotlit
+                if (!BUTTONS.main.startScreenButton && !this._broadcastSpotlit && !isPresenter) return;
+                if (isPresenter) BUTTONS.main.startScreenButton = true;
                 mediaConstraints = this.getScreenConstraints();
                 this.peer_info.peer_screen = true;
                 screen = true;

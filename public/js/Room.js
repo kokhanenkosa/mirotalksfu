@@ -2877,8 +2877,14 @@ function handleButtons() {
     };
     startScreenButton.onclick = async () => {
         const moderator = rc.getModerator();
-        if (moderator.screen_cant_share) {
+        // screen_cant_share applies to guests only — creator/moderator always may share
+        if (moderator.screen_cant_share && !isPresenter) {
             return userLog('warning', 'Модератор запретил демонстрацию экрана', 'top-end', 6000);
+        }
+        // Ensure dock flag is on after promote in lectorium
+        if (isPresenter) {
+            BUTTONS.main.startScreenButton = true;
+            rc.unlockPresenterMediaControls?.();
         }
         await rc.produce(RoomClient.mediaType.screen);
     };
