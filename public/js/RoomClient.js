@@ -383,6 +383,7 @@ class RoomClient {
         this._dialogGuestIds = [];
         this._dialogPresenterId = null;
         this._forceSimpleMedia = false; // skip VB / use soft constraints on dialog invite
+        this._dialogInviteInProgress = false;
         this._pendingChatReply = null; // { msgId, fromName, text }
         this.isChatMaximized = false;
         this.isToggleUnreadMsg = false;
@@ -1537,7 +1538,17 @@ class RoomClient {
 
     handlePeerAction = (data) => {
         console.log('SocketOn Peer action:', data);
-        this.peerAction(data.from_peer_name, data.peer_id, data.action, false, data.broadcast, true, data.message);
+        // Pass full payload as `extra` — dialogInvite needs presenterId/guestIds
+        this.peerAction(
+            data.from_peer_name,
+            data.peer_id,
+            data.action,
+            false,
+            data.broadcast,
+            true,
+            data.message,
+            data
+        );
     };
 
     handleUpdatePeerInfo = (data) => {
@@ -11781,7 +11792,7 @@ class RoomClient {
             newlyInvited.push(peer_id);
         }
         for (const peer_id of newlyInvited) {
-            // Guest auto-starts mic+cam (no consent); include full guest list for layout
+            // Guest auto-starts mic+cam after confirm; include full guest list for layout
             this.socket.emit('peerAction', {
                 from_peer_name: this.peer_name,
                 from_peer_id: this.peer_id,
@@ -11793,6 +11804,18 @@ class RoomClient {
                 broadcast: false,
                 presenterId: this.peer_id,
                 guestIds,
+            });
+            // Backup path via cmd (in case peerAction payload is stripped)
+            this.emitCmd({
+                type: 'dialogInvite',
+                peer_id,
+                broadcast: false,
+                presenterId: this.peer_id,
+                guestIds,
+                guestId: peer_id,
+                from_peer_id: this.peer_id,
+                peer_name: this.peer_name,
+                peer_uuid: this.peer_uuid,
             });
             this.clearHandRaiseAlert(peer_id);
         }
@@ -11861,18 +11884,21 @@ class RoomClient {
     }
 
     async handleDialogInvite(cmd = {}) {
-        // Keep spotlit for the whole invite — produce() gates on it
-        this._broadcastSpotlit = true;
-        this.unlockBroadcastSpotlitControls(mediaType.audio);
-        this.unlockBroadcastSpotlitControls(mediaType.video);
+        // Prevent double-start if peerAction + cmd both arrive
+        if (this._dialogInviteInProgress) return;
+        this._dialogInviteInProgress = true;
 
-        // Mobile/iOS: getUserMedia requires a user gesture — show one-tap confirm
-        if (this.needsUserMediaGesture()) {
+        try {
+            // Keep spotlit for the whole invite — produce() gates on it
+            this._broadcastSpotlit = true;
+            this.unlockBroadcastSpotlitControls(mediaType.audio);
+            this.unlockBroadcastSpotlitControls(mediaType.video);
+
+            // Always confirm: getUserMedia needs a user gesture (iOS / Telegram / Safari)
             await this.promptDialogMediaAndStart(cmd);
-            return;
+        } finally {
+            this._dialogInviteInProgress = false;
         }
-
-        await this.startDialogMediaAndLayout(cmd);
     }
 
     needsUserMediaGesture() {
@@ -12457,7 +12483,7 @@ class RoomClient {
     // PEER ACTION
     // ####################################################
 
-    async peerAction(from_peer_name, id, action, emit = true, broadcast = false, info = true, msg = '') {
+    async peerAction(from_peer_name, id, action, emit = true, broadcast = false, info = true, msg = '', extra = {}) {
         const words = id.split('___');
         const peer_id = words[0];
 
@@ -12628,11 +12654,12 @@ class RoomClient {
                     break;
                 case 'dialogInvite':
                     if (peerActionAllowed) {
+                        // `extra` is the full socket payload from handlePeerAction
                         await this.handleDialogInvite({
-                            presenterId: data.presenterId || data.from_peer_id || '',
-                            from_peer_id: data.from_peer_id || '',
-                            guestIds: data.guestIds || [],
-                            guestId: data.guestId || '',
+                            presenterId: extra.presenterId || extra.from_peer_id || '',
+                            from_peer_id: extra.from_peer_id || '',
+                            guestIds: extra.guestIds || [],
+                            guestId: extra.guestId || peer_id,
                         });
                     }
                     break;
