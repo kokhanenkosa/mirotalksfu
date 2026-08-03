@@ -2308,9 +2308,12 @@ class RoomClient {
                         stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
                     } catch (strictErr) {
                         console.warn('Strict getUserMedia failed, using simple constraints', strictErr);
-                        stream = await navigator.mediaDevices.getUserMedia(
-                            audio ? { audio: true, video: false } : { audio: false, video: true }
-                        );
+                        const soft = audio
+                            ? { audio: true, video: false }
+                            : this.isMobileDevice || this.isMobileSafari
+                              ? { audio: false, video: { facingMode: 'user' } }
+                              : { audio: false, video: true };
+                        stream = await navigator.mediaDevices.getUserMedia(soft);
                     }
                 } else {
                     stream = screen
@@ -2405,16 +2408,24 @@ class RoomClient {
             }
 
             if (video) {
-                const { encodings, codec } = this.getWebCamEncoding();
-                console.log('GET WEBCAM ENCODING', {
-                    encodings: encodings,
-                    codecs: codec,
-                });
-                params.encodings = encodings;
-                params.codecs = codec;
-                params.codecOptions = {
-                    videoGoogleStartBitrate: 1000,
-                };
+                if (this._forceSimpleMedia) {
+                    // Single layer — more reliable on mobile / Telegram WebView
+                    params.encodings = [{ maxBitrate: 900000 }];
+                    params.codecOptions = {
+                        videoGoogleStartBitrate: 600,
+                    };
+                } else {
+                    const { encodings, codec } = this.getWebCamEncoding();
+                    console.log('GET WEBCAM ENCODING', {
+                        encodings: encodings,
+                        codecs: codec,
+                    });
+                    params.encodings = encodings;
+                    params.codecs = codec;
+                    params.codecOptions = {
+                        videoGoogleStartBitrate: 1000,
+                    };
+                }
             }
 
             if (screen) {
@@ -2900,6 +2911,10 @@ class RoomClient {
 
     getVideoConstraints(deviceId) {
         if (this._forceSimpleMedia) {
+            // Mobile-friendly: prefer front camera without strict deviceId
+            if (this.isMobileDevice || this.isMobileSafari) {
+                return { audio: false, video: { facingMode: 'user' } };
+            }
             return { audio: false, video: true };
         }
         const selectedValue = this.getSelectedIndexValue(videoFps);
@@ -6212,8 +6227,9 @@ class RoomClient {
         }
 
         const chatRoom = this.getId('chatRoom');
-        chatRoom.classList.toggle('show');
         if (!this.isChatOpen) {
+            chatRoom.classList.add('show');
+            chatRoom.classList.remove('hidden');
             // Always build participants list (needed for public chat send target),
             // but guests never see the people panel.
             await getRoomParticipants();
@@ -6221,8 +6237,11 @@ class RoomClient {
 
             if (!this.isMobileDevice) {
                 BUTTONS.chat.chatMaxButton && show(chatMaxButton);
+                this.chatCenter();
+            } else {
+                // Mobile: always full-viewport — never chatCenter (800px min-width overflows)
+                this.chatMaximize();
             }
-            this.chatCenter();
             this.sound('open');
             this.showPeerAboutAndMessages('all', 'all');
             // Guests: hide people list, only public chat
@@ -6239,16 +6258,25 @@ class RoomClient {
                     elemDisplay(chat.id, true);
                 }
             }
+        } else {
+            chatRoom.classList.remove('show');
+            chatRoom.classList.add('hidden');
         }
         isParticipantsListOpen = !isParticipantsListOpen;
         this.isChatOpen = !this.isChatOpen;
 
         if (!this.isChatOpen) {
             this.isParticipantsOpen = false;
-            // Сброс maximize, чтобы при следующем открытии не остался fullscreen за углом
+            // Reset maximize flags; next mobile open will chatMaximize again
             if (this.isChatMaximized) {
                 this.isChatMaximized = false;
                 hide(chatMinButton);
+            }
+            if (this.isMobileDevice) {
+                this.resetChatRoomPositionStyles();
+                document.documentElement.style.setProperty('--msger-width', '100%');
+                document.documentElement.style.setProperty('--msger-height', '100%');
+            } else {
                 document.documentElement.style.setProperty('--msger-width', '800px');
                 document.documentElement.style.setProperty('--msger-height', '700px');
             }
@@ -6256,10 +6284,12 @@ class RoomClient {
         this.syncChatToolbarButtons();
         this.updateUnreadCountBadge(this.chatPeerId || 'all');
 
-        // Pin on open for everyone (guests included).
+        // Pin on open for desktop only
         if (this.isChatOpen) {
             if (!this.isMobileDevice) {
                 if (!this.isChatPinned) this.chatPin();
+            } else if (!this.isChatMaximized) {
+                this.chatMaximize();
             }
         } else if (this.isChatPinned && this.isMobileDevice) {
             this.chatUnpin();
@@ -6268,22 +6298,18 @@ class RoomClient {
         resizeChatRoom();
     }
 
-    /** Open public chat and keep it pinned (desktop) / maximized (mobile) for all roles. */
+    /** Open public chat and keep it pinned — desktop only. Mobile stays closed until user opens it. */
     async ensurePublicChatPinned() {
         try {
+            if (this.isMobileDevice) return;
             if (!BUTTONS.main.chatButton && !isPresenter) {
-                // Guests always get public chat even if rules briefly hid the button
                 BUTTONS.main.chatButton = true;
             }
             if (!this.isChatOpen) {
                 await this.toggleChat(false);
             }
             this.showPeerAboutAndMessages('all', 'all');
-            if (this.isMobileDevice) {
-                if (typeof this.chatMaximize === 'function' && !this.isChatMaximized) {
-                    this.chatMaximize();
-                }
-            } else if (!this.isChatPinned) {
+            if (!this.isChatPinned) {
                 this.chatPin();
             }
             if (!isPresenter) {
@@ -6452,7 +6478,34 @@ class RoomClient {
         this.chatFillViewport();
         document.documentElement.style.setProperty('--msger-width', '100%');
         document.documentElement.style.setProperty('--msger-height', '100%');
+        // Kill desktop min-width leftovers on mobile (800px overflow)
+        if (this.isMobileDevice && chatRoom) {
+            chatRoom.style.width = '100%';
+            chatRoom.style.minWidth = '0';
+            chatRoom.style.maxWidth = '100vw';
+            chatRoom.style.height = '100%';
+            chatRoom.style.minHeight = '0';
+            chatRoom.style.maxHeight = '100dvh';
+        }
         this.toggleChatHistorySize(true);
+    }
+
+    chatFillViewport() {
+        this.resetChatRoomPositionStyles();
+        chatRoom.style.position = 'fixed';
+        chatRoom.style.top = '0';
+        chatRoom.style.left = '0';
+        chatRoom.style.right = '0';
+        chatRoom.style.bottom = '0';
+        chatRoom.style.width = '100%';
+        chatRoom.style.maxWidth = '100vw';
+        chatRoom.style.minWidth = '0';
+        chatRoom.style.height = '100%';
+        chatRoom.style.maxHeight = '100dvh';
+        chatRoom.style.minHeight = '0';
+        chatRoom.style.transform = 'none';
+        chatRoom.style.margin = '0';
+        chatRoom.style.zIndex = '12';
     }
 
     chatMinimize() {
@@ -6507,19 +6560,23 @@ class RoomClient {
             this.videoMediaContainerUnpin();
         }
         chatRoom.classList.remove('panel-slide-in');
-        document.documentElement.style.setProperty('--msger-width', '800px');
-        document.documentElement.style.setProperty('--msger-height', '700px');
+        // Mobile: never restore desktop 800px / chatCenter — that overflows the viewport
+        document.documentElement.style.setProperty('--msger-width', '100%');
+        document.documentElement.style.setProperty('--msger-height', '100%');
         hide(chatMinButton);
         BUTTONS.chat.chatMaxButton && show(chatMaxButton);
-        this.chatCenter();
         this.isChatPinned = false;
         setColor(chatTogglePin, 'white');
         this.resizeVideoMenuBar();
         resizeVideoMedia();
-        if (!this.isMobileDevice) this.makeDraggable(chatRoom, chatHeader);
         if (isPresenter && !this.isPlistOpen()) this.toggleShowParticipants();
         if (!chatRoom.classList.contains('container')) chatRoom.classList.add('container');
-        resizeChatRoom();
+        // Keep full-viewport geometry ready for the next open
+        if (this.isChatOpen) {
+            this.chatMaximize();
+        } else {
+            this.resetChatRoomPositionStyles();
+        }
     }
 
     /** Сброс позиционирования чата (pin/maximize/drag конфликтуют через transform/right). */
@@ -6533,19 +6590,12 @@ class RoomClient {
         chatRoom.style.bottom = '';
         chatRoom.style.transform = '';
         chatRoom.style.margin = '';
-    }
-
-    /** Развёрнутый чат: на весь viewport, без translate. */
-    chatFillViewport() {
-        this.resetChatRoomPositionStyles();
-        chatRoom.style.position = 'fixed';
-        chatRoom.style.top = '0';
-        chatRoom.style.left = '0';
-        chatRoom.style.right = '0';
-        chatRoom.style.bottom = '0';
-        chatRoom.style.transform = 'none';
-        chatRoom.style.margin = '0';
-        chatRoom.style.zIndex = '12';
+        chatRoom.style.width = '';
+        chatRoom.style.minWidth = '';
+        chatRoom.style.maxWidth = '';
+        chatRoom.style.height = '';
+        chatRoom.style.minHeight = '';
+        chatRoom.style.maxHeight = '';
     }
 
     chatCenter() {
@@ -6983,6 +7033,10 @@ class RoomClient {
         const messagePeerId = isPublicMessage ? 'all' : data.peer_id;
 
         if (toggleChat && !this.isChatOpen && this.showChatOnMessage) {
+            // Mobile: keep chat closed until user opens it (toast only)
+            if (this.isMobileDevice) {
+                this.userLog('info', `💬 ${data.peer_name}: сообщение в чате`, 'top-end');
+            } else {
             // Auto-switch to the correct tab before opening the chat panel
             if (isPublicMessage) {
                 this.chatPeerId = 'all';
@@ -6994,6 +7048,7 @@ class RoomClient {
                 this.chatPeerAvatar = data.peer_avatar || '';
             }
             await this.toggleChat();
+            }
         }
 
         this.setMsgAvatar('right', data.peer_name, data.peer_avatar);
@@ -11811,11 +11866,67 @@ class RoomClient {
         this.unlockBroadcastSpotlitControls(mediaType.audio);
         this.unlockBroadcastSpotlitControls(mediaType.video);
 
-        // Video first (main for dialog); audio failure must not block camera
+        // Mobile/iOS: getUserMedia requires a user gesture — show one-tap confirm
+        if (this.needsUserMediaGesture()) {
+            await this.promptDialogMediaAndStart(cmd);
+            return;
+        }
+
+        await this.startDialogMediaAndLayout(cmd);
+    }
+
+    needsUserMediaGesture() {
+        try {
+            const ua = navigator.userAgent || '';
+            return !!(
+                this.isMobileDevice ||
+                this.isMobileSafari ||
+                /iPhone|iPad|iPod|Android/i.test(ua)
+            );
+        } catch {
+            return !!this.isMobileDevice;
+        }
+    }
+
+    async promptDialogMediaAndStart(cmd = {}) {
+        return new Promise((resolve) => {
+            sound('notify');
+            Swal.fire({
+                background: swalBackground,
+                position: 'center',
+                title: 'Вас пригласили в диалог',
+                text: 'Разрешите камеру и микрофон, чтобы вас было видно и слышно',
+                confirmButtonText: 'Включить камеру',
+                showCancelButton: false,
+                allowOutsideClick: false,
+                showClass: { popup: 'animate__animated animate__fadeInDown' },
+                hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+            }).then(async () => {
+                try {
+                    await this.startDialogMediaAndLayout(cmd);
+                } finally {
+                    resolve();
+                }
+            });
+        });
+    }
+
+    async startDialogMediaAndLayout(cmd = {}) {
+        this._broadcastSpotlit = true;
+        this.unlockBroadcastSpotlitControls(mediaType.audio);
+        this.unlockBroadcastSpotlitControls(mediaType.video);
+
+        // Video first; audio failure must not block camera
         const videoResult = await Promise.allSettled([this.peerMediaStartForced(mediaType.video)]);
         const audioResult = await Promise.allSettled([this.peerMediaStartForced(mediaType.audio)]);
         if (videoResult[0].status === 'rejected') {
             console.error('handleDialogInvite video failed', videoResult[0].reason);
+            this.userLog(
+                'error',
+                'Не удалось включить камеру. Проверьте разрешения браузера.',
+                'top-end',
+                8000
+            );
         }
         if (audioResult[0].status === 'rejected') {
             console.error('handleDialogInvite audio failed', audioResult[0].reason);
@@ -11826,7 +11937,6 @@ class RoomClient {
                 this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
             }
             this.removeVideoOff?.(this.peer_id);
-            // Layout comes from broadcast dialogSplit (has full guestIds). Only fall back if missing.
             const presenterId = cmd.presenterId || cmd.from_peer_id || '';
             if (presenterId && !this._dialogSplitActive) {
                 const guestIds = cmd.guestIds || (cmd.guestId ? [cmd.guestId] : [this.peer_id]);
@@ -11834,6 +11944,12 @@ class RoomClient {
             } else if (this._dialogSplitActive) {
                 this.refreshDialogSplitIfNeeded(this.peer_id);
             }
+            // Extra retries — consumer tiles appear async for others / self layout
+            [800, 2000, 4000].forEach((ms) => {
+                setTimeout(() => {
+                    if (this._dialogSplitActive) this.refreshDialogSplitIfNeeded(this.peer_id);
+                }, ms);
+            });
         } catch (err) {
             console.error('handleDialogInvite layout failed', err);
         }

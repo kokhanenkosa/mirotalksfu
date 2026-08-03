@@ -2055,12 +2055,29 @@ function roomIsReady() {
     if (room_password) {
         lockRoomButton.click();
     }
-    // Open + pin public chat for everyone (guests included).
-    if (rc && typeof rc.ensurePublicChatPinned === 'function') {
+    // Desktop: open + pin public chat. Mobile: keep chat closed on join.
+    if (rc && !isMobileDevice && typeof rc.ensurePublicChatPinned === 'function') {
         const pinChat = () => rc.ensurePublicChatPinned();
         setTimeout(pinChat, 400);
         setTimeout(pinChat, 1200);
         setTimeout(pinChat, 2500);
+    } else if (rc && isMobileDevice) {
+        // Ensure chat stays closed after join (no leftover .show / pin)
+        const closeMobileChat = () => {
+            try {
+                const el = document.getElementById('chatRoom');
+                if (el) {
+                    el.classList.remove('show');
+                    if (!el.classList.contains('hidden')) el.classList.add('hidden');
+                }
+                rc.isChatOpen = false;
+                if (rc.isChatPinned) rc.chatUnpin();
+            } catch {
+                /* ignore */
+            }
+        };
+        setTimeout(closeMobileChat, 200);
+        setTimeout(closeMobileChat, 800);
     }
 
     // Force-hide theme picker
