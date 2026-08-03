@@ -7037,17 +7037,17 @@ class RoomClient {
             if (this.isMobileDevice) {
                 this.userLog('info', `💬 ${data.peer_name}: сообщение в чате`, 'top-end');
             } else {
-            // Auto-switch to the correct tab before opening the chat panel
-            if (isPublicMessage) {
-                this.chatPeerId = 'all';
-                this.chatPeerName = 'all';
-                this.chatPeerAvatar = '';
-            } else {
-                this.chatPeerId = data.peer_id;
-                this.chatPeerName = data.peer_name;
-                this.chatPeerAvatar = data.peer_avatar || '';
-            }
-            await this.toggleChat();
+                // Auto-switch to the correct tab before opening the chat panel
+                if (isPublicMessage) {
+                    this.chatPeerId = 'all';
+                    this.chatPeerName = 'all';
+                    this.chatPeerAvatar = '';
+                } else {
+                    this.chatPeerId = data.peer_id;
+                    this.chatPeerName = data.peer_name;
+                    this.chatPeerAvatar = data.peer_avatar || '';
+                }
+                await this.toggleChat();
             }
         }
 
