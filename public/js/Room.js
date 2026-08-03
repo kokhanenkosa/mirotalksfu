@@ -1459,6 +1459,9 @@ async function whoAreYou() {
             if (name.length > 32) return 'Имя должно быть не длиннее 32 символов';
             name = filterXSS(name);
             if (isHtml(name)) return 'Недопустимые символы в имени';
+            // Persist name locally always. Phone profile sync is optional and must not block join
+            // when PHONE_AUTH_ENABLED=false (endpoint returns "Авторизация по телефону отключена").
+            window.localStorage.peer_name = name;
             if (window.sessionStorage.phone_auth) {
                 try {
                     const response = await fetch('/phone/profile', {
@@ -1468,17 +1471,14 @@ async function whoAreYou() {
                         body: JSON.stringify({ displayName: name }),
                     });
                     const profile = await response.json().catch(() => ({}));
-                    if (!response.ok || !profile.ok) {
-                        return profile.error || 'Не удалось сохранить имя';
+                    if (response.ok && profile.ok && profile.displayName) {
+                        name = profile.displayName;
+                        window.sessionStorage.phone_display_name = name;
+                        window.localStorage.peer_name = name;
                     }
-                    name = profile.displayName;
-                    window.sessionStorage.phone_display_name = name;
-                    window.localStorage.peer_name = name;
                 } catch {
-                    return 'Не удалось сохранить имя: проверьте соединение';
+                    // ignore — local name is enough when phone auth is off/unreachable
                 }
-            } else if (!getCookie(room_id + '_name')) {
-                window.localStorage.peer_name = name;
             }
             setCookie(room_id + '_name', name, 30);
             peer_name = name;

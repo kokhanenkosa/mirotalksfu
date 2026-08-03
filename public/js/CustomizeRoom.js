@@ -329,27 +329,21 @@ document.addEventListener('DOMContentLoaded', () => {
             const displayName = safe(nameEl?.value);
             if (displayName) {
                 window.localStorage.peer_name = displayName;
-                // Sync name to phone profile only when phone auth is enabled+authenticated
-                try {
-                    const meRes = await fetch('/phone/me', { credentials: 'same-origin' });
-                    const me = await meRes.json().catch(() => ({}));
-                    if (me?.enabled && me?.authenticated) {
-                        const profileResponse = await fetch('/phone/profile', {
+                // Optional background sync — never blocks join (phone auth may be off)
+                fetch('/phone/me', { credentials: 'same-origin' })
+                    .then((res) => res.json().catch(() => ({})))
+                    .then((me) => {
+                        if (!(me?.enabled && me?.authenticated)) return null;
+                        return fetch('/phone/profile', {
                             method: 'POST',
                             credentials: 'same-origin',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ displayName }),
                         });
-                        const profile = await profileResponse.json().catch(() => ({}));
-                        if (profileResponse.ok && profile.ok && profile.displayName) {
-                            window.localStorage.peer_name = profile.displayName;
-                            window.sessionStorage.phone_display_name = profile.displayName;
-                        }
-                    }
-                } catch {
-                    // Phone auth off / network — still allow join with local name
-                }
+                    })
+                    .catch(() => null);
             }
+            // Navigate immediately — do not wait for phone profile
             window.location.href = joinUrl.toString();
         } catch (err) {
             setError(err?.message || 'Не удалось сформировать ссылку для входа');
