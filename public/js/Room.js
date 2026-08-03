@@ -1985,7 +1985,8 @@ function roomIsReady() {
             }
             BUTTONS.main.snapshotRoomButton && show(snapshotRoomButton);
         }
-        BUTTONS.chat.chatPinButton && !isMobileDevice && show(chatTogglePin);
+        // Chat is always pinned — hide unpin control
+        hide(chatTogglePin);
         BUTTONS.chat.chatMaxButton && show(chatMaxButton);
         BUTTONS.poll.pollPinButton && show(pollTogglePin);
         show(editorTogglePin);
@@ -2723,6 +2724,11 @@ function handleButtons() {
         rc.chatSave();
     };
     chatCloseButton.onclick = () => {
+        // Desktop: chat stays pinned; mobile may toggle
+        if (!isMobileDevice) {
+            rc.ensurePublicChatPinned();
+            return;
+        }
         rc.toggleChat();
     };
     chatTogglePin.onclick = () => {
@@ -4230,7 +4236,9 @@ function loadSettingsFromLocalStorage() {
     isPitchBarEnabled = localStorageSettings.pitch_bar;
     isSoundEnabled = localStorageSettings.sounds;
     isKeepButtonsVisible = localStorageSettings.keep_buttons_visible;
-    isChatPinEnabled = localStorageSettings.chat_pin !== undefined ? localStorageSettings.chat_pin : true;
+    // Chat is always pinned for all participants
+    isChatPinEnabled = true;
+    localStorageSettings.chat_pin = true;
     isShortcutsEnabled = localStorageSettings.keyboard_shortcuts;
     showChatOnMsg.checked = rc.showChatOnMessage;
     transcriptShowOnMsg.checked = transcription.showOnMessage;
@@ -6729,7 +6737,12 @@ function getParticipantsList(peers) {
                     iconHtml: _PEER.screenOff,
                 }) +
                 `<button type="button" id="selectAllDialogPeersBtn" class="btn-sm ml5 dialog-toolbar-btn" onclick="event.stopPropagation();rc.toggleSelectAllDialogPeers()">Выбрать всех</button>` +
-                `<button type="button" id="startDialogButton" class="btn-sm ml5 dialog-toolbar-btn dialog-start-btn" onclick="event.stopPropagation();rc.startDialogWithSelectedPeers()">Пригласить в диалог</button>`
+                `<button type="button" id="startDialogButton" class="btn-sm ml5 dialog-toolbar-btn dialog-start-btn" onclick="event.stopPropagation();rc.startDialogWithSelectedPeers()">${
+                    rc._dialogSplitActive ? 'Добавить в диалог' : 'Пригласить в диалог'
+                }</button>` +
+                (rc._dialogSplitActive
+                    ? `<button type="button" id="endDialogButton" class="btn-sm ml5 dialog-toolbar-btn dialog-end-btn" onclick="event.stopPropagation();rc.endDialog()">Завершить диалог</button>`
+                    : '')
         );
     }
 
@@ -6869,10 +6882,17 @@ function getParticipantsList(peers) {
 
                 let buttons = '';
                 if (!peer_info.peer_presenter) {
+                    const inDialog = rc._dialogSplitActive && (rc._dialogGuestIds || []).includes(peer_id);
                     buttons += `<label class="dialog-peer-check-wrap" onclick="event.stopPropagation()">
                         <input type="checkbox" class="dialog-peer-check" data-peer-id="${peer_id}" aria-label="Выбрать для диалога" />
                     </label>`;
-                    buttons += `<button type="button" class="btn-sm ml5 dialog-toolbar-btn dialog-start-btn" onclick="event.stopPropagation();rc.invitePeerToDialog('${peer_id}')">Пригласить в диалог</button>`;
+                    if (!inDialog) {
+                        buttons += `<button type="button" class="btn-sm ml5 dialog-toolbar-btn dialog-start-btn" onclick="event.stopPropagation();rc.invitePeerToDialog('${peer_id}')">${
+                            rc._dialogSplitActive ? 'Добавить в диалог' : 'Пригласить в диалог'
+                        }</button>`;
+                    } else {
+                        buttons += `<span class="dialog-in-badge ml5">В диалоге</span>`;
+                    }
                 }
                 buttons +=
                     renderParticipantActionButton({
@@ -6960,8 +6980,15 @@ function setParticipantsTippy(peers) {
         setTippy('muteAllButton', 'Выключить микрофоны у всех участников', 'top');
         setTippy('hideAllButton', 'Выключить камеры у всех участников', 'top');
         setTippy('stopAllButton', 'Остановить демонстрацию экрана у всех участников', 'top');
-        setTippy('startDialogButton', 'Пригласить выбранных гостей в диалог', 'top');
+        setTippy(
+            'startDialogButton',
+            rc._dialogSplitActive ? 'Добавить выбранных гостей в диалог' : 'Пригласить выбранных гостей в диалог',
+            'top'
+        );
         setTippy('selectAllDialogPeersBtn', 'Выбрать всех гостей для диалога', 'top');
+        if (rc._dialogSplitActive) {
+            setTippy('endDialogButton', 'Завершить диалог и выключить медиа гостей', 'top');
+        }
         //
         for (let peer of Array.from(peers.keys())) {
             const peer_info = peers.get(peer).peer_info;

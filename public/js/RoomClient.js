@@ -380,6 +380,7 @@ class RoomClient {
         this._handRaiseAlerts = new Map(); // peerId -> { name }
         this._dialogSplitActive = false;
         this._dialogGuestId = null;
+        this._dialogGuestIds = [];
         this._dialogPresenterId = null;
         this._forceSimpleMedia = false; // skip VB / use soft constraints on dialog invite
         this._pendingChatReply = null; // { msgId, fromName, text }
@@ -6150,6 +6151,30 @@ class RoomClient {
         if (!fromParticipants && !BUTTONS.main.chatButton) return;
         // Guests cannot open participants list
         if (!isPresenter && fromParticipants) return;
+
+        // Desktop: chat stays open+pinned — never close via toggle
+        if (this.isChatOpen && !this.isMobileDevice) {
+            this.isParticipantsOpen = false;
+            this.showPeerAboutAndMessages('all', 'all');
+            if (this.isPlistOpen()) {
+                const plist = this.getId('plist');
+                const chat = this.getId('chat');
+                if (plist) {
+                    plist.classList.add('hidden');
+                    plist.style.display = isPresenter ? '' : 'none';
+                }
+                if (chat) {
+                    chat.style.marginLeft = '0';
+                    chat.style.borderLeft = 'none';
+                    elemDisplay(chat.id, true);
+                }
+            }
+            if (!this.isChatPinned) this.chatPin();
+            this.syncChatToolbarButtons();
+            this.updateUnreadCountBadge(this.chatPeerId || 'all');
+            return;
+        }
+
         const chatRoom = this.getId('chatRoom');
         chatRoom.classList.toggle('show');
         if (!this.isChatOpen) {
@@ -6195,12 +6220,12 @@ class RoomClient {
         this.syncChatToolbarButtons();
         this.updateUnreadCountBadge(this.chatPeerId || 'all');
 
-        // Pin on open for everyone (guests included). Do not unpin-then-repin — that races with auto-pin.
+        // Pin on open for everyone (guests included).
         if (this.isChatOpen) {
-            if (!this.isMobileDevice && isChatPinEnabled) {
+            if (!this.isMobileDevice) {
                 if (!this.isChatPinned) this.chatPin();
             }
-        } else if (this.isChatPinned) {
+        } else if (this.isChatPinned && this.isMobileDevice) {
             this.chatUnpin();
         }
 
@@ -6222,7 +6247,7 @@ class RoomClient {
                 if (typeof this.chatMaximize === 'function' && !this.isChatMaximized) {
                     this.chatMaximize();
                 }
-            } else if (isChatPinEnabled && !this.isChatPinned) {
+            } else if (!this.isChatPinned) {
                 this.chatPin();
             }
             if (!isPresenter) {
@@ -6245,6 +6270,23 @@ class RoomClient {
 
     /** Закрыть боковую панель чата/списка — вернуться к трансляции. */
     closeChatSidePanel() {
+        // Desktop: chat always stays pinned — only leave participants view
+        if (!this.isMobileDevice) {
+            this.isParticipantsOpen = false;
+            if (this.isPlistOpen()) {
+                const plist = this.getId('plist');
+                const chat = this.getId('chat');
+                if (plist) plist.classList.add('hidden');
+                if (chat) {
+                    chat.style.marginLeft = '0';
+                    chat.style.borderLeft = 'none';
+                    elemDisplay(chat.id, true);
+                }
+            }
+            this.ensurePublicChatPinned();
+            this.syncChatToolbarButtons();
+            return;
+        }
         if (this.isChatOpen) {
             this.toggleChat(true);
         } else if (this.isPlistOpen()) {
@@ -6344,6 +6386,11 @@ class RoomClient {
     }
 
     toggleChatPin() {
+        // Chat must stay pinned for everyone on desktop
+        if (!this.isMobileDevice) {
+            if (!this.isChatPinned) this.chatPin();
+            return;
+        }
         if (transcription.isPin()) {
             return userLog('info', 'Please unpin the transcription that appears to be currently pinned', 'top-end');
         }
@@ -6394,7 +6441,8 @@ class RoomClient {
     }
 
     chatPin() {
-        if (!this.isVideoPinned) {
+        // During dialog split, layout is managed by applyDialogSplitLayout (relative to chat)
+        if (!this._dialogSplitActive && !this.isVideoPinned) {
             this.videoMediaContainerPin();
         }
         if (chatRoom.classList.contains('container')) chatRoom.classList.remove('container');
@@ -6407,9 +6455,18 @@ class RoomClient {
         if (!this.isMobileDevice) this.makeUnDraggable(chatRoom, chatHeader);
         // Guests must never have participants list toggled open by pin/unpin
         if (isPresenter && this.isPlistOpen()) this.toggleShowParticipants();
+        // Re-layout dialog relative to chat width (skip if already inside applyDialogSplitLayout)
+        if (this._dialogSplitActive && !this._applyingDialogSplit) {
+            this.applyDialogSplitLayout(this._dialogPresenterId, this._dialogGuestIds);
+        }
     }
 
     chatUnpin() {
+        // Desktop: chat always remains pinned
+        if (!this.isMobileDevice) {
+            if (!this.isChatPinned) this.chatPin();
+            return;
+        }
         if (!this.isVideoPinned) {
             this.videoMediaContainerUnpin();
         }
@@ -11408,10 +11465,11 @@ class RoomClient {
                 this.handlePeerAudio(cmd);
                 break;
             case 'dialogSplit':
-                this.applyDialogSplitLayout(cmd.presenterId, cmd.guestId);
+                this.applyDialogSplitLayout(cmd.presenterId, cmd.guestIds || cmd.guestId);
                 break;
             case 'dialogSplitEnd':
                 this.exitDialogSplitLayout();
+                this.hideDialogControlsBar();
                 break;
             case 'dialogInvite':
                 // Guest receives invite: auto-start A/V then split layout
@@ -11621,21 +11679,34 @@ class RoomClient {
             return this.userLog('info', 'Выберите участников для диалога', 'top-end');
         }
 
-        // Primary dialog guest for split view (first selected)
-        const primaryGuestId = ids[0];
+        const addingToExisting = !!this._dialogSplitActive;
+        const guestIds = addingToExisting ? [...(this._dialogGuestIds || [])] : [];
 
         for (const peer_id of ids) {
-            // Single invite action: guest auto-starts mic+cam sequentially (no consent)
+            if (peer_id === this.peer_id) continue;
+            if (guestIds.includes(peer_id)) continue;
+            guestIds.push(peer_id);
+            // Guest auto-starts mic+cam sequentially (no consent)
             this.emitPeerMediaAction(peer_id, 'dialogInvite');
             this.clearHandRaiseAlert(peer_id);
         }
 
-        this.applyDialogSplitLayout(this.peer_id, primaryGuestId);
+        if (!guestIds.length) {
+            return this.userLog('info', 'Участник уже в диалоге', 'top-end');
+        }
+
+        // Keep chat pinned so split is relative to remaining stage width
+        if (!this.isMobileDevice) {
+            this.ensurePublicChatPinned();
+        }
+
+        this.applyDialogSplitLayout(this.peer_id, guestIds);
         this.emitCmd({
             type: 'dialogSplit',
             broadcast: true,
             presenterId: this.peer_id,
-            guestId: primaryGuestId,
+            guestId: guestIds[0],
+            guestIds,
             peer_name: this.peer_name,
             peer_uuid: this.peer_uuid,
         });
@@ -11643,13 +11714,44 @@ class RoomClient {
         // Retry layout after guest media appears
         [600, 1500, 3000, 5000].forEach((ms) => {
             setTimeout(() => {
-                if (this._dialogSplitActive && this._dialogGuestId === primaryGuestId) {
-                    this.applyDialogSplitLayout(this.peer_id, primaryGuestId);
+                if (this._dialogSplitActive) {
+                    this.applyDialogSplitLayout(this.peer_id, this._dialogGuestIds);
                 }
             }, ms);
         });
 
-        this.userLog('success', 'Гость приглашён в диалог', 'top-end', 3000);
+        this.renderDialogControlsBar();
+        this.userLog(
+            'success',
+            addingToExisting ? 'Участник добавлен в диалог' : 'Гость приглашён в диалог',
+            'top-end',
+            3000
+        );
+    }
+
+    endDialog() {
+        if (!isPresenter) {
+            return this.userLog('warning', 'Только модератор может завершить диалог', 'top-end');
+        }
+        if (!this._dialogSplitActive) {
+            return this.userLog('info', 'Диалог не активен', 'top-end');
+        }
+        const guests = [...(this._dialogGuestIds || [])];
+        this.emitCmd({
+            type: 'dialogSplitEnd',
+            broadcast: true,
+            presenterId: this.peer_id,
+            guestIds: guests,
+            peer_name: this.peer_name,
+            peer_uuid: this.peer_uuid,
+        });
+        for (const guestId of guests) {
+            this.emitPeerMediaAction(guestId, 'mute');
+            this.emitPeerMediaAction(guestId, 'hide');
+        }
+        this.exitDialogSplitLayout();
+        this.hideDialogControlsBar();
+        this.userLog('success', 'Диалог завершён', 'top-end', 3000);
     }
 
     async handleDialogInvite(cmd = {}) {
@@ -11660,12 +11762,13 @@ class RoomClient {
                 this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
             }
             const presenterId = cmd.presenterId || cmd.from_peer_id || '';
+            const guestIds = cmd.guestIds || (cmd.guestId ? [cmd.guestId] : [this.peer_id]);
             if (presenterId) {
-                this.applyDialogSplitLayout(presenterId, this.peer_id);
+                this.applyDialogSplitLayout(presenterId, guestIds);
                 [800, 2000, 4000].forEach((ms) => {
                     setTimeout(() => {
                         if (this._dialogSplitActive) {
-                            this.applyDialogSplitLayout(presenterId, this.peer_id);
+                            this.applyDialogSplitLayout(presenterId, this._dialogGuestIds || guestIds);
                         }
                     }, ms);
                 });
@@ -11673,6 +11776,53 @@ class RoomClient {
         } catch (err) {
             console.error('handleDialogInvite failed', err);
         }
+    }
+
+    renderDialogControlsBar() {
+        if (!isPresenter) return;
+        let bar = document.getElementById('dialogControlsBar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'dialogControlsBar';
+            bar.className = 'dialog-controls-bar';
+            document.body.appendChild(bar);
+        }
+        if (!this._dialogSplitActive) {
+            bar.classList.add('hidden');
+            return;
+        }
+        const raised = Array.from(this._handRaiseAlerts.entries()).filter(
+            ([id]) => !(this._dialogGuestIds || []).includes(id)
+        );
+        const raiseButtons = raised
+            .map(
+                ([peerId, info]) =>
+                    `<button type="button" class="dialog-controls-add-btn" data-peer-id="${filterXSS(peerId)}">
+                        + ${filterXSS(info.name || 'Участник')}
+                    </button>`
+            )
+            .join('');
+        bar.innerHTML = `
+            <span class="dialog-controls-label"><i class="fas fa-comments"></i> Диалог</span>
+            ${raiseButtons}
+            <button type="button" id="dialogEndBtn" class="dialog-controls-end-btn">Завершить диалог</button>
+        `;
+        bar.classList.remove('hidden');
+        bar.querySelector('#dialogEndBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.endDialog();
+        });
+        bar.querySelectorAll('.dialog-controls-add-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.invitePeerToDialog(btn.getAttribute('data-peer-id'));
+            });
+        });
+    }
+
+    hideDialogControlsBar() {
+        const bar = document.getElementById('dialogControlsBar');
+        if (bar) bar.classList.add('hidden');
     }
 
     emitPeerMediaAction(peer_id, action) {
@@ -11734,12 +11884,13 @@ class RoomClient {
             const row = document.createElement('div');
             row.className = 'hand-raise-banner';
             row.dataset.peerId = peerId;
+            const inviteLabel = this._dialogSplitActive ? 'Добавить в диалог' : 'Пригласить в диалог';
             row.innerHTML = `
                 <span class="hand-raise-banner-text">
                     <i class="fas fa-hand-paper"></i>
                     <b>${filterXSS(info.name)}</b> поднял(а) руку
                 </span>
-                <button type="button" class="hand-raise-invite-btn">Пригласить в диалог</button>
+                <button type="button" class="hand-raise-invite-btn">${inviteLabel}</button>
             `;
             row.querySelector('.hand-raise-invite-btn')?.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -11747,10 +11898,11 @@ class RoomClient {
             });
             host.appendChild(row);
         }
+        if (this._dialogSplitActive) this.renderDialogControlsBar();
     }
 
     // ####################################################
-    // DIALOG SPLIT LAYOUT (50/50 presenter | guest)
+    // DIALOG SPLIT LAYOUT (equal slots in stage left of chat)
     // ####################################################
 
     getCameraWrapByPeerId(peerId) {
@@ -11765,80 +11917,146 @@ class RoomClient {
         return this.getId(peerId + '__videoOff') || this.getId(peerId + '__video') || null;
     }
 
-    applyDialogSplitLayout(presenterId, guestId) {
-        if (!presenterId || !guestId) return;
-        this._dialogSplitActive = true;
+    applyDialogSplitLayout(presenterId, guestIdsInput) {
+        if (!presenterId) return;
+        const guestIds = (Array.isArray(guestIdsInput) ? guestIdsInput : [guestIdsInput])
+            .filter(Boolean)
+            .filter((id) => id !== presenterId);
+        if (!guestIds.length) return;
+
         this._dialogPresenterId = presenterId;
-        this._dialogGuestId = guestId;
+        this._dialogGuestIds = guestIds;
+        this._dialogGuestId = guestIds[0];
+
+        // Pin chat first (before dialog flag) so stage width is 75%
+        if (!this.isMobileDevice && !this.isChatPinned) {
+            this._applyingDialogSplit = true;
+            try {
+                this.chatPin();
+            } catch {
+                /* ignore */
+            }
+            this._applyingDialogSplit = false;
+        }
+
+        this._dialogSplitActive = true;
+        this._applyingDialogSplit = true;
 
         document.body.classList.add('dialog-split-active');
 
-        const presenterWrap = this.getCameraWrapByPeerId(presenterId);
-        const guestWrap = this.getCameraWrapByPeerId(guestId);
+        const peerIds = [presenterId, ...guestIds];
+        const wraps = peerIds.map((id) => this.getCameraWrapByPeerId(id)).filter(Boolean);
+        const wrapSet = new Set(wraps);
 
         document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
-            if (el === presenterWrap || el === guestWrap) return;
+            if (wrapSet.has(el)) return;
             el.dataset.dialogHidden = '1';
             el.style.display = 'none';
+            el.classList.remove('dialog-split-slot', 'dialog-split-left', 'dialog-split-right');
         });
-
-        if (presenterWrap) {
-            presenterWrap.dataset.dialogHidden = '0';
-            presenterWrap.style.display = 'block';
-            presenterWrap.classList.add('dialog-split-left');
-            presenterWrap.classList.remove('dialog-split-right');
-            if (presenterWrap.parentElement !== this.videoPinMediaContainer) {
-                this.videoPinMediaContainer.appendChild(presenterWrap);
-            }
-        }
-        if (guestWrap) {
-            guestWrap.dataset.dialogHidden = '0';
-            guestWrap.style.display = 'block';
-            guestWrap.classList.add('dialog-split-right');
-            guestWrap.classList.remove('dialog-split-left');
-            if (guestWrap.parentElement !== this.videoMediaContainer) {
-                this.videoMediaContainer.appendChild(guestWrap);
-            }
-        }
 
         const isMobileSplit = !!(this.isMobileDevice || window.innerWidth <= 768);
         document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
 
+        // Chat pinned = 25% → stage 75%; split stage equally between dialog peers
+        const chatPct = !isMobileSplit && this.isChatPinned ? 25 : 0;
+        const stagePct = 100 - chatPct;
+        const slotCount = Math.max(wraps.length, 2);
+        const slotPct = stagePct / slotCount;
+
+        // Use pin container for first peer (presenter), media container for the rest — equal stage shares
         this.videoPinMediaContainer.style.display = 'block';
         this.videoPinMediaContainer.style.right = 'auto';
         this.videoPinMediaContainer.style.bottom = 'auto';
-        if (isMobileSplit) {
-            // Mobile: presenter top, guest bottom
-            this.videoPinMediaContainer.style.top = '0';
-            this.videoPinMediaContainer.style.left = '0';
-            this.videoPinMediaContainer.style.width = '100%';
-            this.videoPinMediaContainer.style.height = '50%';
+        this.videoMediaContainer.style.right = 'auto';
+        this.videoMediaContainer.style.bottom = 'auto';
 
-            this.videoMediaContainer.style.top = '50%';
-            this.videoMediaContainer.style.left = '0';
-            this.videoMediaContainer.style.right = '0';
-            this.videoMediaContainer.style.width = '100%';
-            this.videoMediaContainer.style.height = '50%';
-        } else {
-            // Desktop: presenter left, guest right
+        wraps.forEach((wrap, index) => {
+            wrap.dataset.dialogHidden = '0';
+            wrap.style.display = 'block';
+            wrap.classList.add('dialog-split-slot');
+            wrap.classList.toggle('dialog-split-left', index === 0);
+            wrap.classList.toggle('dialog-split-right', index > 0);
+            wrap.style.flex = '1 1 0';
+            wrap.style.maxWidth = 'none';
+            wrap.style.maxHeight = 'none';
+            if (index === 0) {
+                if (wrap.parentElement !== this.videoPinMediaContainer) {
+                    this.videoPinMediaContainer.appendChild(wrap);
+                }
+            } else if (wrap.parentElement !== this.videoMediaContainer) {
+                this.videoMediaContainer.appendChild(wrap);
+            }
+        });
+
+        if (isMobileSplit) {
+            // Mobile: presenter top, guests share bottom (or stack equally)
+            if (slotCount === 2) {
+                this.videoPinMediaContainer.style.top = '0';
+                this.videoPinMediaContainer.style.left = '0';
+                this.videoPinMediaContainer.style.width = '100%';
+                this.videoPinMediaContainer.style.height = '50%';
+
+                this.videoMediaContainer.style.top = '50%';
+                this.videoMediaContainer.style.left = '0';
+                this.videoMediaContainer.style.width = '100%';
+                this.videoMediaContainer.style.height = '50%';
+                this.videoMediaContainer.style.display = 'flex';
+                this.videoMediaContainer.style.flexDirection = 'row';
+            } else {
+                // Equal vertical stack via flex on media; pin unused
+                this.videoPinMediaContainer.style.display = 'none';
+                this.videoMediaContainer.style.top = '0';
+                this.videoMediaContainer.style.left = '0';
+                this.videoMediaContainer.style.width = '100%';
+                this.videoMediaContainer.style.height = '100%';
+                this.videoMediaContainer.style.display = 'flex';
+                this.videoMediaContainer.style.flexDirection = 'column';
+                wraps.forEach((wrap) => {
+                    if (wrap.parentElement !== this.videoMediaContainer) {
+                        this.videoMediaContainer.appendChild(wrap);
+                    }
+                    wrap.style.width = '100%';
+                    wrap.style.height = 'auto';
+                });
+            }
+        } else if (slotCount === 2) {
+            // Desktop 2-way: equal halves of stage left of chat
             this.videoPinMediaContainer.style.top = '0';
             this.videoPinMediaContainer.style.left = '0';
-            this.videoPinMediaContainer.style.width = '50%';
+            this.videoPinMediaContainer.style.width = `${slotPct}%`;
             this.videoPinMediaContainer.style.height = '100%';
 
             this.videoMediaContainer.style.top = '0';
-            this.videoMediaContainer.style.left = '50%';
-            this.videoMediaContainer.style.right = '0';
-            this.videoMediaContainer.style.width = '50%';
+            this.videoMediaContainer.style.left = `${slotPct}%`;
+            this.videoMediaContainer.style.width = `${slotPct}%`;
             this.videoMediaContainer.style.height = '100%';
+            this.videoMediaContainer.style.display = 'block';
+            this.videoMediaContainer.style.flexDirection = '';
+        } else {
+            // Desktop 3+: equal columns across stage
+            this.videoPinMediaContainer.style.top = '0';
+            this.videoPinMediaContainer.style.left = '0';
+            this.videoPinMediaContainer.style.width = `${slotPct}%`;
+            this.videoPinMediaContainer.style.height = '100%';
+
+            this.videoMediaContainer.style.top = '0';
+            this.videoMediaContainer.style.left = `${slotPct}%`;
+            this.videoMediaContainer.style.width = `${stagePct - slotPct}%`;
+            this.videoMediaContainer.style.height = '100%';
+            this.videoMediaContainer.style.display = 'flex';
+            this.videoMediaContainer.style.flexDirection = 'row';
         }
 
         this.isVideoPinned = true;
+        if (isPresenter) this.renderDialogControlsBar();
         try {
             resizeVideoMedia();
             handleAspectRatio();
         } catch {
             /* ignore */
+        } finally {
+            this._applyingDialogSplit = false;
         }
     }
 
@@ -11851,8 +12069,13 @@ class RoomClient {
             el.style.display = '';
             delete el.dataset.dialogHidden;
         });
-        document.querySelectorAll('.dialog-split-left, .dialog-split-right').forEach((el) => {
-            el.classList.remove('dialog-split-left', 'dialog-split-right');
+        document.querySelectorAll('.dialog-split-left, .dialog-split-right, .dialog-split-slot').forEach((el) => {
+            el.classList.remove('dialog-split-left', 'dialog-split-right', 'dialog-split-slot');
+            el.style.flex = '';
+            el.style.maxWidth = '';
+            el.style.maxHeight = '';
+            el.style.width = '';
+            el.style.height = '';
             if (el.parentElement === this.videoPinMediaContainer) {
                 this.videoMediaContainer.appendChild(el);
             }
@@ -11868,9 +12091,19 @@ class RoomClient {
         this.videoMediaContainer.style.right = '';
         this.videoMediaContainer.style.width = '';
         this.videoMediaContainer.style.height = '';
+        this.videoMediaContainer.style.display = '';
+        this.videoMediaContainer.style.flexDirection = '';
         this.isVideoPinned = false;
         this._dialogGuestId = null;
+        this._dialogGuestIds = [];
         this._dialogPresenterId = null;
+
+        // Restore stage width next to pinned chat
+        if (this.isChatPinned && !this.isMobileDevice) {
+            this.videoMediaContainerPin();
+        } else {
+            this.videoMediaContainerUnpin();
+        }
         try {
             resizeVideoMedia();
             handleAspectRatio();
