@@ -770,6 +770,8 @@ class RoomClient {
             this.peer_info.peer_presenter = isPresenter;
             this.getId('isUserPresenter').innerText = isPresenter;
             window.localStorage.isReconnected = false;
+            // Lock presenter self-view orientation (unmirrored = same as guests see)
+            this.refreshLocalCameraMirror();
 
             // GLOBAL LOBBY ENABLED
             if (room?.globalLobby) {
@@ -12816,6 +12818,9 @@ class RoomClient {
                 /* ignore */
             }
         });
+
+        // Presenter self-view orientation rule after dialog layout
+        this.refreshLocalCameraMirror();
     }
 
     ensureDialogFilmstrip(filmWraps = []) {
@@ -12876,6 +12881,8 @@ class RoomClient {
         video.style.width = '100%';
         video.style.height = '100%';
         video.style.objectFit = isMobileSplit ? 'cover' : 'contain';
+        // Clear any leftover inline transform so CSS .mirror (or its absence) wins
+        video.style.removeProperty('transform');
         video.classList.add('videoDefault');
         const markAr = () => {
             if (video.videoWidth > 0 && video.videoHeight > 0) {
@@ -12888,6 +12895,11 @@ class RoomClient {
             video.play?.();
         } catch {
             /* ignore */
+        }
+        // Local tile: keep presenter unmirrored / guest session preference
+        const peerName = video.getAttribute('name') || wrap.dataset?.peerId;
+        if (peerName && peerName === this.peer_id) {
+            this.refreshLocalCameraMirror();
         }
     }
 
@@ -12972,6 +12984,10 @@ class RoomClient {
         } catch {
             /* ignore */
         }
+
+        // Same self-view rule after dialog ends (presenter unmirrored)
+        this.refreshLocalCameraMirror();
+        setTimeout(() => this.refreshLocalCameraMirror(), 100);
     }
 
     setPeerPresenter(peer_id) {
@@ -14137,6 +14153,7 @@ class RoomClient {
                             /* ignore */
                         }
                         handleRules(true);
+                        this.refreshLocalCameraMirror();
                         this.sound('notify');
                         this.userLog('success', 'Вас назначили модератором', 'top-end', 6000);
                     }
@@ -17253,9 +17270,27 @@ class RoomClient {
 
     toggleVideoMirror() {
         const peerVideo = this.getName(this.peer_id);
-        if (peerVideo) {
-            peerVideo.classList.toggle('mirror');
-            sessionVideoMirror = peerVideo.classList.contains('mirror');
+        if (!peerVideo) return;
+        // Presenter/moderator: locked unmirrored (same orientation guests see)
+        if (typeof isPresenter !== 'undefined' && isPresenter) {
+            peerVideo.classList.remove('mirror');
+            sessionVideoMirror = false;
+            return;
+        }
+        peerVideo.classList.toggle('mirror');
+        sessionVideoMirror = peerVideo.classList.contains('mirror');
+    }
+
+    /** Re-apply local self-view mirror policy (after dialog layout / end). */
+    refreshLocalCameraMirror() {
+        try {
+            if (typeof applyLocalCameraMirrorRule === 'function') {
+                applyLocalCameraMirrorRule(this.localVideoElement || this.getName(this.peer_id));
+            } else if (typeof handleCameraMirror === 'function') {
+                handleCameraMirror(this.localVideoElement || this.getName(this.peer_id));
+            }
+        } catch (err) {
+            console.warn('refreshLocalCameraMirror failed', err);
         }
     }
 

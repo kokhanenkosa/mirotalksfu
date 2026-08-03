@@ -3368,14 +3368,39 @@ async function toggleScreenSharing() {
     }
 }
 
-function handleCameraMirror(video) {
-    // Keep rear camera unmirrored and apply current session preference to front camera only.
+/**
+ * Local camera orientation rule:
+ * - Presenter/moderator: always unmirrored (same as guests see them).
+ * - Guests: session preference (default mirrored self-view).
+ * - Rear camera: never mirrored.
+ */
+function applyLocalCameraMirrorRule(video) {
+    if (!video) {
+        try {
+            video = rc?.localVideoElement || (typeof rc?.getName === 'function' ? rc.getName(rc.peer_id) : null);
+        } catch {
+            video = null;
+        }
+    }
+    if (!video) return;
+
     if (camera === 'environment') {
         video.classList.remove('mirror');
         return;
     }
 
+    // Lecturer / moderator: self-view must match remote orientation (not mirrored).
+    if (typeof isPresenter !== 'undefined' && isPresenter) {
+        video.classList.remove('mirror');
+        sessionVideoMirror = false;
+        return;
+    }
+
     video.classList.toggle('mirror', !!sessionVideoMirror);
+}
+
+function handleCameraMirror(video) {
+    applyLocalCameraMirrorRule(video);
 }
 
 function handleSelects() {
