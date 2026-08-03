@@ -1355,7 +1355,16 @@ async function whoAreYou() {
 
     try {
         const { data: phoneProfile } = await axios.get('/phone/me', { timeout: 5000 });
-        if (phoneProfile?.authenticated) {
+        if (phoneProfile && phoneProfile.enabled === false) {
+            // Stale phone session from when OTP was on — clear so join is not blocked
+            try {
+                delete window.sessionStorage.phone_auth;
+                delete window.sessionStorage.phone_number;
+                delete window.sessionStorage.phone_display_name;
+            } catch {
+                /* ignore */
+            }
+        } else if (phoneProfile?.authenticated) {
             window.sessionStorage.phone_auth = window.sessionStorage.phone_auth || 'cookie';
             window.sessionStorage.phone_number = phoneProfile.phone || '';
             default_name = phoneProfile.displayName || '';
