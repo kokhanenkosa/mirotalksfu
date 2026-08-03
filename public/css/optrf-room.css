@@ -326,6 +326,14 @@ html[data-theme] #bottomButtons button i {
     color: inherit !important;
 }
 
+/* Raised hand stays yellow until lowered / dialog starts (beats color:inherit !important) */
+html[data-theme] #bottomButtons #lowerHandButton,
+html[data-theme] #bottomButtons #lowerHandButton i,
+html[data-theme] #bottomButtons #lowerHandButton.is-hand-raised i,
+html[data-theme] #bottomButtons #raiseHandButton.is-hand-raised i {
+    color: #ffd700 !important;
+}
+
 html[data-theme] #bottomButtons .dropdown-menu,
 html[data-theme] #bottomButtons #exitMenu,
 html[data-theme] #bottomButtons #settingsExtraMenu {
@@ -592,6 +600,36 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         height: calc(100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) !important;
     }
 
+    /*
+     * Dialog on mobile: stacked halves. Must beat the rules above (!important),
+     * otherwise both containers fill the same rect and videos look "black".
+     */
+    body.dialog-split-active.dialog-split-mobile #videoPinMediaContainer {
+        top: var(--optrf-topbar-h) !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: calc((100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) * 0.5) !important;
+        display: block !important;
+        z-index: 2;
+    }
+
+    body.dialog-split-active.dialog-split-mobile #videoMediaContainer {
+        top: calc(var(--optrf-topbar-h) + (100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) * 0.5) !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: calc((100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) * 0.5) !important;
+        display: block !important;
+        z-index: 2;
+    }
+
+    body.dialog-split-active.dialog-split-mobile .dialog-split-slot,
+    body.dialog-split-active.dialog-split-mobile .dialog-split-slot > video,
+    body.dialog-split-active.dialog-split-mobile .dialog-split-slot video.videoDefault {
+        width: 100% !important;
+        height: 100% !important;
+        min-height: 0 !important;
+    }
+
     /* Нижний док: primary strip без горизонтального скролла */
     #bottomButtons {
         top: auto !important;
@@ -611,7 +649,18 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         box-sizing: border-box;
         background: color-mix(in srgb, var(--optrf-surface, #1a1d24) 94%, transparent);
         padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+        /* Above fullscreen chat so chat icon can toggle close */
+        z-index: 1300 !important;
     }
+
+    /* Chat leaves room for the pinned dock */
+    #chatRoom.show {
+        bottom: var(--optrf-dock-h) !important;
+        height: calc(100% - var(--optrf-dock-h)) !important;
+        max-height: calc(100dvh - var(--optrf-dock-h)) !important;
+        z-index: 1100 !important;
+    }
+
 
     #bottomButtonsScroller {
         display: flex;

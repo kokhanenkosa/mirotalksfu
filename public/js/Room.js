@@ -4338,6 +4338,8 @@ function handleRoomClientEvents() {
         hide(raiseHandButton);
         show(lowerHandButton);
         setColor(lowerHandIcon, '#FFD700');
+        lowerHandButton?.classList.add('is-hand-raised');
+        raiseHandButton?.classList.add('is-hand-raised');
         hand = true;
     });
     rc.on(RoomClient.EVENTS.lowerHand, () => {
@@ -4345,6 +4347,8 @@ function handleRoomClientEvents() {
         hide(lowerHandButton);
         show(raiseHandButton);
         setColor(lowerHandIcon, 'white');
+        lowerHandButton?.classList.remove('is-hand-raised');
+        raiseHandButton?.classList.remove('is-hand-raised');
         hand = false;
     });
     rc.on(RoomClient.EVENTS.startAudio, () => {
@@ -4877,7 +4881,7 @@ function showButtons() {
         isButtonsBarOver ||
         isButtonsVisible ||
         rc.isVideoBarDropDownOpen ||
-        (isMobileDevice && rc.isChatOpen) ||
+        // Mobile: keep dock visible while chat is open so chat icon can toggle it closed
         (isMobileDevice && rc.isMySettingsOpen)
     )
         return;
@@ -7351,6 +7355,15 @@ function updateThemeCardsDisabled() {
 // ####################################################
 
 function handleAspectRatio() {
+    // Dialog owns layout — never let grid aspect logic collapse dialog slots
+    if (typeof rc !== 'undefined' && rc?._dialogSplitActive) {
+        try {
+            resizeVideoMedia();
+        } catch {
+            /* ignore */
+        }
+        return;
+    }
     if (videoMediaContainer.childElementCount > 1) {
         adaptAspectRatio(videoMediaContainer.childElementCount);
     } else {

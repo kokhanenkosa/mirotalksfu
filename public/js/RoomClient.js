@@ -1434,10 +1434,20 @@ class RoomClient {
             if (isParticipantsListOpen) getRoomParticipants();
             wbUpdate();
             this.editorUpdate();
-        } else {
+        } else if (!this._dialogSplitActive) {
             adaptAspectRatio(participantsCount);
         }
         if (isBreakoutPanelOpen) refreshBreakoutPanel();
+        // Keep dialog tiles intact when someone joins/leaves mid-dialog
+        if (this._dialogSplitActive && this._dialogPresenterId) {
+            [100, 400, 1200].forEach((ms) => {
+                setTimeout(() => {
+                    if (this._dialogSplitActive) {
+                        this.applyDialogSplitLayout(this._dialogPresenterId, this._dialogGuestIds);
+                    }
+                }, ms);
+            });
+        }
     };
 
     handleNewProducers = async (data) => {
@@ -6450,6 +6460,11 @@ class RoomClient {
             pBtn.classList.toggle('is-active', participantsActive);
             pBtn.setAttribute('aria-pressed', participantsActive ? 'true' : 'false');
         }
+        // Mobile: dock always stays above chat for toggle-close
+        if (this.isMobileDevice) {
+            const dock = document.getElementById('bottomButtons');
+            if (dock) dock.style.display = 'flex';
+        }
     }
 
     toggleChatHistorySize(max = true) {
@@ -6507,16 +6522,24 @@ class RoomClient {
         chatRoom.style.top = '0';
         chatRoom.style.left = '0';
         chatRoom.style.right = '0';
-        chatRoom.style.bottom = '0';
+        // Leave space for pinned mobile dock so chat icon stays tappable
+        if (this.isMobileDevice) {
+            chatRoom.style.bottom = 'var(--optrf-dock-h, 58px)';
+            chatRoom.style.height = 'calc(100% - var(--optrf-dock-h, 58px))';
+            chatRoom.style.maxHeight = 'calc(100dvh - var(--optrf-dock-h, 58px))';
+            chatRoom.style.zIndex = '1100';
+        } else {
+            chatRoom.style.bottom = '0';
+            chatRoom.style.height = '100%';
+            chatRoom.style.maxHeight = '100dvh';
+            chatRoom.style.zIndex = '12';
+        }
         chatRoom.style.width = '100%';
         chatRoom.style.maxWidth = '100vw';
         chatRoom.style.minWidth = '0';
-        chatRoom.style.height = '100%';
-        chatRoom.style.maxHeight = '100dvh';
         chatRoom.style.minHeight = '0';
         chatRoom.style.transform = 'none';
         chatRoom.style.margin = '0';
-        chatRoom.style.zIndex = '12';
     }
 
     chatMinimize() {
@@ -11959,6 +11982,7 @@ class RoomClient {
         }
 
         try {
+            // Lower hand when dialog starts (yellow icon off)
             if (this.peer_info?.peer_hand) {
                 this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
             }
@@ -12111,13 +12135,28 @@ class RoomClient {
     getCameraWrapByPeerId(peerId) {
         if (!peerId) return null;
 
+        // Prefer a live Camera with an active MediaStream (never videoOff / placeholder)
+        const liveWraps = [];
+        document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((wrap) => {
+            if (wrap.classList.contains('dialog-split-placeholder')) return;
+            if ((wrap.id || '').endsWith('__videoOff')) return;
+            const video = wrap.querySelector('video[name]');
+            if (!video || video.getAttribute('name') !== peerId) return;
+            const hasStream = !!(video.srcObject && video.srcObject.getVideoTracks?.().some((t) => t.readyState === 'live'));
+            liveWraps.push({ wrap, hasStream, video });
+        });
+        if (liveWraps.length) {
+            liveWraps.sort((a, b) => Number(b.hasStream) - Number(a.hasStream));
+            return liveWraps[0].wrap;
+        }
+
         // Prefer live video tile (producer/consumer id + __video)
         const video = this.getVideoElementByPeerId(peerId);
         if (video) {
             const byId = this.getId(video.id + '__video');
-            if (byId) return byId;
+            if (byId && !(byId.id || '').endsWith('__videoOff')) return byId;
             const closest = video.closest('.Camera');
-            if (closest) return closest;
+            if (closest && !closest.classList.contains('dialog-split-placeholder')) return closest;
         }
 
         // Local producer shortcuts
@@ -12133,15 +12172,10 @@ class RoomClient {
         const named = document.querySelector(`.Camera video[name="${CSS.escape?.(peerId) || peerId}"]`);
         if (named?.closest) {
             const wrap = named.closest('.Camera');
-            if (wrap) return wrap;
+            if (wrap && !wrap.classList.contains('dialog-split-placeholder')) return wrap;
         }
 
-        return (
-            this.getId(peerId + '__videoOff') ||
-            this.getId(peerId + '__dialogSlot') ||
-            this.getId(peerId + '__video') ||
-            null
-        );
+        return this.getId(peerId + '__dialogSlot') || this.getId(peerId + '__videoOff') || this.getId(peerId + '__video') || null;
     }
 
     ensureDialogPlaceholder(peerId) {
@@ -12212,19 +12246,26 @@ class RoomClient {
         const wraps = peerIds.map((id) => this.getCameraWrapByPeerId(id) || this.ensureDialogPlaceholder(id));
         const wrapSet = new Set(wraps.filter(Boolean));
 
+        // Protect ALL live tiles for dialog peers before hiding anything else
         document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
-            if (wrapSet.has(el)) return;
-            // Never hide a live video belonging to a dialog peer (lookup may have picked placeholder)
             const liveVideo = el.querySelector('video[name]');
             const livePeerId = liveVideo?.getAttribute('name');
-            if (livePeerId && peerIds.includes(livePeerId)) {
+            if (livePeerId && peerIds.includes(livePeerId) && !el.classList.contains('dialog-split-placeholder')) {
                 wrapSet.add(el);
-                return;
             }
+        });
+
+        document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
+            if (wrapSet.has(el)) return;
             if (el.classList.contains('dialog-split-placeholder')) {
                 const pid = (el.id || '').replace('__dialogSlot', '');
                 if (peerIds.includes(pid)) return;
             }
+            // Never hide a live dialog peer tile
+            const liveVideo = el.querySelector('video[name]');
+            const livePeerId = liveVideo?.getAttribute('name');
+            if (livePeerId && peerIds.includes(livePeerId)) return;
+
             el.dataset.dialogHidden = '1';
             el.style.display = 'none';
             el.classList.remove('dialog-split-slot', 'dialog-split-left', 'dialog-split-right');
@@ -12233,7 +12274,7 @@ class RoomClient {
         // Prefer live video tiles over placeholders for each dialog peer
         const preferredWraps = peerIds.map((id) => {
             const live = this.getCameraWrapByPeerId(id);
-            if (live && !live.classList.contains('dialog-split-placeholder')) {
+            if (live && !live.classList.contains('dialog-split-placeholder') && !(live.id || '').endsWith('__videoOff')) {
                 this.removeDialogPlaceholder(id);
                 return live;
             }
@@ -12363,6 +12404,19 @@ class RoomClient {
         } finally {
             this._applyingDialogSplit = false;
         }
+
+        // Re-play after DOM moves (iOS / some browsers pause when reparented)
+        wraps.forEach((wrap) => {
+            const v = wrap?.querySelector?.('video');
+            if (!v) return;
+            try {
+                v.style.display = 'block';
+                v.style.visibility = 'visible';
+                v.play?.().catch?.(() => {});
+            } catch {
+                /* ignore */
+            }
+        });
     }
 
     /**
@@ -13567,14 +13621,25 @@ class RoomClient {
                 case 'camBubbleLayout':
                     break;
                 case 'hand':
-                    const peer_hand = this.getPeerHandBtn(peer_id);
-                    if (status) {
-                        if (peer_hand) peer_hand.style.display = 'flex';
-                        // Sticky alert for presenter/moderator until dialog invite
-                        this.showHandRaiseAlert(peer_id, peer_name);
-                    } else {
-                        if (peer_hand) peer_hand.style.display = 'none';
-                        this.clearHandRaiseAlert(peer_id);
+                    {
+                        const peer_hand = this.getPeerHandBtn(peer_id);
+                        if (status) {
+                            if (peer_hand) peer_hand.style.display = 'flex';
+                            // Sticky alert for presenter/moderator until dialog invite
+                            this.showHandRaiseAlert(peer_id, peer_name);
+                            if (peer_id === this.peer_id) {
+                                this.peer_info.peer_hand = true;
+                                this.event(_EVENTS.raiseHand);
+                            }
+                        } else {
+                            if (peer_hand) peer_hand.style.display = 'none';
+                            this.clearHandRaiseAlert(peer_id);
+                            // Lecturer lowered this guest's hand — reset dock icon color
+                            if (peer_id === this.peer_id) {
+                                this.peer_info.peer_hand = false;
+                                this.event(_EVENTS.lowerHand);
+                            }
+                        }
                     }
                     break;
                 case 'avatar':
