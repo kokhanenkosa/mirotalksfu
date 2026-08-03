@@ -133,6 +133,53 @@ body.dialog-split-active #videoMediaContainer {
     background: #0b0f14;
 }
 
+/* Class-based mobile dialog (also when UA is mobile but viewport > 640px) */
+body.dialog-split-active.dialog-split-mobile {
+    --optrf-dock-h: calc(58px + env(safe-area-inset-bottom, 0px));
+    --optrf-topbar-h: calc(48px + env(safe-area-inset-top, 0px));
+}
+
+body.dialog-split-active.dialog-split-mobile #videoPinMediaContainer {
+    display: none !important;
+}
+
+body.dialog-split-active.dialog-split-mobile #videoMediaContainer {
+    top: var(--optrf-topbar-h, 48px) !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: calc(100% - var(--optrf-dock-h, 58px) - var(--optrf-topbar-h, 48px)) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    overflow: hidden !important;
+    z-index: 2;
+}
+
+body.dialog-split-active.dialog-split-mobile .dialog-split-slot {
+    position: relative !important;
+    flex: 1 1 0 !important;
+    width: 100% !important;
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+body.dialog-split-active.dialog-split-mobile .dialog-split-slot > video,
+body.dialog-split-active.dialog-split-mobile .dialog-split-slot video.videoDefault {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    display: block !important;
+}
+
 body.dialog-split-active .dialog-split-left,
 body.dialog-split-active .dialog-split-right,
 body.dialog-split-active .dialog-split-slot {
@@ -231,6 +278,25 @@ body.dialog-split-active .dialog-waiting {
 
 .dialog-controls-add-btn:hover {
     background: rgba(0, 168, 232, 0.35);
+}
+
+.dialog-controls-remove-btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    background: rgba(229, 57, 53, 0.22);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dialog-controls-remove-btn:hover {
+    background: rgba(229, 57, 53, 0.4);
+}
+
+.dialog-controls-remove-btn i {
+    margin-right: 4px;
 }
 
 .dialog-controls-end-btn {
@@ -601,33 +667,51 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
     }
 
     /*
-     * Dialog on mobile: stacked halves. Must beat the rules above (!important),
-     * otherwise both containers fill the same rect and videos look "black".
+     * Dialog on mobile: single flex column for all slots.
+     * Avoids two absolute containers overlapping under mobile !important rules.
      */
     body.dialog-split-active.dialog-split-mobile #videoPinMediaContainer {
-        top: var(--optrf-topbar-h) !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: calc((100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) * 0.5) !important;
-        display: block !important;
-        z-index: 2;
+        display: none !important;
     }
 
     body.dialog-split-active.dialog-split-mobile #videoMediaContainer {
-        top: calc(var(--optrf-topbar-h) + (100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) * 0.5) !important;
+        top: var(--optrf-topbar-h) !important;
         left: 0 !important;
+        right: 0 !important;
         width: 100% !important;
-        height: calc((100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) * 0.5) !important;
-        display: block !important;
+        height: calc(100% - var(--optrf-dock-h) - var(--optrf-topbar-h)) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        flex-wrap: nowrap !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+        overflow: hidden !important;
         z-index: 2;
     }
 
-    body.dialog-split-active.dialog-split-mobile .dialog-split-slot,
+    body.dialog-split-active.dialog-split-mobile .dialog-split-slot {
+        position: relative !important;
+        flex: 1 1 0 !important;
+        width: 100% !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin: 0 !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        align-self: stretch !important;
+    }
+
     body.dialog-split-active.dialog-split-mobile .dialog-split-slot > video,
     body.dialog-split-active.dialog-split-mobile .dialog-split-slot video.videoDefault {
+        position: absolute !important;
+        inset: 0 !important;
         width: 100% !important;
         height: 100% !important;
-        min-height: 0 !important;
+        object-fit: contain !important;
+        display: block !important;
+        background: #0b0f14;
     }
 
     /* Нижний док: primary strip без горизонтального скролла */

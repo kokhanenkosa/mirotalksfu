@@ -3623,7 +3623,8 @@ async function startServer() {
                     if (!isPresenter) return;
                     break;
                 case 'dialogSplit':
-                case 'dialogSplitEnd': {
+                case 'dialogSplitEnd':
+                case 'dialogGuestRemove': {
                     const presenterOk = isPeerPresenter(
                         socket.room_id,
                         socket.id,
@@ -3631,8 +3632,9 @@ async function startServer() {
                         data.peer_uuid
                     );
                     if (!presenterOk) return;
-                    if (data.type === 'dialogSplit') {
+                    if (data.type === 'dialogSplit' || data.type === 'dialogGuestRemove') {
                         room.setDialog(data.presenterId, data.guestIds || data.guestId);
+                        if (!room.getDialog()) room.clearDialog();
                     } else {
                         room.clearDialog();
                     }
@@ -4522,9 +4524,24 @@ async function startServer() {
                 }
             }
 
-            data.to_peer_id == 'all'
-                ? room.broadCast(socket.id, 'message', data)
-                : room.sendTo(data.to_peer_id, 'message', data);
+            if (data.to_peer_id == 'all') {
+                room.pushChatMessage(data);
+                room.broadCast(socket.id, 'message', data);
+            } else {
+                room.sendTo(data.to_peer_id, 'message', data);
+            }
+        });
+
+        // Store public chat sent via DataChannel (no re-broadcast — peers already have it)
+        socket.on('chatHistoryStore', (dataObject) => {
+            if (!roomExists(socket)) return;
+            const data = checkXSS(dataObject);
+            if (!Validator.isValidData(data)) return;
+            if (data.to_peer_id !== 'all') return;
+            const { room, peer } = getRoomAndPeer(socket);
+            if (!room || !peer) return;
+            if (data.peer_name !== peer.peer_info?.peer_name) return;
+            room.pushChatMessage(data);
         });
 
         socket.on('chatReaction', (dataObject) => {

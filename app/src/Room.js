@@ -100,6 +100,10 @@ module.exports = class Room {
 
         // Active dialog (presenter + guests) — synced to late joiners via toJson()
         this._dialog = null; // { presenterId, guestIds: string[] }
+
+        // Public chat ring buffer for late joiners
+        this._chatMessages = [];
+        this._chatMessagesMax = 100;
     }
 
     setDialog(presenterId, guestIds = []) {
@@ -118,6 +122,31 @@ module.exports = class Room {
 
     getDialog() {
         return this._dialog;
+    }
+
+    pushChatMessage(data = {}) {
+        if (!data || data.to_peer_id !== 'all') return;
+        const entry = {
+            room_id: data.room_id,
+            peer_name: data.peer_name,
+            peer_avatar: data.peer_avatar || '',
+            peer_id: data.peer_id,
+            to_peer_id: 'all',
+            to_peer_name: data.to_peer_name || 'all',
+            peer_msg: data.peer_msg,
+            msg_id: data.msg_id || '',
+            reply_to_msg_id: data.reply_to_msg_id || '',
+            reply_to_peer_name: data.reply_to_peer_name || '',
+            reply_to_text: data.reply_to_text || '',
+        };
+        this._chatMessages.push(entry);
+        if (this._chatMessages.length > this._chatMessagesMax) {
+            this._chatMessages.splice(0, this._chatMessages.length - this._chatMessagesMax);
+        }
+    }
+
+    getChatMessages() {
+        return this._chatMessages;
     }
 
     // ####################################################
@@ -163,6 +192,7 @@ module.exports = class Room {
             maxParticipantsReached: this.getVisiblePeersCount() > this.maxParticipants,
             globalLobby: this.globalLobby,
             dialog: this._dialog,
+            chatMessages: this._chatMessages,
         };
     }
 

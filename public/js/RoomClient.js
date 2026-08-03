@@ -912,6 +912,11 @@ class RoomClient {
                 };
             }
 
+            // Public chat history for late joiners (do not auto-open chat on mobile)
+            if (Array.isArray(room.chatMessages) && room.chatMessages.length) {
+                setTimeout(() => this.applyChatHistory(room.chatMessages), 300);
+            }
+
             // Open Chat on Join
             if (chat) {
                 const chatButton = getId('chatButton');
@@ -7027,6 +7032,8 @@ class RoomClient {
                     this.socket.emit('message', data);
                 } else {
                     console.log('Message sent via DataChannel');
+                    // Keep server history in sync (DC path skips the message handler)
+                    this.socket.emit('chatHistoryStore', data);
                 }
             } else {
                 // Private messages or DataChannel unavailable: use signaling
@@ -11590,7 +11597,8 @@ class RoomClient {
                 this.handlePeerAudio(cmd);
                 break;
             case 'dialogSplit':
-                this.applyDialogSplitLayout(cmd.presenterId, cmd.guestIds || cmd.guestId);
+            case 'dialogGuestRemove':
+                this.handleDialogSplitUpdate(cmd);
                 break;
             case 'dialogSplitEnd':
                 this.exitDialogSplitLayout();
@@ -11906,6 +11914,90 @@ class RoomClient {
         this.userLog('success', 'Диалог завершён', 'top-end', 3000);
     }
 
+    /** Remove one guest from an active multi-guest dialog (keeps dialog for the rest). */
+    removeGuestFromDialog(guestId) {
+        if (!isPresenter) {
+            return this.userLog('warning', 'Только модератор может убрать участника из диалога', 'top-end');
+        }
+        if (!this._dialogSplitActive || !guestId) return;
+        const guests = [...(this._dialogGuestIds || [])].filter((id) => id && id !== guestId);
+        if (!guests.length) {
+            return this.endDialog();
+        }
+        this.emitPeerMediaAction(guestId, 'mute');
+        this.emitPeerMediaAction(guestId, 'hide');
+        this.applyDialogSplitLayout(this.peer_id, guests);
+        this.emitCmd({
+            type: 'dialogGuestRemove',
+            broadcast: true,
+            presenterId: this.peer_id,
+            guestId,
+            guestIds: guests,
+            removedGuestId: guestId,
+            peer_name: this.peer_name,
+            peer_uuid: this.peer_uuid,
+        });
+        this.renderDialogControlsBar();
+        this.userLog('success', 'Участник убран из диалога', 'top-end', 3000);
+    }
+
+    handleDialogSplitUpdate(cmd = {}) {
+        const presenterId = cmd.presenterId || '';
+        const guestIds = (Array.isArray(cmd.guestIds) ? cmd.guestIds : cmd.guestId ? [cmd.guestId] : [])
+            .filter(Boolean)
+            .filter((id) => id !== presenterId);
+        const wasGuest = (this._dialogGuestIds || []).includes(this.peer_id);
+        const stillGuest = guestIds.includes(this.peer_id);
+        const removedId = cmd.removedGuestId || '';
+
+        if (!presenterId || !guestIds.length) {
+            if (wasGuest && this.peer_id !== presenterId) {
+                this.leaveDialogAsGuest();
+            }
+            this.exitDialogSplitLayout();
+            this.hideDialogControlsBar();
+            return;
+        }
+
+        this.applyDialogSplitLayout(presenterId, guestIds);
+
+        // This client was removed from dialog — stop A/V and leave layout role
+        if (
+            (removedId === this.peer_id || (wasGuest && !stillGuest)) &&
+            this.peer_id !== presenterId
+        ) {
+            this.leaveDialogAsGuest();
+        }
+    }
+
+    leaveDialogAsGuest() {
+        try {
+            if (this.producerExist(mediaType.video)) {
+                this.closeProducer(mediaType.video, 'dialogRemove');
+            }
+            if (this.producerExist(mediaType.audio)) {
+                this.pauseProducer(mediaType.audio);
+                this.updatePeerInfo(this.peer_name, this.peer_id, 'audio', false);
+            }
+        } catch (err) {
+            console.warn('leaveDialogAsGuest media stop failed', err);
+        }
+        this._broadcastSpotlit = false;
+        this.userLog('info', 'Вас убрали из диалога', 'top-end', 4000);
+    }
+
+    applyChatHistory(messages = []) {
+        if (!Array.isArray(messages) || !messages.length) return;
+        for (const m of messages) {
+            try {
+                // toggleChat=false — don't open panel; just fill history
+                this.showMessage(m, false);
+            } catch (err) {
+                console.warn('applyChatHistory message failed', err);
+            }
+        }
+    }
+
     async handleDialogInvite(cmd = {}) {
         // Prevent double-start if peerAction + cmd both arrive
         if (this._dialogInviteInProgress) return;
@@ -12029,8 +12121,20 @@ class RoomClient {
                     </button>`
             )
             .join('');
+        const guestButtons = (this._dialogGuestIds || [])
+            .map((guestId) => {
+                const name =
+                    this.peers?.get?.(guestId)?.peer_info?.peer_name ||
+                    this._handRaiseAlerts.get(guestId)?.name ||
+                    'Гость';
+                return `<button type="button" class="dialog-controls-remove-btn" data-peer-id="${filterXSS(guestId)}" title="Убрать из диалога">
+                    <i class="fas fa-user-minus"></i> ${filterXSS(name)}
+                </button>`;
+            })
+            .join('');
         bar.innerHTML = `
             <span class="dialog-controls-label"><i class="fas fa-comments"></i> Диалог</span>
+            ${guestButtons}
             ${raiseButtons}
             <button type="button" id="dialogEndBtn" class="dialog-controls-end-btn">Завершить диалог</button>
         `;
@@ -12043,6 +12147,12 @@ class RoomClient {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.invitePeerToDialog(btn.getAttribute('data-peer-id'));
+            });
+        });
+        bar.querySelectorAll('.dialog-controls-remove-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.removeGuestFromDialog(btn.getAttribute('data-peer-id'));
             });
         });
     }
@@ -12140,13 +12250,19 @@ class RoomClient {
         document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((wrap) => {
             if (wrap.classList.contains('dialog-split-placeholder')) return;
             if ((wrap.id || '').endsWith('__videoOff')) return;
-            const video = wrap.querySelector('video[name]');
-            if (!video || video.getAttribute('name') !== peerId) return;
-            const hasStream = !!(video.srcObject && video.srcObject.getVideoTracks?.().some((t) => t.readyState === 'live'));
-            liveWraps.push({ wrap, hasStream, video });
+            const byName = wrap.querySelector(`video[name="${CSS.escape?.(peerId) || peerId}"]`);
+            const byData = wrap.dataset?.peerId === peerId ? wrap.querySelector('video') : null;
+            const video = byName || byData;
+            if (!video) return;
+            const isCam = wrap.dataset?.mediaKind !== 'screen';
+            const hasStream = !!(
+                video.srcObject && video.srcObject.getVideoTracks?.().some((t) => t.readyState === 'live')
+            );
+            liveWraps.push({ wrap, hasStream, isCam, video });
         });
         if (liveWraps.length) {
-            liveWraps.sort((a, b) => Number(b.hasStream) - Number(a.hasStream));
+            // Prefer camera over screen, then active stream
+            liveWraps.sort((a, b) => Number(b.isCam) - Number(a.isCam) || Number(b.hasStream) - Number(a.hasStream));
             return liveWraps[0].wrap;
         }
 
@@ -12163,17 +12279,17 @@ class RoomClient {
         if (peerId === this.peer_id) {
             const local =
                 (this.videoProducerId && this.getId(this.videoProducerId + '__video')) ||
+                (this.screenProducerId && this.getId(this.screenProducerId + '__video')) ||
                 (this.myVideoEl && this.getId(this.myVideoEl.id + '__video')) ||
                 null;
             if (local) return local;
         }
 
-        // Any Camera that contains a video named as this peer
-        const named = document.querySelector(`.Camera video[name="${CSS.escape?.(peerId) || peerId}"]`);
-        if (named?.closest) {
-            const wrap = named.closest('.Camera');
-            if (wrap && !wrap.classList.contains('dialog-split-placeholder')) return wrap;
-        }
+        // data-peer-id fallback (screen tiles often omit video[name])
+        const byPeerData = document.querySelector(
+            `.Camera[data-peer-id="${CSS.escape?.(peerId) || peerId}"]:not([id$="__videoOff"])`
+        );
+        if (byPeerData && !byPeerData.classList.contains('dialog-split-placeholder')) return byPeerData;
 
         return this.getId(peerId + '__dialogSlot') || this.getId(peerId + '__videoOff') || this.getId(peerId + '__video') || null;
     }
@@ -12320,7 +12436,12 @@ class RoomClient {
             wrap.style.flex = '1 1 0';
             wrap.style.alignSelf = 'stretch';
 
-            if (index === 0) {
+            if (isMobileSplit) {
+                // Mobile: all slots in one flex column (avoids overlapping absolute containers)
+                if (wrap.parentElement !== this.videoMediaContainer) {
+                    this.videoMediaContainer.appendChild(wrap);
+                }
+            } else if (index === 0) {
                 if (wrap.parentElement !== this.videoPinMediaContainer) {
                     this.videoPinMediaContainer.appendChild(wrap);
                 }
@@ -12332,33 +12453,48 @@ class RoomClient {
         });
 
         if (isMobileSplit) {
-            if (slotCount === 2) {
-                this.videoPinMediaContainer.style.top = '0';
-                this.videoPinMediaContainer.style.left = '0';
-                this.videoPinMediaContainer.style.width = '100%';
-                this.videoPinMediaContainer.style.height = '50%';
-                this.videoPinMediaContainer.style.display = 'block';
-
-                this.videoMediaContainer.style.top = '50%';
-                this.videoMediaContainer.style.left = '0';
-                this.videoMediaContainer.style.width = '100%';
-                this.videoMediaContainer.style.height = '50%';
-                this.videoMediaContainer.style.display = 'block';
-            } else {
-                this.videoPinMediaContainer.style.display = 'none';
-                this.videoMediaContainer.style.top = '0';
-                this.videoMediaContainer.style.left = '0';
-                this.videoMediaContainer.style.width = '100%';
-                this.videoMediaContainer.style.height = '100%';
-                this.videoMediaContainer.style.display = 'flex';
-                this.videoMediaContainer.style.flexDirection = 'column';
-                wraps.forEach((wrap) => {
-                    if (!wrap) return;
-                    if (wrap.parentElement !== this.videoMediaContainer) {
-                        this.videoMediaContainer.appendChild(wrap);
+            const setImp = (el, prop, value) => el?.style?.setProperty(prop, value, 'important');
+            setImp(this.videoPinMediaContainer, 'display', 'none');
+            setImp(this.videoMediaContainer, 'display', 'flex');
+            setImp(this.videoMediaContainer, 'flex-direction', 'column');
+            setImp(this.videoMediaContainer, 'flex-wrap', 'nowrap');
+            setImp(this.videoMediaContainer, 'align-items', 'stretch');
+            setImp(this.videoMediaContainer, 'justify-content', 'stretch');
+            setImp(this.videoMediaContainer, 'top', 'var(--optrf-topbar-h, 48px)');
+            setImp(this.videoMediaContainer, 'left', '0');
+            setImp(this.videoMediaContainer, 'right', '0');
+            setImp(this.videoMediaContainer, 'width', '100%');
+            setImp(
+                this.videoMediaContainer,
+                'height',
+                'calc(100% - var(--optrf-dock-h, 58px) - var(--optrf-topbar-h, 48px))'
+            );
+            setImp(this.videoMediaContainer, 'overflow', 'hidden');
+            wraps.forEach((wrap) => {
+                if (!wrap) return;
+                setImp(wrap, 'display', 'block');
+                setImp(wrap, 'position', 'relative');
+                setImp(wrap, 'flex', '1 1 0');
+                setImp(wrap, 'width', '100%');
+                setImp(wrap, 'height', '0'); // equal flex share
+                setImp(wrap, 'min-height', '0');
+                setImp(wrap, 'margin', '0');
+                const v = wrap.querySelector('video');
+                if (v) {
+                    setImp(v, 'position', 'absolute');
+                    setImp(v, 'inset', '0');
+                    setImp(v, 'width', '100%');
+                    setImp(v, 'height', '100%');
+                    setImp(v, 'object-fit', 'contain');
+                    v.setAttribute('playsinline', 'true');
+                    v.setAttribute('webkit-playsinline', 'true');
+                    try {
+                        v.play?.().catch?.(() => {});
+                    } catch {
+                        /* ignore */
                     }
-                });
-            }
+                }
+            });
         } else if (slotCount === 2) {
             // Desktop 2-way: equal halves of stage left of chat
             this.videoPinMediaContainer.style.top = '0';
