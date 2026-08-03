@@ -2847,14 +2847,16 @@ function handleButtons() {
     };
     startVideoButton.onclick = async () => {
         const moderator = rc.getModerator();
-        if (moderator.video_cant_unhide) {
+        const dialogOrSpotlit = !!(rc._broadcastSpotlit || rc._dialogSplitActive);
+        // Lectorium often has video_cant_unhide; dialog guests must still toggle camera
+        if (moderator.video_cant_unhide && !dialogOrSpotlit) {
             return userLog('warning', 'Модератор запретил включать камеру', 'top-end', 6000);
         }
         setVideoButtonsDisabled(true);
         try {
             if (!isEnumerateVideoDevices) await initEnumerateVideoDevices();
             // Dialog / spotlit guests: soft constraints + keep dock controls visible
-            if (rc._broadcastSpotlit || rc._dialogSplitActive) {
+            if (dialogOrSpotlit) {
                 await rc.peerMediaStartForced(RoomClient.mediaType.video);
             } else {
                 await rc.produce(RoomClient.mediaType.video, videoSelect.value);
@@ -3801,7 +3803,12 @@ function handleKeyboardShortcuts() {
                     audio ? stopAudioButton.click() : startAudioButton.click();
                     break;
                 case 'v':
-                    if (notPresenter && !video && (video_cant_unhide || !BUTTONS.main.startVideoButton)) {
+                    if (
+                        notPresenter &&
+                        !video &&
+                        !(rc._broadcastSpotlit || rc._dialogSplitActive) &&
+                        (video_cant_unhide || !BUTTONS.main.startVideoButton)
+                    ) {
                         userLog('warning', 'Ведущий запретил включать камеру', 'top-end');
                         break;
                     }
