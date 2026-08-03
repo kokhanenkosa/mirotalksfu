@@ -385,6 +385,7 @@ class RoomClient {
         this._dialogActiveSpeakerId = null; // for >5 guests focus layout
         this._forceSimpleMedia = false; // skip VB / use soft constraints on dialog invite
         this._dialogInviteInProgress = false;
+        this._leavingDialog = false; // suppress videoOff avatar while exiting dialog
         this._pendingChatReply = null; // { msgId, fromName, text }
         this.isChatMaximized = false;
         this.isToggleUnreadMsg = false;
@@ -4923,6 +4924,11 @@ class RoomClient {
         this.peer_info.peer_video = status;
         if (!this.peer_info.peer_video) {
             console.log('Set local video enabled: ' + status);
+            // Leaving dialog: never leave a sticky avatar tile in lectorium
+            if (this._leavingDialog) {
+                this.removeVideoOff(this.peer_id);
+                return;
+            }
             // Пассивным слушателям в broadcast не нужен свой videoOff-тайл.
             // Dialog guests (_broadcastSpotlit) keep avatar slot so they can toggle back on.
             if (!isBroadcastingEnabled || isPresenter || this._broadcastSpotlit || this._dialogSplitActive) {
@@ -4930,7 +4936,7 @@ class RoomClient {
                 this.sendVideoOff();
             }
         }
-        if (this._dialogSplitActive) {
+        if (this._dialogSplitActive && !this._leavingDialog) {
             this.refreshDialogSplitIfNeeded(this.peer_id);
         }
     }
@@ -11631,13 +11637,22 @@ class RoomClient {
             case 'dialogGuestLeave':
                 this.handleDialogSplitUpdate(cmd);
                 break;
-            case 'dialogSplitEnd':
-                if ((this._dialogGuestIds || []).includes(this.peer_id) && !isPresenter) {
+            case 'dialogSplitEnd': {
+                const endedGuests = [...(this._dialogGuestIds || [])];
+                if (endedGuests.includes(this.peer_id) && !isPresenter) {
                     this.leaveDialogAsGuest({ silent: true });
                 }
+                endedGuests.forEach((id) => this.collapseDialogPeerTile(id));
                 this.exitDialogSplitLayout();
                 this.hideDialogControlsBar();
+                try {
+                    resizeVideoMedia();
+                    handleAspectRatio();
+                } catch {
+                    /* ignore */
+                }
                 break;
+            }
             case 'dialogInvite':
                 // Guest receives invite: auto-start A/V then split layout
                 this.handleDialogInvite(cmd);
@@ -11942,6 +11957,7 @@ class RoomClient {
         for (const guestId of guests) {
             this.emitPeerMediaAction(guestId, 'mute');
             this.emitPeerMediaAction(guestId, 'hide');
+            this.collapseDialogPeerTile(guestId);
         }
         this.exitDialogSplitLayout();
         this.hideDialogControlsBar();
@@ -11960,6 +11976,7 @@ class RoomClient {
         }
         this.emitPeerMediaAction(guestId, 'mute');
         this.emitPeerMediaAction(guestId, 'hide');
+        this.collapseDialogPeerTile(guestId);
         this.applyDialogSplitLayout(this.peer_id, guests);
         this.emitCmd({
             type: 'dialogGuestRemove',
@@ -11983,11 +12000,15 @@ class RoomClient {
         const wasGuest = (this._dialogGuestIds || []).includes(this.peer_id);
         const stillGuest = guestIds.includes(this.peer_id);
         const removedId = cmd.removedGuestId || '';
+        const previousGuests = [...(this._dialogGuestIds || [])];
 
         if (!presenterId || !guestIds.length) {
             if (wasGuest && this.peer_id !== presenterId) {
                 this.leaveDialogAsGuest();
             }
+            // Collapse tiles for everyone who left the dialog
+            previousGuests.forEach((id) => this.collapseDialogPeerTile(id));
+            if (removedId) this.collapseDialogPeerTile(removedId);
             this.exitDialogSplitLayout();
             this.hideDialogControlsBar();
             return;
@@ -12001,11 +12022,24 @@ class RoomClient {
             this.peer_id !== presenterId
         ) {
             this.leaveDialogAsGuest();
+            this.exitDialogSplitLayout();
         }
+
+        // Remotes: drop avatar of guest who left (keep dialog for remaining guests)
+        if (removedId && removedId !== this.peer_id) {
+            this.collapseDialogPeerTile(removedId);
+            if (this._dialogSplitActive) {
+                this.applyDialogSplitLayout(presenterId, guestIds);
+            }
+        }
+        previousGuests
+            .filter((id) => id && !guestIds.includes(id) && id !== this.peer_id)
+            .forEach((id) => this.collapseDialogPeerTile(id));
     }
 
     leaveDialogAsGuest(opts = {}) {
         const silent = !!opts.silent;
+        this._leavingDialog = true;
         try {
             if (this.producerExist(mediaType.video)) {
                 this.closeProducer(mediaType.video, 'dialogRemove');
@@ -12016,10 +12050,20 @@ class RoomClient {
             }
         } catch (err) {
             console.warn('leaveDialogAsGuest media stop failed', err);
+        } finally {
+            this._broadcastSpotlit = false;
+            // Collapse guest tile completely (lectorium: no avatar for passive listeners)
+            try {
+                this.peer_info.peer_video = false;
+                this.removeVideoOff(this.peer_id);
+                this.removeDialogPlaceholder(this.peer_id);
+            } catch {
+                /* ignore */
+            }
+            this.lockBroadcastGuestControls();
+            this.hideDialogControlsBar();
+            this._leavingDialog = false;
         }
-        this._broadcastSpotlit = false;
-        this.lockBroadcastGuestControls();
-        this.hideDialogControlsBar();
         if (!silent) {
             this.userLog('info', 'Вас убрали из диалога', 'top-end', 4000);
         }
@@ -12046,18 +12090,46 @@ class RoomClient {
         if (!this._dialogSplitActive || !(this._dialogGuestIds || []).includes(this.peer_id)) {
             return this.userLog('info', 'Диалог не активен', 'top-end');
         }
+        const guestId = this.peer_id;
         this.emitCmd({
             type: 'dialogGuestLeave',
             broadcast: true,
-            guestId: this.peer_id,
-            removedGuestId: this.peer_id,
+            guestId,
+            removedGuestId: guestId,
             presenterId: this._dialogPresenterId,
             peer_name: this.peer_name,
             peer_uuid: this.peer_uuid,
         });
         this.leaveDialogAsGuest({ silent: true });
         this.exitDialogSplitLayout();
+        // Extra cleanup — avatar must not remain after dialog collapse
+        this.removeVideoOff(guestId);
+        this.removeDialogPlaceholder(guestId);
+        try {
+            resizeVideoMedia();
+            handleAspectRatio();
+        } catch {
+            /* ignore */
+        }
         this.userLog('success', 'Вы завершили диалог', 'top-end', 3000);
+    }
+
+    /** Drop a peer's dialog/camera-off tile (lectorium guest leave / dialog end). */
+    collapseDialogPeerTile(peerId) {
+        if (!peerId) return;
+        this.removeVideoOff(peerId);
+        this.removeDialogPlaceholder(peerId);
+        const live =
+            this.getId(peerId + '__video') ||
+            document.querySelector(`.Camera[data-peer-id="${CSS.escape?.(peerId) || peerId}"]`);
+        // Do not remove presenter's live camera; only orphan dialog slots already handled above
+        if (live && (live.id || '').endsWith('__videoOff')) {
+            try {
+                live.parentElement?.removeChild(live);
+            } catch {
+                /* ignore */
+            }
+        }
     }
 
     applyChatHistory(messages = []) {
@@ -12881,6 +12953,12 @@ class RoomClient {
         this._dialogGuestIds = [];
         this._dialogPresenterId = null;
         this._dialogActiveSpeakerId = null;
+
+        // Lectorium guest: after dialog ends, own avatar must not stay on stage
+        if (!isPresenter && (isLectoriumEnabled || isBroadcastingEnabled) && !this._broadcastSpotlit) {
+            this.removeVideoOff(this.peer_id);
+            this.removeDialogPlaceholder(this.peer_id);
+        }
 
         // Restore stage width next to pinned chat
         if (this.isChatPinned && !this.isMobileDevice) {
