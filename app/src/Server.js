@@ -666,7 +666,9 @@ let announcedAddress = webRtcServerActive
 const workers = [];
 let nextMediasoupWorkerIdx = 0;
 
-// Autodetect announcedAddress with multiple fallback services
+// Autodetect announcedAddress with multiple fallback services.
+// Never block forever — missing SFU_ANNOUNCED_IP + blocked outbound HTTP used to hang
+// startup and cause Coolify 504 Gateway Timeout after redeploy.
 if (!announcedAddress && IP === '0.0.0.0') {
     const detectPublicIp = async () => {
         const services = config.system?.services?.ip || [
@@ -677,27 +679,30 @@ if (!announcedAddress && IP === '0.0.0.0') {
 
         for (const service of services) {
             try {
-                const ip = await fetchPublicIp(service);
+                const ip = await fetchPublicIp(service, 4000);
                 if (ip) {
                     announcedAddress = ip;
                     updateAnnouncedAddress(ip);
-                    startServer().catch((startErr) => {
-                        log.error('Server startup failed', startErr);
-                        process.exit(1);
-                    });
+                    log.info('Detected public IP for SFU announcedAddress', { ip });
                     return;
                 }
             } catch (err) {
                 log.warn(`Failed to detect IP from ${service}`, err.message);
             }
         }
-        throw new Error('All public IP detection services failed! Please check your network connection');
+        log.warn(
+            'Public IP detection failed — set SFU_ANNOUNCED_IP in Coolify. Starting server anyway.'
+        );
     };
 
-    detectPublicIp().catch((err) => {
-        log.error('Public IP detection failed', err.message);
-        process.exit(1);
-    });
+    detectPublicIp()
+        .catch((err) => log.warn('Public IP detection error', err.message))
+        .finally(() => {
+            startServer().catch((startErr) => {
+                log.error('Server startup failed', startErr);
+                process.exit(1);
+            });
+        });
 } else {
     startServer().catch((startErr) => {
         log.error('Server startup failed', startErr);
@@ -705,16 +710,21 @@ if (!announcedAddress && IP === '0.0.0.0') {
     });
 }
 
-function fetchPublicIp(serviceUrl) {
+function fetchPublicIp(serviceUrl, timeoutMs = 4000) {
     return new Promise((resolve, reject) => {
-        http.get(serviceUrl, (resp) => {
+        const req = http.get(serviceUrl, (resp) => {
             if (resp.statusCode !== 200) {
+                resp.resume();
                 return reject(new Error(`HTTP ${resp.statusCode}`));
             }
             let data = '';
             resp.on('data', (chunk) => (data += chunk));
             resp.on('end', () => resolve(data.toString().trim()));
-        }).on('error', reject);
+        });
+        req.setTimeout(timeoutMs, () => {
+            req.destroy(new Error(`Timeout after ${timeoutMs}ms`));
+        });
+        req.on('error', reject);
     });
 }
 
@@ -2609,8 +2619,10 @@ async function startServer() {
         try {
             await createWorkers();
         } catch (err) {
+            // Keep HTTP up so Coolify healthcheck / proxy don't 504 forever;
+            // mediasoup will retry on next deploy after ports are free.
             log.error('Create Worker ERROR --->', err);
-            process.exit(1);
+            log.error('HTTP stays up, but WebRTC may be unavailable until workers start');
         }
     })();
 
@@ -2652,9 +2664,18 @@ async function startServer() {
                     webRtcServerOptions: webRtcServerOptions,
                 });
 
-                const webRtcServer = await worker.createWebRtcServer(webRtcServerOptions);
-                worker.appData.webRtcServer = webRtcServer;
-                log.info('WebRtcServer ready', { worker_pid: worker.pid, index: i });
+                try {
+                    const webRtcServer = await worker.createWebRtcServer(webRtcServerOptions);
+                    worker.appData.webRtcServer = webRtcServer;
+                    log.info('WebRtcServer ready', { worker_pid: worker.pid, index: i });
+                } catch (wssErr) {
+                    log.error('WebRtcServer create failed for worker', {
+                        index: i,
+                        worker_pid: worker.pid,
+                        error: wssErr?.message || wssErr,
+                    });
+                    throw wssErr;
+                }
             }
 
             worker.on('died', () => {

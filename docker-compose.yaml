@@ -120,6 +120,11 @@ services:
             - mirotalksfu-rtmp:/src/app/rtmp
             - mirotalksfu-phone-data:/src/app/data
 
+        # Coolify/Traefik: container is on default + coolify networks.
+        # Without this label Traefik may pick the wrong network → 504 Gateway Timeout.
+        labels:
+            - traefik.docker.network=coolify
+
         networks:
             - default
             - coolify
@@ -132,10 +137,10 @@ services:
                     '-e',
                     "require('net').createConnection(3010,'127.0.0.1').on('connect',function(){this.end();process.exit(0)}).on('error',function(){process.exit(1)})",
                 ]
-            interval: 30s
+            interval: 15s
             timeout: 5s
-            retries: 5
-            start_period: 60s
+            retries: 8
+            start_period: 90s
 
 volumes:
     mirotalksfu-rec:
