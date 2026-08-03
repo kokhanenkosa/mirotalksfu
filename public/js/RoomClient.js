@@ -3379,6 +3379,7 @@ class RoomClient {
                 handleAspectRatio();
                 console.log('[addProducer] Video-element-count', this.videoMediaContainer.childElementCount);
                 this.refreshCamBubble(this.peer_id);
+                this.refreshDialogSplitIfNeeded(this.peer_id);
                 break;
             case mediaType.audio:
                 elem = document.createElement('audio');
@@ -4130,6 +4131,7 @@ class RoomClient {
                 this.syncPeerCamBubbleState(remotePeerId, peer_info);
                 this.refreshCamBubble(remotePeerId);
                 this.scheduleCamBubbleRetry(remotePeerId);
+                this.refreshDialogSplitIfNeeded(remotePeerId);
                 this.sound('joined');
                 break;
             case mediaType.audio:
@@ -11907,6 +11909,8 @@ class RoomClient {
 
     getCameraWrapByPeerId(peerId) {
         if (!peerId) return null;
+
+        // Prefer live video tile (producer/consumer id + __video)
         const video = this.getVideoElementByPeerId(peerId);
         if (video) {
             const byId = this.getId(video.id + '__video');
@@ -11914,7 +11918,66 @@ class RoomClient {
             const closest = video.closest('.Camera');
             if (closest) return closest;
         }
-        return this.getId(peerId + '__videoOff') || this.getId(peerId + '__video') || null;
+
+        // Local producer shortcuts
+        if (peerId === this.peer_id) {
+            const local =
+                (this.videoProducerId && this.getId(this.videoProducerId + '__video')) ||
+                (this.myVideoEl && this.getId(this.myVideoEl.id + '__video')) ||
+                null;
+            if (local) return local;
+        }
+
+        // Any Camera that contains a video named as this peer
+        const named = document.querySelector(`.Camera video[name="${CSS.escape?.(peerId) || peerId}"]`);
+        if (named?.closest) {
+            const wrap = named.closest('.Camera');
+            if (wrap) return wrap;
+        }
+
+        return (
+            this.getId(peerId + '__videoOff') ||
+            this.getId(peerId + '__dialogSlot') ||
+            this.getId(peerId + '__video') ||
+            null
+        );
+    }
+
+    ensureDialogPlaceholder(peerId) {
+        if (!peerId) return null;
+        const existing = this.getCameraWrapByPeerId(peerId);
+        if (existing && !existing.classList.contains('dialog-split-placeholder')) return existing;
+        let slot = this.getId(peerId + '__dialogSlot');
+        if (!slot) {
+            slot = document.createElement('div');
+            slot.id = peerId + '__dialogSlot';
+            slot.className = 'Camera dialog-split-placeholder';
+            slot.innerHTML = `
+                <div class="dialog-waiting">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Ожидание видео...</span>
+                </div>
+            `;
+            this.videoMediaContainer.appendChild(slot);
+        }
+        return slot;
+    }
+
+    removeDialogPlaceholder(peerId) {
+        const slot = this.getId(peerId + '__dialogSlot');
+        if (slot?.parentElement) slot.parentElement.removeChild(slot);
+    }
+
+    refreshDialogSplitIfNeeded(peerId) {
+        if (!this._dialogSplitActive || !this._dialogPresenterId) return;
+        const guests = this._dialogGuestIds || [];
+        if (peerId && peerId !== this._dialogPresenterId && !guests.includes(peerId)) return;
+        if (peerId) this.removeDialogPlaceholder(peerId);
+        // Defer so DOM tile is fully attached
+        setTimeout(() => {
+            if (!this._dialogSplitActive) return;
+            this.applyDialogSplitLayout(this._dialogPresenterId, this._dialogGuestIds);
+        }, 50);
     }
 
     applyDialogSplitLayout(presenterId, guestIdsInput) {
@@ -11945,11 +12008,16 @@ class RoomClient {
         document.body.classList.add('dialog-split-active');
 
         const peerIds = [presenterId, ...guestIds];
-        const wraps = peerIds.map((id) => this.getCameraWrapByPeerId(id)).filter(Boolean);
-        const wrapSet = new Set(wraps);
+        const wraps = peerIds.map((id) => this.getCameraWrapByPeerId(id) || this.ensureDialogPlaceholder(id));
+        const wrapSet = new Set(wraps.filter(Boolean));
 
         document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
             if (wrapSet.has(el)) return;
+            // Keep orphan placeholders only for dialog peers
+            if (el.classList.contains('dialog-split-placeholder')) {
+                const pid = (el.id || '').replace('__dialogSlot', '');
+                if (peerIds.includes(pid)) return;
+            }
             el.dataset.dialogHidden = '1';
             el.style.display = 'none';
             el.classList.remove('dialog-split-slot', 'dialog-split-left', 'dialog-split-right');
@@ -11961,25 +12029,49 @@ class RoomClient {
         // Chat pinned = 25% → stage 75%; split stage equally between dialog peers
         const chatPct = !isMobileSplit && this.isChatPinned ? 25 : 0;
         const stagePct = 100 - chatPct;
-        const slotCount = Math.max(wraps.length, 2);
+        const slotCount = Math.max(peerIds.length, 2);
         const slotPct = stagePct / slotCount;
 
-        // Use pin container for first peer (presenter), media container for the rest — equal stage shares
         this.videoPinMediaContainer.style.display = 'block';
+        this.videoPinMediaContainer.style.position = 'absolute';
         this.videoPinMediaContainer.style.right = 'auto';
         this.videoPinMediaContainer.style.bottom = 'auto';
+        this.videoPinMediaContainer.style.overflow = 'hidden';
+        this.videoMediaContainer.style.position = 'absolute';
         this.videoMediaContainer.style.right = 'auto';
         this.videoMediaContainer.style.bottom = 'auto';
+        this.videoMediaContainer.style.overflow = 'hidden';
 
         wraps.forEach((wrap, index) => {
+            if (!wrap) return;
             wrap.dataset.dialogHidden = '0';
             wrap.style.display = 'block';
+            wrap.style.visibility = 'visible';
+            wrap.style.opacity = '1';
             wrap.classList.add('dialog-split-slot');
             wrap.classList.toggle('dialog-split-left', index === 0);
             wrap.classList.toggle('dialog-split-right', index > 0);
             wrap.style.flex = '1 1 0';
+            wrap.style.width = '100%';
+            wrap.style.height = '100%';
+            wrap.style.margin = '0';
             wrap.style.maxWidth = 'none';
             wrap.style.maxHeight = 'none';
+            wrap.style.alignSelf = 'stretch';
+
+            const video = wrap.querySelector('video');
+            if (video) {
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'cover';
+                video.classList.add('videoDefault');
+                try {
+                    video.play?.();
+                } catch {
+                    /* ignore */
+                }
+            }
+
             if (index === 0) {
                 if (wrap.parentElement !== this.videoPinMediaContainer) {
                     this.videoPinMediaContainer.appendChild(wrap);
@@ -11990,7 +12082,6 @@ class RoomClient {
         });
 
         if (isMobileSplit) {
-            // Mobile: presenter top, guests share bottom (or stack equally)
             if (slotCount === 2) {
                 this.videoPinMediaContainer.style.top = '0';
                 this.videoPinMediaContainer.style.left = '0';
@@ -12004,7 +12095,6 @@ class RoomClient {
                 this.videoMediaContainer.style.display = 'flex';
                 this.videoMediaContainer.style.flexDirection = 'row';
             } else {
-                // Equal vertical stack via flex on media; pin unused
                 this.videoPinMediaContainer.style.display = 'none';
                 this.videoMediaContainer.style.top = '0';
                 this.videoMediaContainer.style.left = '0';
@@ -12013,11 +12103,13 @@ class RoomClient {
                 this.videoMediaContainer.style.display = 'flex';
                 this.videoMediaContainer.style.flexDirection = 'column';
                 wraps.forEach((wrap) => {
+                    if (!wrap) return;
                     if (wrap.parentElement !== this.videoMediaContainer) {
                         this.videoMediaContainer.appendChild(wrap);
                     }
                     wrap.style.width = '100%';
                     wrap.style.height = 'auto';
+                    wrap.style.flex = '1 1 0';
                 });
             }
         } else if (slotCount === 2) {
@@ -12033,8 +12125,10 @@ class RoomClient {
             this.videoMediaContainer.style.height = '100%';
             this.videoMediaContainer.style.display = 'block';
             this.videoMediaContainer.style.flexDirection = '';
+            this.videoMediaContainer.style.flexWrap = 'nowrap';
+            this.videoMediaContainer.style.alignItems = 'stretch';
+            this.videoMediaContainer.style.justifyContent = 'stretch';
         } else {
-            // Desktop 3+: equal columns across stage
             this.videoPinMediaContainer.style.top = '0';
             this.videoPinMediaContainer.style.left = '0';
             this.videoPinMediaContainer.style.width = `${slotPct}%`;
@@ -12046,13 +12140,16 @@ class RoomClient {
             this.videoMediaContainer.style.height = '100%';
             this.videoMediaContainer.style.display = 'flex';
             this.videoMediaContainer.style.flexDirection = 'row';
+            this.videoMediaContainer.style.flexWrap = 'nowrap';
+            this.videoMediaContainer.style.alignItems = 'stretch';
+            this.videoMediaContainer.style.justifyContent = 'stretch';
         }
 
         this.isVideoPinned = true;
         if (isPresenter) this.renderDialogControlsBar();
         try {
-            resizeVideoMedia();
-            handleAspectRatio();
+            // Do not call handleAspectRatio/resizeVideoMedia — they shrink tiles during dialog
+            if (typeof resizeVideoMedia === 'function') resizeVideoMedia();
         } catch {
             /* ignore */
         } finally {
@@ -12076,9 +12173,14 @@ class RoomClient {
             el.style.maxHeight = '';
             el.style.width = '';
             el.style.height = '';
+            el.style.margin = '';
+            el.style.alignSelf = '';
             if (el.parentElement === this.videoPinMediaContainer) {
                 this.videoMediaContainer.appendChild(el);
             }
+        });
+        document.querySelectorAll('.dialog-split-placeholder').forEach((el) => {
+            el.parentElement?.removeChild(el);
         });
 
         this.videoPinMediaContainer.style.display = 'none';
