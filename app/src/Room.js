@@ -97,6 +97,27 @@ module.exports = class Room {
 
         this.maxParticipants = config?.moderation?.room?.maxParticipants || 1000;
         this.globalLobby = config?.moderation?.room?.lobby || false;
+
+        // Active dialog (presenter + guests) — synced to late joiners via toJson()
+        this._dialog = null; // { presenterId, guestIds: string[] }
+    }
+
+    setDialog(presenterId, guestIds = []) {
+        const guests = (Array.isArray(guestIds) ? guestIds : [guestIds]).filter(Boolean);
+        if (!presenterId || !guests.length) {
+            this._dialog = null;
+            return null;
+        }
+        this._dialog = { presenterId, guestIds: guests };
+        return this._dialog;
+    }
+
+    clearDialog() {
+        this._dialog = null;
+    }
+
+    getDialog() {
+        return this._dialog;
     }
 
     // ####################################################
@@ -141,6 +162,7 @@ module.exports = class Room {
             maxParticipants: this.maxParticipants,
             maxParticipantsReached: this.getVisiblePeersCount() > this.maxParticipants,
             globalLobby: this.globalLobby,
+            dialog: this._dialog,
         };
     }
 

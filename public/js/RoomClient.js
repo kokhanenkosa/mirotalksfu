@@ -708,6 +708,19 @@ class RoomClient {
         } else {
             await this.startLocalMedia();
         }
+
+        this.schedulePendingRoomDialog();
+    }
+
+    /** Apply server-synced dialog layout after join (producers may arrive async). */
+    schedulePendingRoomDialog() {
+        const pending = this._pendingRoomDialog;
+        if (!pending?.presenterId || !pending.guestIds?.length) return;
+        const apply = () => {
+            if (!this._pendingRoomDialog) return;
+            this.applyDialogSplitLayout(pending.presenterId, pending.guestIds);
+        };
+        [500, 1500, 3000, 6000].forEach((ms) => setTimeout(apply, ms));
     }
 
     async loadDeviceAndInitTransports() {
@@ -887,6 +900,15 @@ class RoomClient {
             this.dominantSpeaker = room.dominantSpeaker || false;
             if (!this.dominantSpeaker) {
                 elemDisplay('dominantSpeakerFocusDiv', false);
+            }
+
+            // Active dialog (late joiner sync from server room state)
+            if (room.dialog?.presenterId && (room.dialog.guestIds?.length || room.dialog.guestId)) {
+                const guestIds = room.dialog.guestIds || [room.dialog.guestId];
+                this._pendingRoomDialog = {
+                    presenterId: room.dialog.presenterId,
+                    guestIds: guestIds.filter(Boolean),
+                };
             }
 
             // Open Chat on Join
@@ -2230,14 +2252,20 @@ class RoomClient {
         switch (type) {
             case mediaType.audio:
                 // В лектории кнопки скрыты, но «дать слово» временно разрешает produce.
-                if (!BUTTONS.main.startAudioButton && !this._broadcastSpotlit) return;
+                if (!BUTTONS.main.startAudioButton && !this._broadcastSpotlit) {
+                    if (this._forceSimpleMedia) throw new Error('Audio produce blocked (no spotlit)');
+                    return;
+                }
                 this.isAudioAllowed = true;
                 mediaConstraints = this.getAudioConstraints(deviceId);
                 this.peer_info.peer_audio = true;
                 audio = true;
                 break;
             case mediaType.video:
-                if (!BUTTONS.main.startVideoButton && !this._broadcastSpotlit) return;
+                if (!BUTTONS.main.startVideoButton && !this._broadcastSpotlit) {
+                    if (this._forceSimpleMedia) throw new Error('Video produce blocked (no spotlit)');
+                    return;
+                }
                 this.isVideoAllowed = true;
                 mediaConstraints = swapCamera ? this.getCameraConstraints() : this.getVideoConstraints(deviceId);
                 this.peer_info.peer_video = true;
@@ -2254,11 +2282,15 @@ class RoomClient {
         }
 
         if (!this.device.canProduce('video') && !audio) {
-            return console.error('Cannot produce video');
+            const msg = 'Cannot produce video';
+            console.error(msg);
+            if (this._forceSimpleMedia) throw new Error(msg);
+            return;
         }
 
         if (this.producerLabel.has(type)) {
-            return console.warn('Producer already exists for this type ' + type);
+            console.warn('Producer already exists for this type ' + type);
+            return;
         }
 
         const videoPrivacyBtn = this.getId(this.peer_id + '__vp');
@@ -2496,6 +2528,8 @@ class RoomClient {
         } catch (err) {
             console.error('Produce error:', err);
             handleMediaError(type, err);
+            // Dialog invite / forced media must see the failure to retry / surface errors
+            if (this._forceSimpleMedia) throw err;
         }
     }
 
@@ -11683,13 +11717,28 @@ class RoomClient {
 
         const addingToExisting = !!this._dialogSplitActive;
         const guestIds = addingToExisting ? [...(this._dialogGuestIds || [])] : [];
+        const newlyInvited = [];
 
         for (const peer_id of ids) {
             if (peer_id === this.peer_id) continue;
             if (guestIds.includes(peer_id)) continue;
             guestIds.push(peer_id);
-            // Guest auto-starts mic+cam sequentially (no consent)
-            this.emitPeerMediaAction(peer_id, 'dialogInvite');
+            newlyInvited.push(peer_id);
+        }
+        for (const peer_id of newlyInvited) {
+            // Guest auto-starts mic+cam (no consent); include full guest list for layout
+            this.socket.emit('peerAction', {
+                from_peer_name: this.peer_name,
+                from_peer_id: this.peer_id,
+                from_peer_uuid: this.peer_uuid,
+                to_peer_uuid: '',
+                peer_id,
+                action: 'dialogInvite',
+                message: '',
+                broadcast: false,
+                presenterId: this.peer_id,
+                guestIds,
+            });
             this.clearHandRaiseAlert(peer_id);
         }
 
@@ -11757,26 +11806,36 @@ class RoomClient {
     }
 
     async handleDialogInvite(cmd = {}) {
+        // Keep spotlit for the whole invite — produce() gates on it
+        this._broadcastSpotlit = true;
+        this.unlockBroadcastSpotlitControls(mediaType.audio);
+        this.unlockBroadcastSpotlitControls(mediaType.video);
+
+        // Video first (main for dialog); audio failure must not block camera
+        const videoResult = await Promise.allSettled([this.peerMediaStartForced(mediaType.video)]);
+        const audioResult = await Promise.allSettled([this.peerMediaStartForced(mediaType.audio)]);
+        if (videoResult[0].status === 'rejected') {
+            console.error('handleDialogInvite video failed', videoResult[0].reason);
+        }
+        if (audioResult[0].status === 'rejected') {
+            console.error('handleDialogInvite audio failed', audioResult[0].reason);
+        }
+
         try {
-            await this.peerMediaStartForced(mediaType.audio);
-            await this.peerMediaStartForced(mediaType.video);
             if (this.peer_info?.peer_hand) {
                 this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
             }
+            this.removeVideoOff?.(this.peer_id);
+            // Layout comes from broadcast dialogSplit (has full guestIds). Only fall back if missing.
             const presenterId = cmd.presenterId || cmd.from_peer_id || '';
-            const guestIds = cmd.guestIds || (cmd.guestId ? [cmd.guestId] : [this.peer_id]);
-            if (presenterId) {
+            if (presenterId && !this._dialogSplitActive) {
+                const guestIds = cmd.guestIds || (cmd.guestId ? [cmd.guestId] : [this.peer_id]);
                 this.applyDialogSplitLayout(presenterId, guestIds);
-                [800, 2000, 4000].forEach((ms) => {
-                    setTimeout(() => {
-                        if (this._dialogSplitActive) {
-                            this.applyDialogSplitLayout(presenterId, this._dialogGuestIds || guestIds);
-                        }
-                    }, ms);
-                });
+            } else if (this._dialogSplitActive) {
+                this.refreshDialogSplitIfNeeded(this.peer_id);
             }
         } catch (err) {
-            console.error('handleDialogInvite failed', err);
+            console.error('handleDialogInvite layout failed', err);
         }
     }
 
@@ -12051,26 +12110,8 @@ class RoomClient {
             wrap.classList.add('dialog-split-slot');
             wrap.classList.toggle('dialog-split-left', index === 0);
             wrap.classList.toggle('dialog-split-right', index > 0);
-            wrap.style.flex = '1 1 0';
-            wrap.style.width = '100%';
-            wrap.style.height = '100%';
             wrap.style.margin = '0';
-            wrap.style.maxWidth = 'none';
-            wrap.style.maxHeight = 'none';
-            wrap.style.alignSelf = 'stretch';
-
-            const video = wrap.querySelector('video');
-            if (video) {
-                video.style.width = '100%';
-                video.style.height = '100%';
-                video.style.objectFit = 'cover';
-                video.classList.add('videoDefault');
-                try {
-                    video.play?.();
-                } catch {
-                    /* ignore */
-                }
-            }
+            wrap.style.alignSelf = 'center';
 
             if (index === 0) {
                 if (wrap.parentElement !== this.videoPinMediaContainer) {
@@ -12079,6 +12120,9 @@ class RoomClient {
             } else if (wrap.parentElement !== this.videoMediaContainer) {
                 this.videoMediaContainer.appendChild(wrap);
             }
+
+            // Desktop: frame aspect ratio follows the source stream (16:9 / 9:16 / …)
+            this.bindDialogSourceAspect(wrap, isMobileSplit);
         });
 
         if (isMobileSplit) {
@@ -12118,21 +12162,27 @@ class RoomClient {
             this.videoPinMediaContainer.style.left = '0';
             this.videoPinMediaContainer.style.width = `${slotPct}%`;
             this.videoPinMediaContainer.style.height = '100%';
+            this.videoPinMediaContainer.style.display = 'flex';
+            this.videoPinMediaContainer.style.alignItems = 'center';
+            this.videoPinMediaContainer.style.justifyContent = 'center';
 
             this.videoMediaContainer.style.top = '0';
             this.videoMediaContainer.style.left = `${slotPct}%`;
             this.videoMediaContainer.style.width = `${slotPct}%`;
             this.videoMediaContainer.style.height = '100%';
-            this.videoMediaContainer.style.display = 'block';
-            this.videoMediaContainer.style.flexDirection = '';
+            this.videoMediaContainer.style.display = 'flex';
+            this.videoMediaContainer.style.flexDirection = 'row';
             this.videoMediaContainer.style.flexWrap = 'nowrap';
-            this.videoMediaContainer.style.alignItems = 'stretch';
-            this.videoMediaContainer.style.justifyContent = 'stretch';
+            this.videoMediaContainer.style.alignItems = 'center';
+            this.videoMediaContainer.style.justifyContent = 'center';
         } else {
             this.videoPinMediaContainer.style.top = '0';
             this.videoPinMediaContainer.style.left = '0';
             this.videoPinMediaContainer.style.width = `${slotPct}%`;
             this.videoPinMediaContainer.style.height = '100%';
+            this.videoPinMediaContainer.style.display = 'flex';
+            this.videoPinMediaContainer.style.alignItems = 'center';
+            this.videoPinMediaContainer.style.justifyContent = 'center';
 
             this.videoMediaContainer.style.top = '0';
             this.videoMediaContainer.style.left = `${slotPct}%`;
@@ -12141,14 +12191,14 @@ class RoomClient {
             this.videoMediaContainer.style.display = 'flex';
             this.videoMediaContainer.style.flexDirection = 'row';
             this.videoMediaContainer.style.flexWrap = 'nowrap';
-            this.videoMediaContainer.style.alignItems = 'stretch';
-            this.videoMediaContainer.style.justifyContent = 'stretch';
+            this.videoMediaContainer.style.alignItems = 'center';
+            this.videoMediaContainer.style.justifyContent = 'center';
         }
 
         this.isVideoPinned = true;
+        this._pendingRoomDialog = null;
         if (isPresenter) this.renderDialogControlsBar();
         try {
-            // Do not call handleAspectRatio/resizeVideoMedia — they shrink tiles during dialog
             if (typeof resizeVideoMedia === 'function') resizeVideoMedia();
         } catch {
             /* ignore */
@@ -12157,9 +12207,84 @@ class RoomClient {
         }
     }
 
+    /**
+     * Desktop dialog: size the Camera frame from the real stream AR (16:9, 9:16, …).
+     * Mobile keeps full-bleed slots.
+     */
+    bindDialogSourceAspect(wrap, isMobileSplit) {
+        if (!wrap) return;
+        const video = wrap.querySelector('video');
+
+        if (isMobileSplit) {
+            wrap.style.flex = '1 1 0';
+            wrap.style.width = '100%';
+            wrap.style.height = '100%';
+            wrap.style.maxWidth = 'none';
+            wrap.style.maxHeight = 'none';
+            if (video) {
+                video.style.width = '100%';
+                video.style.height = '100%';
+                video.style.objectFit = 'cover';
+                video.classList.add('videoDefault');
+                try {
+                    video.play?.();
+                } catch {
+                    /* ignore */
+                }
+            }
+            return;
+        }
+
+        const applyAr = () => {
+            const parent = wrap.parentElement;
+            const maxW = Math.max(1, parent?.clientWidth || wrap.clientWidth || 1);
+            const maxH = Math.max(1, parent?.clientHeight || wrap.clientHeight || 1);
+            const w = video?.videoWidth || 0;
+            const h = video?.videoHeight || 0;
+            const ar = w > 0 && h > 0 ? w / h : 16 / 9;
+            if (w > 0 && h > 0) wrap.dataset.sourceAr = `${w}:${h}`;
+
+            let boxW = maxW;
+            let boxH = boxW / ar;
+            if (boxH > maxH) {
+                boxH = maxH;
+                boxW = boxH * ar;
+            }
+            wrap.style.flex = '0 0 auto';
+            wrap.style.width = `${Math.floor(boxW)}px`;
+            wrap.style.height = `${Math.floor(boxH)}px`;
+            wrap.style.maxWidth = '100%';
+            wrap.style.maxHeight = '100%';
+        };
+
+        if (video) {
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'contain';
+            video.classList.add('videoDefault');
+            if (wrap._dialogArHandler) {
+                video.removeEventListener('loadedmetadata', wrap._dialogArHandler);
+                video.removeEventListener('resize', wrap._dialogArHandler);
+            }
+            wrap._dialogArHandler = applyAr;
+            video.addEventListener('loadedmetadata', applyAr);
+            video.addEventListener('resize', applyAr);
+            if (video.readyState >= 1) applyAr();
+            else applyAr(); // placeholder size until metadata
+            try {
+                video.play?.();
+            } catch {
+                /* ignore */
+            }
+        } else {
+            applyAr();
+        }
+    }
+
     exitDialogSplitLayout() {
         if (!this._dialogSplitActive) return;
         this._dialogSplitActive = false;
+        this._pendingRoomDialog = null;
         document.body.classList.remove('dialog-split-active', 'dialog-split-mobile');
 
         document.querySelectorAll('.Camera[data-dialog-hidden="1"]').forEach((el) => {
@@ -12418,8 +12543,10 @@ class RoomClient {
                 case 'dialogInvite':
                     if (peerActionAllowed) {
                         await this.handleDialogInvite({
-                            presenterId: data.from_peer_id || '',
+                            presenterId: data.presenterId || data.from_peer_id || '',
                             from_peer_id: data.from_peer_id || '',
+                            guestIds: data.guestIds || [],
+                            guestId: data.guestId || '',
                         });
                     }
                     break;

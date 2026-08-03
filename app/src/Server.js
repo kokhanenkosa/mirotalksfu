@@ -3631,6 +3631,11 @@ async function startServer() {
                         data.peer_uuid
                     );
                     if (!presenterOk) return;
+                    if (data.type === 'dialogSplit') {
+                        room.setDialog(data.presenterId, data.guestIds || data.guestId);
+                    } else {
+                        room.clearDialog();
+                    }
                     break;
                 }
                 case 'peerAudio':
