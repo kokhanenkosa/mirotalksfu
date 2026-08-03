@@ -2569,7 +2569,10 @@ async function startServer() {
     // START SERVER
     // ####################################################
 
-    server.listen(config?.server?.listen?.port || 3010, () => {
+    const listenIp = config?.server?.listen?.ip || '0.0.0.0';
+    const listenPort = Number(config?.server?.listen?.port || 3010);
+    server.listen(listenPort, listenIp, () => {
+        log.info('HTTP server listening', { ip: listenIp, port: listenPort });
         log.log(
             `%c
     
@@ -2633,7 +2636,13 @@ async function startServer() {
                 const portIncrement = i;
 
                 for (const listenInfo of webRtcServerOptions.listenInfos) {
-                    if (!listenInfo.portRange) {
+                    // Each worker must own a unique port. Sharing one portRange across
+                    // all workers causes bind conflicts / hangs (Gateway Timeout after redeploy).
+                    if (listenInfo.portRange) {
+                        const port = Number(rtcMinPort) + portIncrement;
+                        delete listenInfo.portRange;
+                        listenInfo.port = port;
+                    } else if (typeof listenInfo.port === 'number') {
                         listenInfo.port += portIncrement;
                     }
                 }
@@ -2645,6 +2654,7 @@ async function startServer() {
 
                 const webRtcServer = await worker.createWebRtcServer(webRtcServerOptions);
                 worker.appData.webRtcServer = webRtcServer;
+                log.info('WebRtcServer ready', { worker_pid: worker.pid, index: i });
             }
 
             worker.on('died', () => {
