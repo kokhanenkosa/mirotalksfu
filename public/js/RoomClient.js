@@ -6126,7 +6126,9 @@ class RoomClient {
         const chatRoom = this.getId('chatRoom');
         chatRoom.classList.toggle('show');
         if (!this.isChatOpen) {
-            if (isPresenter) await getRoomParticipants();
+            // Always build participants list (needed for public chat send target),
+            // but guests never see the people panel.
+            await getRoomParticipants();
             hide(chatMinButton);
 
             if (!this.isMobileDevice) {
@@ -6655,78 +6657,87 @@ class RoomClient {
         }
 
         if (!isChatGPTOn && !isDeepSeekOn) {
+            // Prefer active list item; fallback to current chat peer / public chat
+            let to_peer_id = this.chatPeerId || 'all';
+            let to_peer_name = this.chatPeerName || 'all';
             const participantsList = this.getId('participantsList');
-            const participantsListItems = participantsList.getElementsByTagName('li');
-            for (let i = 0; i < participantsListItems.length; i++) {
-                const li = participantsListItems[i];
-                if (li.classList.contains('active')) {
-                    data.to_peer_id = li.getAttribute('data-to-id');
-                    data.to_peer_name = li.getAttribute('data-to-name');
-
-                    const isPublicMessage = data.to_peer_id === 'all';
-
-                    if (isPublicMessage && this._moderator.chat_cant_publicly) {
-                        this.cleanMessage();
-                        return this.userLog(
-                            'warning',
-                            'The moderator does not allow you to chat publicly',
-                            'top-end',
-                            6000
-                        );
-                    }
-
-                    if (!isPublicMessage && this._moderator.chat_cant_privately) {
-                        this.cleanMessage();
-                        return this.userLog(
-                            'warning',
-                            'The moderator does not allow you to chat privately',
-                            'top-end',
-                            6000
-                        );
-                    }
-
-                    console.log('Send message:', data);
-
-                    // Try DataChannel for public messages, fallback to signaling
-                    if (isPublicMessage && this.useDataChannel && this.isChatDataChannelOpen()) {
-                        const dcMsg = {
-                            type: 'chat',
-                            room_id: data.room_id,
-                            peer_name: data.peer_name,
-                            peer_avatar: data.peer_avatar,
-                            peer_id: data.peer_id,
-                            to_peer_id: data.to_peer_id,
-                            to_peer_name: data.to_peer_name,
-                            peer_msg: data.peer_msg,
-                            msg_id: data.msg_id,
-                            timestamp: Date.now(),
-                        };
-                        const sent = this.sendChatDataChannelMessage(dcMsg);
-                        if (!sent) {
-                            console.warn('DataChannel send failed, falling back to signaling');
-                            this.socket.emit('message', data);
-                        } else {
-                            console.log('Message sent via DataChannel');
-                        }
-                    } else {
-                        // Private messages or DataChannel unavailable: use signaling
-                        this.socket.emit('message', data);
-                    }
-
-                    this.setMsgAvatar('left', this.peer_name, this.peer_avatar);
-                    this.appendMessage(
-                        'left',
-                        this.leftMsgAvatar,
-                        this.peer_name,
-                        this.peer_id,
-                        peer_msg,
-                        data.to_peer_id,
-                        data.to_peer_name,
-                        data.msg_id
-                    );
-                    this.cleanMessage();
-                }
+            const activeLi = participantsList?.querySelector?.('li.active');
+            if (activeLi) {
+                to_peer_id = activeLi.getAttribute('data-to-id') || to_peer_id;
+                to_peer_name = activeLi.getAttribute('data-to-name') || to_peer_name;
             }
+
+            // Private DMs disabled — always public room chat
+            if (this._moderator.chat_cant_privately && !['all', 'ChatGPT', 'DeepSeek'].includes(to_peer_id)) {
+                to_peer_id = 'all';
+                to_peer_name = 'all';
+            }
+
+            data.to_peer_id = to_peer_id;
+            data.to_peer_name = to_peer_name;
+
+            const isPublicMessage = data.to_peer_id === 'all';
+
+            if (isPublicMessage && this._moderator.chat_cant_publicly) {
+                this.cleanMessage();
+                return this.userLog(
+                    'warning',
+                    'The moderator does not allow you to chat publicly',
+                    'top-end',
+                    6000
+                );
+            }
+
+            if (!isPublicMessage && this._moderator.chat_cant_privately) {
+                this.cleanMessage();
+                return this.userLog(
+                    'warning',
+                    'The moderator does not allow you to chat privately',
+                    'top-end',
+                    6000
+                );
+            }
+
+            console.log('Send message:', data);
+
+            // Try DataChannel for public messages, fallback to signaling
+            if (isPublicMessage && this.useDataChannel && this.isChatDataChannelOpen()) {
+                const dcMsg = {
+                    type: 'chat',
+                    room_id: data.room_id,
+                    peer_name: data.peer_name,
+                    peer_avatar: data.peer_avatar,
+                    peer_id: data.peer_id,
+                    to_peer_id: data.to_peer_id,
+                    to_peer_name: data.to_peer_name,
+                    peer_msg: data.peer_msg,
+                    msg_id: data.msg_id,
+                    timestamp: Date.now(),
+                };
+                const sent = this.sendChatDataChannelMessage(dcMsg);
+                if (!sent) {
+                    console.warn('DataChannel send failed, falling back to signaling');
+                    this.socket.emit('message', data);
+                } else {
+                    console.log('Message sent via DataChannel');
+                }
+            } else {
+                // Private messages or DataChannel unavailable: use signaling
+                this.socket.emit('message', data);
+            }
+
+            this.setMsgAvatar('left', this.peer_name, this.peer_avatar);
+            this.appendMessage(
+                'left',
+                this.leftMsgAvatar,
+                this.peer_name,
+                this.peer_id,
+                peer_msg,
+                data.to_peer_id,
+                data.to_peer_name,
+                data.msg_id
+            );
+            this.cleanMessage();
         }
     }
 

@@ -328,18 +328,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const joinUrl = buildJoinUrl();
             const displayName = safe(nameEl?.value);
             if (displayName) {
-                const profileResponse = await fetch('/phone/profile', {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ displayName }),
-                });
-                const profile = await profileResponse.json().catch(() => ({}));
-                if (!profileResponse.ok || !profile.ok) {
-                    throw new Error(profile.error || 'Не удалось сохранить имя');
+                window.localStorage.peer_name = displayName;
+                // Sync name to phone profile only when phone auth is enabled+authenticated
+                try {
+                    const meRes = await fetch('/phone/me', { credentials: 'same-origin' });
+                    const me = await meRes.json().catch(() => ({}));
+                    if (me?.enabled && me?.authenticated) {
+                        const profileResponse = await fetch('/phone/profile', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ displayName }),
+                        });
+                        const profile = await profileResponse.json().catch(() => ({}));
+                        if (profileResponse.ok && profile.ok && profile.displayName) {
+                            window.localStorage.peer_name = profile.displayName;
+                            window.sessionStorage.phone_display_name = profile.displayName;
+                        }
+                    }
+                } catch {
+                    // Phone auth off / network — still allow join with local name
                 }
-                window.localStorage.peer_name = profile.displayName;
-                window.sessionStorage.phone_display_name = profile.displayName;
             }
             window.location.href = joinUrl.toString();
         } catch (err) {
