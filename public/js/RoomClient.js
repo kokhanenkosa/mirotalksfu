@@ -1411,12 +1411,18 @@ class RoomClient {
     };
 
     handleSetVideoOff = (data) => {
-        if (shouldShowPeerVideoTile(data.peer_presenter)) {
+        const inDialog =
+            this._dialogSplitActive &&
+            data?.peer_id &&
+            (data.peer_id === this._dialogPresenterId || (this._dialogGuestIds || []).includes(data.peer_id));
+        if (shouldShowPeerVideoTile(data.peer_presenter, data) || inDialog) {
             console.log('SocketOn setVideoOff', {
                 peer_name: data.peer_name,
                 peer_presenter: data.peer_presenter,
+                inDialog,
             });
             this.setVideoOff(data, true);
+            if (inDialog) this.refreshDialogSplitIfNeeded(data.peer_id);
         }
     };
 
@@ -4340,7 +4346,11 @@ class RoomClient {
         let d, vb, i, h, au, lm, sf, sm, sv, gl, ban, ko, p, pm, pb, pv, st, ri;
 
         const { peer_id, peer_name, peer_avatar, peer_audio, peer_presenter } = peer_info;
-        if (remotePeer && !shouldShowPeerVideoTile(peer_presenter)) {
+        const inDialog =
+            this._dialogSplitActive &&
+            peer_id &&
+            (peer_id === this._dialogPresenterId || (this._dialogGuestIds || []).includes(peer_id));
+        if (remotePeer && !shouldShowPeerVideoTile(peer_presenter, peer_info) && !inDialog) {
             this.removeVideoOff(peer_id);
             return;
         }
@@ -4914,10 +4924,14 @@ class RoomClient {
         if (!this.peer_info.peer_video) {
             console.log('Set local video enabled: ' + status);
             // Пассивным слушателям в broadcast не нужен свой videoOff-тайл.
-            if (!isBroadcastingEnabled || isPresenter || this._broadcastSpotlit) {
+            // Dialog guests (_broadcastSpotlit) keep avatar slot so they can toggle back on.
+            if (!isBroadcastingEnabled || isPresenter || this._broadcastSpotlit || this._dialogSplitActive) {
                 this.setVideoOff(this.peer_info, false);
                 this.sendVideoOff();
             }
+        }
+        if (this._dialogSplitActive) {
+            this.refreshDialogSplitIfNeeded(this.peer_id);
         }
     }
 
@@ -11614,9 +11628,13 @@ class RoomClient {
                 break;
             case 'dialogSplit':
             case 'dialogGuestRemove':
+            case 'dialogGuestLeave':
                 this.handleDialogSplitUpdate(cmd);
                 break;
             case 'dialogSplitEnd':
+                if ((this._dialogGuestIds || []).includes(this.peer_id) && !isPresenter) {
+                    this.leaveDialogAsGuest({ silent: true });
+                }
                 this.exitDialogSplitLayout();
                 this.hideDialogControlsBar();
                 break;
@@ -11986,7 +12004,8 @@ class RoomClient {
         }
     }
 
-    leaveDialogAsGuest() {
+    leaveDialogAsGuest(opts = {}) {
+        const silent = !!opts.silent;
         try {
             if (this.producerExist(mediaType.video)) {
                 this.closeProducer(mediaType.video, 'dialogRemove');
@@ -11999,7 +12018,46 @@ class RoomClient {
             console.warn('leaveDialogAsGuest media stop failed', err);
         }
         this._broadcastSpotlit = false;
-        this.userLog('info', 'Вас убрали из диалога', 'top-end', 4000);
+        this.lockBroadcastGuestControls();
+        this.hideDialogControlsBar();
+        if (!silent) {
+            this.userLog('info', 'Вас убрали из диалога', 'top-end', 4000);
+        }
+    }
+
+    /** Re-hide media dock controls after dialog/spotlit ends (lectorium guest). */
+    lockBroadcastGuestControls() {
+        if (isPresenter) return;
+        if (!(isLectoriumEnabled || isBroadcastingEnabled)) return;
+        BUTTONS.main.startAudioButton = false;
+        BUTTONS.main.startVideoButton = false;
+        BUTTONS.main.swapCameraButton = false;
+        elemDisplay('startAudioButton', false);
+        elemDisplay('stopAudioButton', false);
+        elemDisplay('startVideoButton', false);
+        elemDisplay('stopVideoButton', false);
+        elemDisplay('swapCameraButton', false);
+        elemDisplay('tabVideoDevicesBtn', false);
+    }
+
+    /** Guest leaves active dialog (keeps room; stops own A/V). */
+    requestLeaveDialog() {
+        if (isPresenter) return this.endDialog();
+        if (!this._dialogSplitActive || !(this._dialogGuestIds || []).includes(this.peer_id)) {
+            return this.userLog('info', 'Диалог не активен', 'top-end');
+        }
+        this.emitCmd({
+            type: 'dialogGuestLeave',
+            broadcast: true,
+            guestId: this.peer_id,
+            removedGuestId: this.peer_id,
+            presenterId: this._dialogPresenterId,
+            peer_name: this.peer_name,
+            peer_uuid: this.peer_uuid,
+        });
+        this.leaveDialogAsGuest({ silent: true });
+        this.exitDialogSplitLayout();
+        this.userLog('success', 'Вы завершили диалог', 'top-end', 3000);
     }
 
     applyChatHistory(messages = []) {
@@ -12114,7 +12172,6 @@ class RoomClient {
     }
 
     renderDialogControlsBar() {
-        if (!isPresenter) return;
         let bar = document.getElementById('dialogControlsBar');
         if (!bar) {
             bar = document.createElement('div');
@@ -12126,6 +12183,26 @@ class RoomClient {
             bar.classList.add('hidden');
             return;
         }
+
+        // Guest: only "end dialog" for themselves
+        if (!isPresenter) {
+            if (!(this._dialogGuestIds || []).includes(this.peer_id)) {
+                bar.classList.add('hidden');
+                return;
+            }
+            bar.innerHTML = `
+                <button type="button" id="dialogGuestLeaveBtn" class="dialog-controls-end-btn">
+                    <i class="fas fa-phone-slash"></i> Завершить диалог
+                </button>
+            `;
+            bar.classList.remove('hidden');
+            bar.querySelector('#dialogGuestLeaveBtn')?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.requestLeaveDialog();
+            });
+            return;
+        }
+
         const raised = Array.from(this._handRaiseAlerts.entries()).filter(
             ([id]) => !(this._dialogGuestIds || []).includes(id)
         );
@@ -12443,12 +12520,17 @@ class RoomClient {
             el.classList.remove('dialog-split-slot', 'dialog-split-left', 'dialog-split-right');
         });
 
-        // Prefer live video tiles over placeholders for each visible dialog peer
+        // Prefer live camera, then videoOff avatar slot, then waiting placeholder
         const preferredWraps = peerIds.map((id) => {
             const live = this.getCameraWrapByPeerId(id);
-            if (live && !live.classList.contains('dialog-split-placeholder') && !(live.id || '').endsWith('__videoOff')) {
+            if (live && !live.classList.contains('dialog-split-placeholder')) {
                 this.removeDialogPlaceholder(id);
                 return live;
+            }
+            const videoOff = this.getId(id + '__videoOff');
+            if (videoOff) {
+                this.removeDialogPlaceholder(id);
+                return videoOff;
             }
             return live || this.ensureDialogPlaceholder(id);
         });
@@ -12641,7 +12723,7 @@ class RoomClient {
 
         this.isVideoPinned = true;
         this._pendingRoomDialog = null;
-        if (isPresenter) this.renderDialogControlsBar();
+        this.renderDialogControlsBar();
         try {
             if (typeof resizeVideoMedia === 'function') resizeVideoMedia();
         } catch {
@@ -13071,9 +13153,16 @@ class RoomClient {
         }
         if (type === mediaType.video || type === 'video') {
             BUTTONS.main.startVideoButton = true;
+            BUTTONS.main.swapCameraButton = true;
+            show(startVideoButton);
             elemDisplay('startVideoButton', true);
+            hide(stopVideoButton);
             elemDisplay('stopVideoButton', false);
             elemDisplay('tabVideoDevicesBtn', true);
+            if (typeof swapCameraButton !== 'undefined' && swapCameraButton) {
+                show(swapCameraButton);
+                elemDisplay('swapCameraButton', true);
+            }
         }
         if (type === mediaType.screen || type === 'screen') {
             BUTTONS.main.startScreenButton = true;

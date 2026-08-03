@@ -3661,6 +3661,28 @@ async function startServer() {
                     }
                     break;
                 }
+                case 'dialogGuestLeave': {
+                    // Guest may leave dialog themselves (not presenter-only)
+                    const dialog = room.getDialog?.() || null;
+                    const leaverId = socket.id;
+                    if (!dialog || !Array.isArray(dialog.guestIds) || !dialog.guestIds.includes(leaverId)) {
+                        return;
+                    }
+                    const guests = dialog.guestIds.filter((id) => id && id !== leaverId);
+                    data.removedGuestId = leaverId;
+                    data.guestId = leaverId;
+                    data.presenterId = dialog.presenterId;
+                    data.guestIds = guests;
+                    data.broadcast = true;
+                    if (guests.length) {
+                        room.setDialog(dialog.presenterId, guests);
+                        data.type = 'dialogGuestRemove';
+                    } else {
+                        room.clearDialog();
+                        data.type = 'dialogSplitEnd';
+                    }
+                    break;
+                }
                 case 'peerAudio':
                     // Keep producer volume to update consumer on join room...
                     if (data.audioProducerId) {

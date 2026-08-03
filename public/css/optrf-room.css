@@ -346,6 +346,44 @@ body.dialog-split-active .dialog-waiting {
     cursor: pointer;
 }
 
+.dialog-controls-end-btn i {
+    margin-right: 4px;
+}
+
+/* Keep avatar / name visible in dialog when camera is off */
+body.dialog-split-active .dialog-split-slot[id$='__videoOff'],
+body.dialog-split-active .dialog-split-slot.dialog-split-placeholder {
+    background: #121820 !important;
+}
+
+body.dialog-split-active .dialog-split-slot[id$='__videoOff'] .videoAvatarImage {
+    display: block !important;
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: min(42%, 160px) !important;
+    height: auto !important;
+    max-height: 55% !important;
+    object-fit: contain !important;
+    z-index: 1;
+}
+
+body.dialog-split-active .dialog-split-slot[id$='__videoOff'] .videoPeerName,
+body.dialog-split-active .dialog-split-slot[id$='__videoOff'] p[id$='__name'] {
+    position: absolute !important;
+    left: 8px !important;
+    bottom: 8px !important;
+    z-index: 2;
+    margin: 0 !important;
+}
+
+/* Guest leave bar sits above mobile dock */
+body.dialog-split-mobile .dialog-controls-bar {
+    bottom: calc(var(--optrf-dock-h, 58px) + 10px);
+    z-index: 1250;
+}
+
 .dialog-controls-end-btn:hover {
     background: #c62828;
 }

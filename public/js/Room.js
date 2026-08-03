@@ -2851,9 +2851,22 @@ function handleButtons() {
             return userLog('warning', 'Модератор запретил включать камеру', 'top-end', 6000);
         }
         setVideoButtonsDisabled(true);
-        if (!isEnumerateVideoDevices) await initEnumerateVideoDevices();
-        await rc.produce(RoomClient.mediaType.video, videoSelect.value);
-        // await rc.resumeProducer(RoomClient.mediaType.video);
+        try {
+            if (!isEnumerateVideoDevices) await initEnumerateVideoDevices();
+            // Dialog / spotlit guests: soft constraints + keep dock controls visible
+            if (rc._broadcastSpotlit || rc._dialogSplitActive) {
+                await rc.peerMediaStartForced(RoomClient.mediaType.video);
+            } else {
+                await rc.produce(RoomClient.mediaType.video, videoSelect.value);
+            }
+        } catch (err) {
+            console.error('startVideoButton failed', err);
+            setVideoButtonsDisabled(false);
+            if (BUTTONS.main.startVideoButton) {
+                show(startVideoButton);
+                elemDisplay('startVideoButton', true);
+            }
+        }
     };
     stopVideoButton.onclick = () => {
         setVideoButtonsDisabled(true);
@@ -4389,7 +4402,9 @@ function handleRoomClientEvents() {
     rc.on(RoomClient.EVENTS.startVideo, () => {
         console.log('Room event: Client start video');
         hide(startVideoButton);
+        elemDisplay('startVideoButton', false);
         show(stopVideoButton);
+        elemDisplay('stopVideoButton', true);
         setColor(startVideoButton, 'red');
         setVideoButtonsDisabled(false);
         hideClassElements('videoMenuBar');
@@ -4400,8 +4415,12 @@ function handleRoomClientEvents() {
     rc.on(RoomClient.EVENTS.pauseVideo, () => {
         console.log('Room event: Client pause video');
         hide(stopVideoButton);
-        BUTTONS.main.startVideoButton && show(startVideoButton);
-        setColor(startVideoButton, 'red');
+        elemDisplay('stopVideoButton', false);
+        if (BUTTONS.main.startVideoButton) {
+            show(startVideoButton);
+            elemDisplay('startVideoButton', true);
+            setColor(startVideoButton, 'red');
+        }
         setVideoButtonsDisabled(false);
         hideClassElements('videoMenuBar');
         video = false;
@@ -4410,7 +4429,11 @@ function handleRoomClientEvents() {
     rc.on(RoomClient.EVENTS.resumeVideo, () => {
         console.log('Room event: Client resume video');
         hide(startVideoButton);
-        BUTTONS.main.startVideoButton && show(stopVideoButton);
+        elemDisplay('startVideoButton', false);
+        if (BUTTONS.main.startVideoButton) {
+            show(stopVideoButton);
+            elemDisplay('stopVideoButton', true);
+        }
         setVideoButtonsDisabled(false);
         isVideoPrivacyActive = false;
         hideClassElements('videoMenuBar');
@@ -4420,7 +4443,13 @@ function handleRoomClientEvents() {
     rc.on(RoomClient.EVENTS.stopVideo, () => {
         console.log('Room event: Client stop video');
         hide(stopVideoButton);
-        show(startVideoButton);
+        elemDisplay('stopVideoButton', false);
+        // Broadcast rules use style.display=none — show() alone cannot restore the button
+        if (BUTTONS.main.startVideoButton) {
+            show(startVideoButton);
+            elemDisplay('startVideoButton', true);
+            setColor(startVideoButton, 'red');
+        }
         setVideoButtonsDisabled(false);
         isVideoPrivacyActive = false;
         hideClassElements('videoMenuBar');
