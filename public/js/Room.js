@@ -2054,17 +2054,12 @@ function roomIsReady() {
     if (room_password) {
         lockRoomButton.click();
     }
-    // Desktop: open public chat pinned to the right
-    if (!isMobileDevice && rc && typeof rc.canBePinned === 'function' && rc.canBePinned()) {
-        setTimeout(() => {
-            try {
-                if (!rc.isChatOpen) rc.toggleChat(true);
-                rc.showPeerAboutAndMessages('all', 'all');
-                if (!rc.isChatPinned && isChatPinEnabled) rc.chatPin();
-            } catch (e) {
-                console.warn('Auto-pin public chat failed', e);
-            }
-        }, 600);
+    // Open + pin public chat for everyone (guests included).
+    if (rc && typeof rc.ensurePublicChatPinned === 'function') {
+        const pinChat = () => rc.ensurePublicChatPinned();
+        setTimeout(pinChat, 400);
+        setTimeout(pinChat, 1200);
+        setTimeout(pinChat, 2500);
     }
 
     // Force-hide theme picker

@@ -3957,6 +3957,7 @@ async function startServer() {
                 'eject',
                 'ban',
                 'geoLocation',
+                'dialogInvite',
             ];
 
             if (presenterActions.some((v) => data.action === v)) {

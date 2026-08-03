@@ -39,25 +39,28 @@ button.swal2-confirm:hover {
     display: none !important;
 }
 
-/* Sticky hand-raise alerts on presenter video */
+/* Sticky hand-raise alerts — bottom-left, compact */
 .hand-raise-alerts-host {
     position: absolute;
-    top: 12px;
+    top: auto;
+    bottom: 14px;
     left: 12px;
-    right: 12px;
+    right: auto;
     z-index: 40;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     pointer-events: none;
+    max-width: min(280px, calc(100% - 24px));
 }
 
 .hand-raise-alerts-host--floating {
     position: fixed;
-    top: 72px;
+    top: auto;
+    bottom: 96px;
     left: 16px;
     right: auto;
-    max-width: min(420px, calc(100vw - 32px));
+    max-width: min(280px, calc(100vw - 32px));
 }
 
 .hand-raise-alerts-host.hidden {
@@ -69,12 +72,12 @@ button.swal2-confirm:hover {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: rgba(12, 16, 22, 0.92);
-    border: 1px solid rgba(0, 168, 232, 0.45);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(12, 16, 22, 0.9);
+    border: 1px solid rgba(0, 168, 232, 0.4);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
     color: #fff;
     animation: handRaisePulse 1.6s ease-in-out infinite;
 }
@@ -82,21 +85,24 @@ button.swal2-confirm:hover {
 .hand-raise-banner-text {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
+    gap: 6px;
+    font-size: 12px;
+    line-height: 1.25;
 }
 
 .hand-raise-banner-text .fa-hand-paper {
     color: #ffc107;
+    font-size: 12px;
 }
 
 .hand-raise-invite-btn {
     border: 0;
-    border-radius: 8px;
-    padding: 8px 12px;
+    border-radius: 6px;
+    padding: 5px 8px;
     background: #00a8e8;
     color: #fff;
     font-weight: 600;
+    font-size: 11px;
     cursor: pointer;
     white-space: nowrap;
 }
@@ -108,14 +114,14 @@ button.swal2-confirm:hover {
 @keyframes handRaisePulse {
     0%,
     100% {
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
     }
     50% {
-        box-shadow: 0 8px 28px rgba(0, 168, 232, 0.35);
+        box-shadow: 0 4px 16px rgba(0, 168, 232, 0.3);
     }
 }
 
-/* Dialog split 50/50 */
+/* Dialog split 50/50 — desktop L/R */
 body.dialog-split-active #videoPinMediaContainer {
     display: block !important;
     top: 0 !important;
@@ -137,6 +143,37 @@ body.dialog-split-active .dialog-split-right {
     height: 100% !important;
     max-width: none !important;
     max-height: none !important;
+}
+
+/* Dialog split — mobile T/B */
+body.dialog-split-active.dialog-split-mobile #videoPinMediaContainer {
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 50% !important;
+}
+
+body.dialog-split-active.dialog-split-mobile #videoMediaContainer {
+    top: 50% !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 50% !important;
+}
+
+@media (max-width: 768px) {
+    body.dialog-split-active #videoPinMediaContainer {
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 50% !important;
+    }
+
+    body.dialog-split-active #videoMediaContainer {
+        top: 50% !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 50% !important;
+    }
 }
 
 /* Bridge the Room-specific variables to the global OPTRF theme. */

@@ -381,6 +381,8 @@ class RoomClient {
         this._dialogSplitActive = false;
         this._dialogGuestId = null;
         this._dialogPresenterId = null;
+        this._forceSimpleMedia = false; // skip VB / use soft constraints on dialog invite
+        this._pendingChatReply = null; // { msgId, fromName, text }
         this.isChatMaximized = false;
         this.isToggleUnreadMsg = false;
         this.isToggleRaiseHand = false;
@@ -2267,12 +2269,24 @@ class RoomClient {
             if (init) {
                 stream = initStream;
             } else {
-                stream = screen
-                    ? await navigator.mediaDevices.getDisplayMedia(mediaConstraints)
-                    : await navigator.mediaDevices.getUserMedia(mediaConstraints);
+                // Dialog invite: prefer soft constraints if strict ones fail
+                if (!screen && this._forceSimpleMedia) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+                    } catch (strictErr) {
+                        console.warn('Strict getUserMedia failed, using simple constraints', strictErr);
+                        stream = await navigator.mediaDevices.getUserMedia(
+                            audio ? { audio: true, video: false } : { audio: false, video: true }
+                        );
+                    }
+                } else {
+                    stream = screen
+                        ? await navigator.mediaDevices.getDisplayMedia(mediaConstraints)
+                        : await navigator.mediaDevices.getUserMedia(mediaConstraints);
+                }
 
-                // Handle Virtual Background and Blur using MediaPipe
-                if (video && isMediaStreamTrackAndTransformerSupported) {
+                // Handle Virtual Background and Blur using MediaPipe (skip on forced dialog invite)
+                if (video && isMediaStreamTrackAndTransformerSupported && !this._forceSimpleMedia) {
                     const videoTrack = stream.getVideoTracks()[0];
 
                     if (virtualBackgroundBlurLevel) {
@@ -2294,7 +2308,7 @@ class RoomClient {
                 }
             }
 
-            if (audio && BUTTONS.settings.customNoiseSuppression) {
+            if (audio && BUTTONS.settings.customNoiseSuppression && !this._forceSimpleMedia) {
                 /*
                  * Initialize RNNoise Suppression if enabled and supported
                  * This will only apply to audio tracks
@@ -2793,6 +2807,9 @@ class RoomClient {
     // ####################################################
 
     getAudioConstraints(deviceId) {
+        if (this._forceSimpleMedia) {
+            return { audio: true, video: false };
+        }
         // If custom RNNoise is enabled but not supported, fall back to built-in WebRTC noise suppression
         const useBuiltInNoiseSuppression = !BUTTONS.settings.customNoiseSuppression || !this.isRNNoiseSupported;
 
@@ -2813,7 +2830,8 @@ class RoomClient {
             } else if (this.isMobileDevice) {
                 audioConstraints.deviceId = { ideal: deviceId };
             } else {
-                audioConstraints.deviceId = { exact: deviceId };
+                // Prefer ideal so stale deviceId does not hard-fail dialog invite
+                audioConstraints.deviceId = { ideal: deviceId };
             }
         }
 
@@ -2846,22 +2864,26 @@ class RoomClient {
     }
 
     getVideoConstraints(deviceId) {
+        if (this._forceSimpleMedia) {
+            return { audio: false, video: true };
+        }
         const selectedValue = this.getSelectedIndexValue(videoFps);
-        const customFrameRate = parseInt(selectedValue, 10);
+        const customFrameRate = parseInt(selectedValue, 10) || 30;
 
         const resolutionMap = this.getResolutionMap();
 
-        // Default to HD
-        const [width, height] = resolutionMap[videoQuality.value] || [1280, 720];
+        // Default to HD (null-safe: guests may not have settings UI ready)
+        const qualityKey = videoQuality?.value || 'hd';
+        const [width, height] = resolutionMap[qualityKey] || [1280, 720];
 
         const constraints = {
             width: { ideal: width },
             height: { ideal: height },
-            frameRate: { ideal: customFrameRate || 30 },
+            frameRate: { ideal: customFrameRate },
         };
 
         if (deviceId) {
-            constraints.deviceId = { exact: deviceId };
+            constraints.deviceId = { ideal: deviceId };
         }
 
         return {
@@ -4929,7 +4951,12 @@ class RoomClient {
     }
 
     getSelectedIndexValue(elem) {
-        return elem.options[elem.selectedIndex].value;
+        try {
+            if (!elem?.options || elem.selectedIndex < 0) return '';
+            return elem.options[elem.selectedIndex]?.value || '';
+        } catch {
+            return '';
+        }
     }
 
     // ####################################################
@@ -6168,13 +6195,52 @@ class RoomClient {
         this.syncChatToolbarButtons();
         this.updateUnreadCountBadge(this.chatPeerId || 'all');
 
-        if (this.isChatPinned) this.chatUnpin();
-
-        if (!this.isMobileDevice && this.isChatOpen && this.canBePinned() && isChatPinEnabled) {
-            this.toggleChatPin();
+        // Pin on open for everyone (guests included). Do not unpin-then-repin — that races with auto-pin.
+        if (this.isChatOpen) {
+            if (!this.isMobileDevice && isChatPinEnabled) {
+                if (!this.isChatPinned) this.chatPin();
+            }
+        } else if (this.isChatPinned) {
+            this.chatUnpin();
         }
 
         resizeChatRoom();
+    }
+
+    /** Open public chat and keep it pinned (desktop) / maximized (mobile) for all roles. */
+    async ensurePublicChatPinned() {
+        try {
+            if (!BUTTONS.main.chatButton && !isPresenter) {
+                // Guests always get public chat even if rules briefly hid the button
+                BUTTONS.main.chatButton = true;
+            }
+            if (!this.isChatOpen) {
+                await this.toggleChat(false);
+            }
+            this.showPeerAboutAndMessages('all', 'all');
+            if (this.isMobileDevice) {
+                if (typeof this.chatMaximize === 'function' && !this.isChatMaximized) {
+                    this.chatMaximize();
+                }
+            } else if (isChatPinEnabled && !this.isChatPinned) {
+                this.chatPin();
+            }
+            if (!isPresenter) {
+                const plist = this.getId('plist');
+                const chat = this.getId('chat');
+                if (plist) {
+                    plist.classList.add('hidden');
+                    plist.style.display = 'none';
+                }
+                if (chat) {
+                    chat.style.marginLeft = '0';
+                    chat.style.borderLeft = 'none';
+                    elemDisplay(chat.id, true);
+                }
+            }
+        } catch (e) {
+            console.warn('ensurePublicChatPinned failed', e);
+        }
     }
 
     /** Закрыть боковую панель чата/списка — вернуться к трансляции. */
@@ -6339,7 +6405,8 @@ class RoomClient {
         resizeVideoMedia();
         chatRoom.style.resize = 'none';
         if (!this.isMobileDevice) this.makeUnDraggable(chatRoom, chatHeader);
-        if (this.isPlistOpen()) this.toggleShowParticipants();
+        // Guests must never have participants list toggled open by pin/unpin
+        if (isPresenter && this.isPlistOpen()) this.toggleShowParticipants();
     }
 
     chatUnpin() {
@@ -6357,7 +6424,7 @@ class RoomClient {
         this.resizeVideoMenuBar();
         resizeVideoMedia();
         if (!this.isMobileDevice) this.makeDraggable(chatRoom, chatHeader);
-        if (!this.isPlistOpen()) this.toggleShowParticipants();
+        if (isPresenter && !this.isPlistOpen()) this.toggleShowParticipants();
         if (!chatRoom.classList.contains('container')) chatRoom.classList.add('container');
         resizeChatRoom();
     }
@@ -6427,6 +6494,58 @@ class RoomClient {
         chatMessage.setAttribute('rows', '1');
         const charCount = this.getId('chatCharCount');
         if (charCount) charCount.textContent = '0 / 4000';
+        this.clearChatReply();
+    }
+
+    ensureChatReplyBar() {
+        let bar = this.getId('chatReplyBar');
+        if (bar) return bar;
+        const wrapper = document.querySelector('.chat-input-wrapper');
+        if (!wrapper) return null;
+        bar = document.createElement('div');
+        bar.id = 'chatReplyBar';
+        bar.className = 'chat-reply-bar hidden';
+        bar.innerHTML = `
+            <div class="chat-reply-bar-accent"></div>
+            <div class="chat-reply-bar-body">
+                <div class="chat-reply-bar-name" id="chatReplyBarName"></div>
+                <div class="chat-reply-bar-text" id="chatReplyBarText"></div>
+            </div>
+            <button type="button" id="chatReplyBarClose" class="chat-reply-bar-close" title="Отмена">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        wrapper.insertBefore(bar, wrapper.firstChild);
+        bar.querySelector('#chatReplyBarClose')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.clearChatReply();
+        });
+        return bar;
+    }
+
+    setChatReply(msgListId) {
+        const msgEl = document.getElementById(msgListId);
+        if (!msgEl) return;
+        const fromName = msgEl.getAttribute('data-from-name') || 'Участник';
+        const msgId = msgEl.getAttribute('data-msg-id') || msgListId;
+        const textEl = msgEl.querySelector('[id^="message-"]');
+        const text = (textEl?.innerText || textEl?.textContent || '').trim().slice(0, 280);
+        this._pendingChatReply = { msgId, fromName, text };
+        const bar = this.ensureChatReplyBar();
+        if (!bar) return;
+        const nameEl = this.getId('chatReplyBarName');
+        const textPreview = this.getId('chatReplyBarText');
+        if (nameEl) nameEl.textContent = fromName;
+        if (textPreview) textPreview.textContent = text || 'Сообщение';
+        bar.classList.remove('hidden');
+        chatMessage?.focus?.();
+    }
+
+    clearChatReply() {
+        this._pendingChatReply = null;
+        const bar = this.getId('chatReplyBar');
+        if (bar) bar.classList.add('hidden');
     }
 
     pasteMessage() {
@@ -6491,6 +6610,13 @@ class RoomClient {
         this.peer_name = filterXSS(this.peer_name);
 
         const msg_id = `${this.peer_id}_${Date.now()}`;
+        const reply = this._pendingChatReply
+            ? {
+                  reply_to_msg_id: this._pendingChatReply.msgId || '',
+                  reply_to_peer_name: this._pendingChatReply.fromName || '',
+                  reply_to_text: this._pendingChatReply.text || '',
+              }
+            : null;
         const data = {
             room_id: this.room_id,
             peer_name: this.peer_name,
@@ -6500,6 +6626,7 @@ class RoomClient {
             to_peer_name: '',
             peer_msg: peer_msg,
             msg_id: msg_id,
+            ...(reply || {}),
         };
 
         if (isChatGPTOn) {
@@ -6712,6 +6839,9 @@ class RoomClient {
                     to_peer_name: data.to_peer_name,
                     peer_msg: data.peer_msg,
                     msg_id: data.msg_id,
+                    reply_to_msg_id: data.reply_to_msg_id || '',
+                    reply_to_peer_name: data.reply_to_peer_name || '',
+                    reply_to_text: data.reply_to_text || '',
                     timestamp: Date.now(),
                 };
                 const sent = this.sendChatDataChannelMessage(dcMsg);
@@ -6735,7 +6865,8 @@ class RoomClient {
                 peer_msg,
                 data.to_peer_id,
                 data.to_peer_name,
-                data.msg_id
+                data.msg_id,
+                reply
             );
             this.cleanMessage();
         }
@@ -6773,6 +6904,14 @@ class RoomClient {
         }
 
         this.setMsgAvatar('right', data.peer_name, data.peer_avatar);
+        const reply =
+            data.reply_to_msg_id || data.reply_to_peer_name || data.reply_to_text
+                ? {
+                      reply_to_msg_id: data.reply_to_msg_id || '',
+                      reply_to_peer_name: data.reply_to_peer_name || '',
+                      reply_to_text: data.reply_to_text || '',
+                  }
+                : null;
         this.appendMessage(
             'right',
             this.rightMsgAvatar,
@@ -6781,7 +6920,8 @@ class RoomClient {
             data.peer_msg,
             data.to_peer_id,
             data.to_peer_name,
-            data.msg_id
+            data.msg_id,
+            reply
         );
 
         if (!this.showChatOnMessage) {
@@ -6865,7 +7005,7 @@ class RoomClient {
         avatar === 'left' ? (this.leftMsgAvatar = avatarImg) : (this.rightMsgAvatar = avatarImg);
     }
 
-    appendMessage(side, img, fromName, fromId, msg, toId, toName, msgId = '') {
+    appendMessage(side, img, fromName, fromId, msg, toId, toName, msgId = '', reply = null) {
         const getSide = filterXSS(side);
         // img is always internally computed (isValidAvatarURL / genAvatarSvg / genGravatar) and is
         // set via setAttribute — no XSS risk. filterXSS must NOT be applied here because it encodes
@@ -6919,6 +7059,16 @@ class RoomClient {
             )
             .join('');
 
+        const replyName = filterXSS(reply?.reply_to_peer_name || reply?.fromName || '');
+        const replyText = filterXSS(reply?.reply_to_text || reply?.text || '');
+        const replyHtml =
+            replyName || replyText
+                ? `<div class="chat-msg-reply" title="Ответ на сообщение">
+                        <div class="chat-msg-reply-name">${this.sanitizeHtml(replyName || 'Участник')}</div>
+                        <div class="chat-msg-reply-text">${this.sanitizeHtml(replyText || 'Сообщение')}</div>
+                   </div>`
+                : '';
+
         const newMessageHTML = `
             <li id="msg-${chatMessagesId}"  
                 data-from-id="${this.sanitizeHtml(getFromId)}" 
@@ -6932,10 +7082,17 @@ class RoomClient {
                     ${positionFirst}
                 </div>
                 <div class="message ${messageClass}">
+                    ${replyHtml}
                     <span class="text-start" id="message-${chatMessagesId}"></span>
                     <div class="message-reactions"></div>
                     <hr/>
                     <div class="about-buttons mt5">
+                        <button 
+                            id="msg-reply-${chatMessagesId}" 
+                            class="mr5" 
+                            onclick="rc.setChatReply('msg-${chatMessagesId}')">
+                            <i class="fas fa-reply"></i>
+                        </button>
                         <button 
                             id="msg-copy-${chatMessagesId}" 
                             class="mr5" 
@@ -7003,6 +7160,7 @@ class RoomClient {
         chatHistory.scrollTop += 500;
 
         if (!this.isMobileDevice) {
+            this.setTippy('msg-reply-' + chatMessagesId, 'Ответить', 'top');
             this.setTippy('msg-delete-' + chatMessagesId, 'Удалить', 'top');
             this.setTippy('msg-copy-' + chatMessagesId, 'Копировать', 'top');
             this.setTippy('msg-speech-' + chatMessagesId, 'Озвучить', 'top');
@@ -11255,6 +11413,10 @@ class RoomClient {
             case 'dialogSplitEnd':
                 this.exitDialogSplitLayout();
                 break;
+            case 'dialogInvite':
+                // Guest receives invite: auto-start A/V then split layout
+                this.handleDialogInvite(cmd);
+                break;
             default:
                 break;
             //...
@@ -11463,8 +11625,8 @@ class RoomClient {
         const primaryGuestId = ids[0];
 
         for (const peer_id of ids) {
-            this.emitPeerMediaAction(peer_id, 'unmute');
-            this.emitPeerMediaAction(peer_id, 'unhide');
+            // Single invite action: guest auto-starts mic+cam sequentially (no consent)
+            this.emitPeerMediaAction(peer_id, 'dialogInvite');
             this.clearHandRaiseAlert(peer_id);
         }
 
@@ -11479,7 +11641,7 @@ class RoomClient {
         });
 
         // Retry layout after guest media appears
-        [400, 1200, 2500].forEach((ms) => {
+        [600, 1500, 3000, 5000].forEach((ms) => {
             setTimeout(() => {
                 if (this._dialogSplitActive && this._dialogGuestId === primaryGuestId) {
                     this.applyDialogSplitLayout(this.peer_id, primaryGuestId);
@@ -11488,6 +11650,29 @@ class RoomClient {
         });
 
         this.userLog('success', 'Гость приглашён в диалог', 'top-end', 3000);
+    }
+
+    async handleDialogInvite(cmd = {}) {
+        try {
+            await this.peerMediaStartForced(mediaType.audio);
+            await this.peerMediaStartForced(mediaType.video);
+            if (this.peer_info?.peer_hand) {
+                this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
+            }
+            const presenterId = cmd.presenterId || cmd.from_peer_id || '';
+            if (presenterId) {
+                this.applyDialogSplitLayout(presenterId, this.peer_id);
+                [800, 2000, 4000].forEach((ms) => {
+                    setTimeout(() => {
+                        if (this._dialogSplitActive) {
+                            this.applyDialogSplitLayout(presenterId, this.peer_id);
+                        }
+                    }, ms);
+                });
+            }
+        } catch (err) {
+            console.error('handleDialogInvite failed', err);
+        }
     }
 
     emitPeerMediaAction(peer_id, action) {
@@ -11616,18 +11801,37 @@ class RoomClient {
             }
         }
 
-        this.videoPinMediaContainer.style.display = 'block';
-        this.videoPinMediaContainer.style.top = '0';
-        this.videoPinMediaContainer.style.left = '0';
-        this.videoPinMediaContainer.style.right = 'auto';
-        this.videoPinMediaContainer.style.width = '50%';
-        this.videoPinMediaContainer.style.height = '100%';
+        const isMobileSplit = !!(this.isMobileDevice || window.innerWidth <= 768);
+        document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
 
-        this.videoMediaContainer.style.top = '0';
-        this.videoMediaContainer.style.left = '50%';
-        this.videoMediaContainer.style.right = '0';
-        this.videoMediaContainer.style.width = '50%';
-        this.videoMediaContainer.style.height = '100%';
+        this.videoPinMediaContainer.style.display = 'block';
+        this.videoPinMediaContainer.style.right = 'auto';
+        this.videoPinMediaContainer.style.bottom = 'auto';
+        if (isMobileSplit) {
+            // Mobile: presenter top, guest bottom
+            this.videoPinMediaContainer.style.top = '0';
+            this.videoPinMediaContainer.style.left = '0';
+            this.videoPinMediaContainer.style.width = '100%';
+            this.videoPinMediaContainer.style.height = '50%';
+
+            this.videoMediaContainer.style.top = '50%';
+            this.videoMediaContainer.style.left = '0';
+            this.videoMediaContainer.style.right = '0';
+            this.videoMediaContainer.style.width = '100%';
+            this.videoMediaContainer.style.height = '50%';
+        } else {
+            // Desktop: presenter left, guest right
+            this.videoPinMediaContainer.style.top = '0';
+            this.videoPinMediaContainer.style.left = '0';
+            this.videoPinMediaContainer.style.width = '50%';
+            this.videoPinMediaContainer.style.height = '100%';
+
+            this.videoMediaContainer.style.top = '0';
+            this.videoMediaContainer.style.left = '50%';
+            this.videoMediaContainer.style.right = '0';
+            this.videoMediaContainer.style.width = '50%';
+            this.videoMediaContainer.style.height = '100%';
+        }
 
         this.isVideoPinned = true;
         try {
@@ -11641,7 +11845,7 @@ class RoomClient {
     exitDialogSplitLayout() {
         if (!this._dialogSplitActive) return;
         this._dialogSplitActive = false;
-        document.body.classList.remove('dialog-split-active');
+        document.body.classList.remove('dialog-split-active', 'dialog-split-mobile');
 
         document.querySelectorAll('.Camera[data-dialog-hidden="1"]').forEach((el) => {
             el.style.display = '';
@@ -11657,6 +11861,8 @@ class RoomClient {
         this.videoPinMediaContainer.style.display = 'none';
         this.videoPinMediaContainer.style.width = '';
         this.videoPinMediaContainer.style.height = '';
+        this.videoPinMediaContainer.style.top = '';
+        this.videoPinMediaContainer.style.left = '';
         this.videoMediaContainer.style.top = '';
         this.videoMediaContainer.style.left = '';
         this.videoMediaContainer.style.right = '';
@@ -11849,7 +12055,6 @@ class RoomClient {
                     break;
                 case 'unmute':
                     if (peerActionAllowed) {
-                        // No guest consent popup — moderator invite starts media immediately
                         await this.peerMediaStartForced(mediaType.audio);
                         if (this.peer_info?.peer_hand) {
                             this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
@@ -11873,6 +12078,14 @@ class RoomClient {
                         if (this.peer_info?.peer_hand) {
                             this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
                         }
+                    }
+                    break;
+                case 'dialogInvite':
+                    if (peerActionAllowed) {
+                        await this.handleDialogInvite({
+                            presenterId: data.from_peer_id || '',
+                            from_peer_id: data.from_peer_id || '',
+                        });
                     }
                     break;
                 case 'stop':
@@ -11910,8 +12123,9 @@ class RoomClient {
      */
     unlockBroadcastSpotlitControls(type) {
         this._broadcastSpotlit = true;
-        if (!(isBroadcastingEnabled || isLectoriumEnabled) || isPresenter) return;
+        if (isPresenter) return;
 
+        // Unlock media controls for invited guest (broadcast / lectorium / dialog)
         if (type === mediaType.audio || type === 'audio') {
             BUTTONS.main.startAudioButton = true;
             elemDisplay('startAudioButton', true);
@@ -11928,20 +12142,33 @@ class RoomClient {
             elemDisplay('startScreenButton', true);
             elemDisplay('stopScreenButton', false);
         }
-        // Настройки устройств могут понадобиться для выбора микрофона/камеры.
         BUTTONS.main.settingsButton = true;
         elemDisplay('settingsButton', true);
     }
 
     async peerMediaStartForced(type) {
+        this._broadcastSpotlit = true;
+        this.unlockBroadcastSpotlitControls(type);
+        this._forceSimpleMedia = true;
         try {
-            this.unlockBroadcastSpotlitControls(type);
             switch (type) {
                 case mediaType.audio:
                     if (this.producerExist(mediaType.audio)) {
                         await this.resumeProducer(mediaType.audio);
                     } else {
-                        await this.produce(mediaType.audio, microphoneSelect?.value);
+                        try {
+                            // Prefer null deviceId — avoid stale exact device failures for guests
+                            await this.produce(mediaType.audio, null);
+                        } catch (e1) {
+                            console.warn('Audio produce fallback', e1);
+                            await this.produceSimpleTrack(mediaType.audio);
+                        }
+                        if (!this.producerExist(mediaType.audio)) {
+                            await this.produceSimpleTrack(mediaType.audio);
+                        }
+                    }
+                    if (!this.producerExist(mediaType.audio)) {
+                        throw new Error('Audio producer not started');
                     }
                     this.updatePeerInfo(this.peer_name, this.peer_id, 'audio', true);
                     this.event(_EVENTS.startAudio);
@@ -11952,7 +12179,18 @@ class RoomClient {
                     if (this.producerExist(mediaType.video)) {
                         await this.resumeProducer(mediaType.video);
                     } else {
-                        await this.produce(mediaType.video, videoSelect?.value);
+                        try {
+                            await this.produce(mediaType.video, null);
+                        } catch (e1) {
+                            console.warn('Video produce fallback', e1);
+                            await this.produceSimpleTrack(mediaType.video);
+                        }
+                        if (!this.producerExist(mediaType.video)) {
+                            await this.produceSimpleTrack(mediaType.video);
+                        }
+                    }
+                    if (!this.producerExist(mediaType.video)) {
+                        throw new Error('Video producer not started');
                     }
                     this.updatePeerInfo(this.peer_name, this.peer_id, 'video', true);
                     this.event(_EVENTS.startVideo);
@@ -11977,7 +12215,20 @@ class RoomClient {
                 'top-end',
                 8000
             );
+            throw err;
+        } finally {
+            this._forceSimpleMedia = false;
         }
+    }
+
+    /** Retry produce with simplest constraints for dialog invite. */
+    async produceSimpleTrack(type) {
+        if (this.producerLabel.has(type)) {
+            await this.resumeProducer(type);
+            return;
+        }
+        this._forceSimpleMedia = true;
+        await this.produce(type, null, false, false);
     }
 
     peerMediaStartConfirm(type, imageUrl, title, text) {
