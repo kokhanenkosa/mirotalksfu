@@ -101,9 +101,30 @@ module.exports = class Room {
         // Active dialog (presenter + guests) — synced to late joiners via toJson()
         this._dialog = null; // { presenterId, guestIds: string[] }
 
+        // Co-lecturer stage: mode 1 = mod screen + creator cam bubble; mode 2 = creator camera
+        this._stageScene = null; // { mode, creatorId, moderatorId, bubbleLayout }
+
         // Public chat ring buffer for late joiners
         this._chatMessages = [];
         this._chatMessagesMax = 100;
+    }
+
+    setStageScene(scene = null) {
+        if (!scene || !scene.mode) {
+            this._stageScene = null;
+            return null;
+        }
+        this._stageScene = {
+            mode: Number(scene.mode) === 2 ? 2 : 1,
+            creatorId: scene.creatorId || '',
+            moderatorId: scene.moderatorId || '',
+            bubbleLayout: scene.bubbleLayout || '',
+        };
+        return this._stageScene;
+    }
+
+    getStageScene() {
+        return this._stageScene;
     }
 
     setDialog(presenterId, guestIds = []) {
@@ -192,6 +213,7 @@ module.exports = class Room {
             maxParticipantsReached: this.getVisiblePeersCount() > this.maxParticipants,
             globalLobby: this.globalLobby,
             dialog: this._dialog,
+            stageScene: this._stageScene,
             chatMessages: this._chatMessages,
         };
     }

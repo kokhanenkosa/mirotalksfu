@@ -386,6 +386,9 @@ class RoomClient {
         this._forceSimpleMedia = false; // skip VB / use soft constraints on dialog invite
         this._dialogInviteInProgress = false;
         this._leavingDialog = false; // suppress videoOff avatar while exiting dialog
+        this._meetingCreatorId = null; // room creator peer id (camera for scenes)
+        this._stageScene = null; // { mode:1|2, creatorId, moderatorId, bubbleLayout }
+        this._stageSceneActive = false;
         this._pendingChatReply = null; // { msgId, fromName, text }
         this.isChatMaximized = false;
         this.isToggleUnreadMsg = false;
@@ -772,6 +775,28 @@ class RoomClient {
             window.localStorage.isReconnected = false;
             // Lock presenter self-view orientation (unmirrored = same as guests see)
             this.refreshLocalCameraMirror();
+
+            // Meeting creator = first presenter join (or restored from stageScene)
+            if (room?.stageScene?.creatorId) {
+                this._meetingCreatorId = room.stageScene.creatorId;
+            } else if (isPresenter && !this._meetingCreatorId) {
+                this._meetingCreatorId = this.peer_id;
+            }
+            if (room?.stageScene?.mode) {
+                this._stageScene = {
+                    mode: Number(room.stageScene.mode) === 2 ? 2 : 1,
+                    creatorId: room.stageScene.creatorId || this._meetingCreatorId,
+                    moderatorId: room.stageScene.moderatorId || '',
+                    bubbleLayout: room.stageScene.bubbleLayout || '',
+                };
+            }
+            if (this._stageScene?.mode) {
+                [800, 2000, 4000].forEach((ms) => setTimeout(() => this.applyStageScene(), ms));
+            }
+            if (isPresenter) {
+                this.unlockPresenterMediaControls();
+                this.renderStageSceneBar();
+            }
 
             // GLOBAL LOBBY ENABLED
             if (room?.globalLobby) {
@@ -2516,6 +2541,8 @@ class RoomClient {
                     if (elem.classList.contains('mirror')) {
                         elem.classList.remove('mirror');
                     }
+                    // Co-lecturer: mod/creator screen → scene 1
+                    setTimeout(() => this.onLocalScreenShareStarted?.(), 300);
                 }
             } else {
                 this.localAudioStream = stream;
@@ -4217,6 +4244,9 @@ class RoomClient {
                 this.refreshCamBubble(remotePeerId);
                 this.scheduleCamBubbleRetry(remotePeerId);
                 this.refreshDialogSplitIfNeeded(remotePeerId);
+                if (this._stageScene?.mode) {
+                    setTimeout(() => this.applyStageScene(), 150);
+                }
                 this.sound('joined');
                 break;
             case mediaType.audio:
@@ -11659,6 +11689,9 @@ class RoomClient {
                 // Guest receives invite: auto-start A/V then split layout
                 this.handleDialogInvite(cmd);
                 break;
+            case 'stageScene':
+                this.handleStageSceneUpdate(cmd);
+                break;
             default:
                 break;
             //...
@@ -13019,6 +13052,299 @@ class RoomClient {
     }
 
     // ####################################################
+    // STAGE SCENES (creator + moderators)
+    // mode 1: moderator screen + creator camera circle
+    // mode 2: creator camera full
+    // ####################################################
+
+    canControlStageScenes() {
+        return Boolean(isPresenter);
+    }
+
+    ensureMeetingCreatorId() {
+        if (this._meetingCreatorId) return this._meetingCreatorId;
+        if (this._stageScene?.creatorId) {
+            this._meetingCreatorId = this._stageScene.creatorId;
+            return this._meetingCreatorId;
+        }
+        // Prefer first presenter peer; else self if presenter
+        try {
+            for (const [id, peer] of this.peers || []) {
+                if (peer?.peer_info?.peer_presenter) {
+                    this._meetingCreatorId = id;
+                    return id;
+                }
+            }
+        } catch {
+            /* ignore */
+        }
+        if (isPresenter) this._meetingCreatorId = this.peer_id;
+        return this._meetingCreatorId;
+    }
+
+    findScreenSharingModeratorId() {
+        const creatorId = this.ensureMeetingCreatorId();
+        // Prefer a presenter who is sharing screen and is not the creator
+        try {
+            for (const [id, peer] of this.peers || []) {
+                if (id === creatorId) continue;
+                if (!peer?.peer_info?.peer_presenter) continue;
+                if (this.getPeerMediaTile(id, 'screen')) return id;
+            }
+        } catch {
+            /* ignore */
+        }
+        // Local mod sharing
+        if (
+            isPresenter &&
+            this.peer_id !== creatorId &&
+            this.producerExist?.(mediaType.screen)
+        ) {
+            return this.peer_id;
+        }
+        // Creator sharing own screen — still valid for scene 1
+        if (this.getPeerMediaTile(creatorId, 'screen')) return creatorId;
+        if (isPresenter && this.producerExist?.(mediaType.screen)) return this.peer_id;
+        return this._stageScene?.moderatorId || '';
+    }
+
+    setStageSceneMode(mode) {
+        if (!this.canControlStageScenes()) {
+            return this.userLog('warning', 'Только создатель или модератор может переключать сцены', 'top-end');
+        }
+        const creatorId = this.ensureMeetingCreatorId();
+        if (!creatorId) {
+            return this.userLog('warning', 'Не удалось определить создателя встречи', 'top-end');
+        }
+        const nextMode = Number(mode) === 2 ? 2 : 1;
+        let moderatorId = this._stageScene?.moderatorId || this.findScreenSharingModeratorId();
+        if (nextMode === 1 && !moderatorId) {
+            return this.userLog(
+                'warning',
+                'Для сцены 1 модератор должен включить демонстрацию экрана',
+                'top-end',
+                6000
+            );
+        }
+        if (nextMode === 1 && !this.getPeerMediaTile(creatorId, 'video') && creatorId === this.peer_id) {
+            // Creator locally without video yet — try start
+            this.peerMediaStartForced?.(mediaType.video)?.catch?.(() => {});
+        }
+        const bubbleLayout =
+            this._stageScene?.bubbleLayout ||
+            this.encodeCamBubbleLayout(this.getDefaultCamBubbleLayout());
+        this._stageScene = {
+            mode: nextMode,
+            creatorId,
+            moderatorId: moderatorId || creatorId,
+            bubbleLayout,
+        };
+        this.broadcastStageScene(true);
+        this.applyStageScene();
+        this.renderStageSceneBar();
+    }
+
+    broadcastStageScene(immediate = true) {
+        if (!this._stageScene || !this.canControlStageScenes()) return;
+        const send = () => {
+            this.emitCmd({
+                type: 'stageScene',
+                broadcast: true,
+                mode: this._stageScene.mode,
+                creatorId: this._stageScene.creatorId,
+                moderatorId: this._stageScene.moderatorId,
+                bubbleLayout: this._stageScene.bubbleLayout || '',
+                peer_name: this.peer_name,
+                peer_uuid: this.peer_uuid,
+            });
+        };
+        if (immediate) {
+            send();
+            return;
+        }
+        clearTimeout(this._stageSceneBroadcastTimer);
+        this._stageSceneBroadcastTimer = setTimeout(send, 120);
+    }
+
+    handleStageSceneUpdate(cmd = {}) {
+        this._stageScene = {
+            mode: Number(cmd.mode) === 2 ? 2 : 1,
+            creatorId: cmd.creatorId || this.ensureMeetingCreatorId(),
+            moderatorId: cmd.moderatorId || '',
+            bubbleLayout: cmd.bubbleLayout || '',
+        };
+        if (this._stageScene.creatorId) this._meetingCreatorId = this._stageScene.creatorId;
+        this.applyStageScene();
+        this.renderStageSceneBar();
+    }
+
+    clearStageSceneVisuals() {
+        const modId = this._stageScene?.moderatorId;
+        const creatorId = this._stageScene?.creatorId || this._meetingCreatorId;
+        if (modId) this.clearCamBubble(modId);
+        if (creatorId && creatorId !== modId) {
+            const v = this.getPeerMediaTile(creatorId, 'video');
+            if (v) {
+                v.classList.remove('cam-bubble-source-hidden');
+                v.style.display = '';
+            }
+        }
+        this.applyCamBubbleStageLayout(false);
+        this._stageSceneActive = false;
+        document.body.classList.remove('stage-scene-active', 'stage-scene-1', 'stage-scene-2');
+    }
+
+    pinPeerMediaTile(peerId, mediaKind) {
+        const tile = this.getPeerMediaTile(peerId, mediaKind);
+        if (!tile) return false;
+        const video =
+            tile.querySelector(':scope > video') ||
+            [...tile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
+        const pinId = video?.id;
+        if (!pinId) return false;
+        const pinBtn = this.getId(`${pinId}__pin`);
+        if (pinBtn && !this.isVideoPinned) {
+            pinBtn.click();
+            return true;
+        }
+        // Already pinned different — unpin then pin
+        if (pinBtn && this.isVideoPinned && this.pinnedVideoPlayerId !== pinId) {
+            const currentPin = this.getId(`${this.pinnedVideoPlayerId}__pin`);
+            currentPin?.click?.();
+            setTimeout(() => pinBtn.click(), 50);
+            return true;
+        }
+        return Boolean(this.isVideoPinned && this.pinnedVideoPlayerId === pinId);
+    }
+
+    applyStageScene() {
+        if (!this._stageScene?.mode) {
+            this.clearStageSceneVisuals();
+            return;
+        }
+        const { mode, creatorId, moderatorId, bubbleLayout } = this._stageScene;
+        this._meetingCreatorId = creatorId || this._meetingCreatorId;
+        document.body.classList.add('stage-scene-active');
+        document.body.classList.toggle('stage-scene-1', mode === 1);
+        document.body.classList.toggle('stage-scene-2', mode === 2);
+
+        if (mode === 2) {
+            // Creator camera full stage
+            this._stageSceneActive = false;
+            if (moderatorId) this.clearCamBubble(moderatorId);
+            this.pinPeerMediaTile(creatorId, 'video');
+            const creatorTile = this.getPeerMediaTile(creatorId, 'video');
+            if (creatorTile) {
+                creatorTile.classList.remove('cam-bubble-source-hidden');
+                creatorTile.style.display = '';
+            }
+            // Hide moderator screen from grid while scene 2 is active
+            if (moderatorId) {
+                const screenTile = this.getPeerMediaTile(moderatorId, 'screen');
+                if (screenTile && screenTile.parentElement === this.videoMediaContainer) {
+                    screenTile.dataset.stageHidden = '1';
+                    screenTile.style.display = 'none';
+                }
+            }
+            this.applyCamBubbleStageLayout(false);
+            try {
+                handleAspectRatio();
+            } catch {
+                /* ignore */
+            }
+            return;
+        }
+
+        // mode 1 — mod screen + creator circle
+        this._stageSceneActive = true;
+        if (bubbleLayout) {
+            // keep encoded on scene object
+        }
+        // Unhide mod screen if previously hidden
+        if (moderatorId) {
+            const screenTile = this.getPeerMediaTile(moderatorId, 'screen');
+            if (screenTile?.dataset.stageHidden === '1') {
+                screenTile.style.display = '';
+                delete screenTile.dataset.stageHidden;
+            }
+        }
+        this.pinPeerMediaTile(moderatorId, 'screen');
+        const ok = this.applyCamBubble(moderatorId, creatorId);
+        if (!ok) {
+            [200, 600, 1200, 2500].forEach((ms) => {
+                setTimeout(() => {
+                    if (this._stageScene?.mode === 1) {
+                        this.pinPeerMediaTile(moderatorId, 'screen');
+                        this.applyCamBubble(moderatorId, creatorId);
+                    }
+                }, ms);
+            });
+        }
+    }
+
+    /** When a moderator starts screen share — offer / auto-switch to scene 1. */
+    onLocalScreenShareStarted() {
+        if (!isPresenter) return;
+        const creatorId = this.ensureMeetingCreatorId();
+        if (!creatorId) return;
+        // Moderator (or creator) sharing → scene 1
+        if (!this._stageScene) {
+            this._stageScene = {
+                mode: 1,
+                creatorId,
+                moderatorId: this.peer_id,
+                bubbleLayout: this.encodeCamBubbleLayout(this.getDefaultCamBubbleLayout()),
+            };
+        } else {
+            this._stageScene.moderatorId = this.peer_id;
+            this._stageScene.mode = 1;
+            this._stageScene.creatorId = creatorId;
+        }
+        this.broadcastStageScene(true);
+        this.applyStageScene();
+        this.renderStageSceneBar();
+        // Ensure creator has camera for the circle
+        if (creatorId === this.peer_id && !this.producerExist(mediaType.video)) {
+            this.peerMediaStartForced?.(mediaType.video)?.catch?.(() => {});
+        }
+    }
+
+    renderStageSceneBar() {
+        let bar = document.getElementById('stageSceneBar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'stageSceneBar';
+            bar.className = 'stage-scene-bar';
+            document.body.appendChild(bar);
+        }
+        if (!this.canControlStageScenes()) {
+            bar.classList.add('hidden');
+            return;
+        }
+        const mode = this._stageScene?.mode || 0;
+        bar.innerHTML = `
+            <span class="stage-scene-label"><i class="fas fa-clapperboard"></i> Сцены</span>
+            <button type="button" class="stage-scene-btn ${mode === 1 ? 'is-active' : ''}" data-scene="1" title="Экран модератора + кружок создателя">
+                <i class="fas fa-desktop"></i> Сцена 1
+            </button>
+            <button type="button" class="stage-scene-btn ${mode === 2 ? 'is-active' : ''}" data-scene="2" title="Камера создателя">
+                <i class="fas fa-video"></i> Сцена 2
+            </button>
+        `;
+        bar.classList.remove('hidden');
+        bar.querySelectorAll('.stage-scene-btn').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.setStageSceneMode(Number(btn.getAttribute('data-scene')));
+            });
+        });
+    }
+
+    hideStageSceneBar() {
+        document.getElementById('stageSceneBar')?.classList.add('hidden');
+    }
+
+    // ####################################################
     // PEER ACTION
     // ####################################################
 
@@ -14153,10 +14479,19 @@ class RoomClient {
                             /* ignore */
                         }
                         handleRules(true);
+                        this.unlockPresenterMediaControls();
                         this.refreshLocalCameraMirror();
+                        this.renderStageSceneBar();
                         this.sound('notify');
-                        this.userLog('success', 'Вас назначили модератором', 'top-end', 6000);
+                        this.userLog(
+                            'success',
+                            'Вас назначили модератором. Можно демонстрировать экран и переключать сцены.',
+                            'top-end',
+                            8000
+                        );
                     }
+                    // Any promote/demote refresh — scene bar for all presenters
+                    if (status) this.renderStageSceneBar();
                     break;
                 default:
                     break;
@@ -14410,7 +14745,11 @@ class RoomClient {
                 this._camBubbleRetryTimers.delete(peerId);
                 return;
             }
-            const ok = this.applyCamBubble(peerId);
+            const camId =
+                this._stageSceneActive && this._stageScene?.mode === 1
+                    ? this._stageScene.creatorId
+                    : null;
+            const ok = this.applyCamBubble(peerId, camId);
             left -= 1;
             if (ok || left <= 0) {
                 this._camBubbleRetryTimers.delete(peerId);
@@ -14799,9 +15138,45 @@ class RoomClient {
         return L;
     }
 
-    /** Свой кружок всегда редактируем (isPresenter часто false после join/reconnect). */
+    /**
+     * Own same-peer bubble always editable.
+     * Cross-peer stage scene (mod screen + creator cam): any presenter may edit.
+     */
     isCamBubbleEditable(peerId) {
+        if (this._stageSceneActive && this._stageScene?.mode === 1 && isPresenter) return true;
         return Boolean(peerId && peerId === this.peer_id);
+    }
+
+    /** After promote in lectorium — restore A/V/screen dock controls for moderator. */
+    unlockPresenterMediaControls() {
+        BUTTONS.main.startAudioButton = true;
+        BUTTONS.main.startVideoButton = true;
+        BUTTONS.main.startScreenButton = true;
+        BUTTONS.main.swapCameraButton = true;
+        BUTTONS.main.settingsButton = true;
+        BUTTONS.main.participantsButton = true;
+        try {
+            const hasAudio = this.producerExist?.(mediaType.audio);
+            const hasVideo = this.producerExist?.(mediaType.video);
+            const hasScreen = this.producerExist?.(mediaType.screen);
+            elemDisplay('startAudioButton', !hasAudio);
+            elemDisplay('stopAudioButton', !!hasAudio);
+            elemDisplay('startVideoButton', !hasVideo);
+            elemDisplay('stopVideoButton', !!hasVideo);
+            elemDisplay('startScreenButton', !hasScreen);
+            elemDisplay('stopScreenButton', !!hasScreen);
+            if (typeof show === 'function') {
+                show(settingsButton);
+                show(participantsButton);
+                if (typeof swapCameraButton !== 'undefined' && swapCameraButton) show(swapCameraButton);
+            }
+            elemDisplay('settingsButton', true);
+            elemDisplay('participantsButton', true);
+            elemDisplay('swapCameraButton', true);
+            elemDisplay('tabVideoDevicesBtn', true);
+        } catch (err) {
+            console.warn('unlockPresenterMediaControls', err);
+        }
     }
 
     /** После resize плиток — восстановить кадр всех кружков */
@@ -15237,20 +15612,28 @@ class RoomClient {
         if (btn) btn.classList.remove('show', 'is-open');
     }
 
-    applyCamBubble(peerId) {
+    /**
+     * Camera circle on screen share.
+     * @param {string} screenPeerId - peer who owns the screen tile
+     * @param {string|null} camPeerId - peer who owns the camera (defaults to screenPeerId)
+     */
+    applyCamBubble(screenPeerId, camPeerId = null) {
+        const peerId = screenPeerId;
+        const camId = camPeerId || screenPeerId;
         const screenTile = this.getPeerMediaTile(peerId, 'screen');
-        const videoTile = this.getPeerMediaTile(peerId, 'video');
+        const videoTile = this.getPeerMediaTile(camId, 'video');
         if (!screenTile || !videoTile) {
             return false;
         }
 
         const sourceVideo =
-            videoTile.querySelector('video') || document.querySelector(`video[name="${peerId}"]`);
+            videoTile.querySelector('video') || document.querySelector(`video[name="${camId}"]`);
         if (!sourceVideo?.srcObject) return false;
 
         screenTile.classList.add('Camera', 'has-cam-bubble');
         if (!screenTile.dataset.peerId) screenTile.dataset.peerId = peerId;
         if (!screenTile.dataset.mediaKind) screenTile.dataset.mediaKind = 'screen';
+        screenTile.dataset.camBubbleCamPeer = camId;
 
         let bubble = screenTile.querySelector('.cam-bubble');
         if (!bubble) {
@@ -15260,6 +15643,8 @@ class RoomClient {
             bubble.setAttribute('aria-label', 'Камера поверх экрана');
             screenTile.appendChild(bubble);
         }
+        bubble.dataset.camPeerId = camId;
+        bubble.dataset.screenPeerId = peerId;
 
         const layers = this.ensureCamBubbleLayers(bubble);
         let bubbleVideo = layers.video;
@@ -15276,7 +15661,7 @@ class RoomClient {
             bubbleVideo.srcObject = sourceVideo.srcObject;
         }
         bubbleVideo.play?.().catch(() => {});
-        // Без зеркала: лектор видит ровно то, что студенты.
+        // Presenter self-view policy: unmirrored (matches remotes)
         bubbleVideo.classList.remove('mirror');
 
         // contain — как у студента, без растягивания
@@ -15290,7 +15675,9 @@ class RoomClient {
 
         const editable = this.isCamBubbleEditable(peerId);
         let layout = this.getCamBubbleLayoutForPeer(peerId);
-        if (peerId !== this.peer_id) {
+        if (this._stageSceneActive && this._stageScene?.bubbleLayout) {
+            layout = this.decodeCamBubbleLayout(this._stageScene.bubbleLayout);
+        } else if (camId !== this.peer_id && peerId !== this.peer_id) {
             const peer = this.peers?.get?.(peerId);
             if (peer?.peer_info?.peer_cam_bubble_layout) {
                 layout = this.decodeCamBubbleLayout(peer.peer_info.peer_cam_bubble_layout);
@@ -15333,7 +15720,7 @@ class RoomClient {
         videoTile.classList.add('cam-bubble-source-hidden');
         videoTile.style.display = 'none';
         if (!videoTile.dataset.mediaKind) videoTile.dataset.mediaKind = 'video';
-        if (!videoTile.dataset.peerId) videoTile.dataset.peerId = peerId;
+        if (!videoTile.dataset.peerId) videoTile.dataset.peerId = camId;
 
         // Полный холст и у лектора, и у зрителя с закреплённым экраном
         if (
@@ -15342,7 +15729,7 @@ class RoomClient {
             screenTile.parentElement === this.videoPinMediaContainer
         ) {
             this.applyCamBubbleStageLayout(true);
-        } else if (peerId === this.peer_id) {
+        } else if (peerId === this.peer_id || this._stageSceneActive) {
             this.applyCamBubbleStageLayout(true);
         }
 
@@ -15374,7 +15761,13 @@ class RoomClient {
 
         const commit = (layout, broadcast, immediate = true) => {
             const L = this.applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, true);
-            this.peer_info.peer_cam_bubble_layout = this.encodeCamBubbleLayout(L);
+            const encoded = this.encodeCamBubbleLayout(L);
+            if (this._stageSceneActive && this._stageScene?.mode === 1) {
+                this._stageScene.bubbleLayout = encoded;
+                if (broadcast) this.broadcastStageScene(immediate);
+                return;
+            }
+            this.peer_info.peer_cam_bubble_layout = encoded;
             this.peer_info.peer_cam_bubble = true;
             if (broadcast) this.broadcastCamBubbleLayout(L, immediate);
         };
@@ -15532,7 +15925,13 @@ class RoomClient {
         const readLayout = () => this.decodeCamBubbleLayout(bubble.dataset.layout || '');
         const commit = (layout, broadcast, immediate = true) => {
             const L = this.applyCamBubbleLayoutStyles(bubble, bubbleVideo, layout, true);
-            this.peer_info.peer_cam_bubble_layout = this.encodeCamBubbleLayout(L);
+            const encoded = this.encodeCamBubbleLayout(L);
+            if (this._stageSceneActive && this._stageScene?.mode === 1) {
+                this._stageScene.bubbleLayout = encoded;
+                if (broadcast) this.broadcastStageScene(immediate);
+                return;
+            }
+            this.peer_info.peer_cam_bubble_layout = encoded;
             this.peer_info.peer_cam_bubble = true;
             if (broadcast) this.broadcastCamBubbleLayout(L, immediate);
         };

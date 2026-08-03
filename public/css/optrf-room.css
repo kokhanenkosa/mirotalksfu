@@ -265,6 +265,75 @@ body.dialog-split-active .dialog-waiting {
     font-size: 14px;
 }
 
+/* Stage scene switcher (creator + moderators) */
+.stage-scene-bar {
+    position: fixed;
+    left: 50%;
+    top: calc(var(--optrf-topbar-h, 48px) + 10px);
+    transform: translateX(-50%);
+    z-index: 46;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(12, 16, 22, 0.92);
+    border: 1px solid rgba(0, 168, 232, 0.45);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    max-width: min(720px, calc(100vw - 24px));
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.stage-scene-bar.hidden {
+    display: none !important;
+}
+
+.stage-scene-label {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.stage-scene-label i {
+    color: #00a8e8;
+    margin-right: 4px;
+}
+
+.stage-scene-btn {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.stage-scene-btn i {
+    margin-right: 4px;
+}
+
+.stage-scene-btn:hover {
+    background: rgba(0, 168, 232, 0.2);
+}
+
+.stage-scene-btn.is-active {
+    background: #00a8e8;
+    border-color: #00a8e8;
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(0, 168, 232, 0.35);
+}
+
+@media (max-width: 640px) {
+    .stage-scene-bar {
+        top: auto;
+        bottom: calc(var(--optrf-dock-h, 58px) + 56px);
+    }
+}
+
 /* Floating dialog controls (presenter) */
 .dialog-controls-bar {
     position: fixed;

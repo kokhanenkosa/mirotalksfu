@@ -3683,6 +3683,23 @@ async function startServer() {
                     }
                     break;
                 }
+                case 'stageScene': {
+                    const presenterOk = isPeerPresenter(
+                        socket.room_id,
+                        socket.id,
+                        data.peer_name,
+                        data.peer_uuid
+                    );
+                    if (!presenterOk) return;
+                    room.setStageScene?.({
+                        mode: data.mode,
+                        creatorId: data.creatorId,
+                        moderatorId: data.moderatorId,
+                        bubbleLayout: data.bubbleLayout,
+                    });
+                    data.broadcast = true;
+                    break;
+                }
                 case 'peerAudio':
                     // Keep producer volume to update consumer on join room...
                     if (data.audioProducerId) {
