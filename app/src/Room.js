@@ -20,7 +20,10 @@ module.exports = class Room {
         this.createdByPhone = null;
         this.createdAt = Date.now();
         this.worker = worker;
-        this.webRtcServer = worker.appData.webRtcServer;
+        if (!worker) {
+            throw new Error('Room requires a mediasoup worker');
+        }
+        this.webRtcServer = worker.appData?.webRtcServer;
         this.webRtcServerActive = config.mediasoup.webRtcServerActive;
         this.io = io;
         this.audioLevelObserver = null;

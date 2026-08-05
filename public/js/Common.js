@@ -21,7 +21,18 @@ function makeRoomName() {
     if (window.RoomNameGen?.generate) return window.RoomNameGen.generate();
     const d = new Date();
     const p = (n) => String(n).padStart(2, '0');
-    return `hookah-${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}-${p(d.getHours())}:${p(d.getMinutes())}`;
+    return `hookah-${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}-${p(d.getHours())}-${p(d.getMinutes())}`;
+}
+
+/** Safe room id for URLs/proxies: no spaces/colons (colon caused Coolify/Traefik 502 quirks). */
+function sanitizeRoomName(value) {
+    return String(value || '')
+        .trim()
+        .replace(/[:\s]+/g, '-')
+        .replace(/[^a-zA-Z0-9._-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 64);
 }
 
 let txt = makeRoomName();
@@ -85,7 +96,7 @@ if (roomName) {
     roomName.setAttribute('autocomplete', 'off');
     roomName.setAttribute(
         'title',
-        'Только латиница, цифры и символы - _ : . Русские буквы запрещены'
+        'Только латиница, цифры и символы - _ . (без двоеточия и пробелов)'
     );
 
     if (window.sessionStorage.roomID) {
@@ -192,7 +203,7 @@ function genRoom() {
 
 function joinRoom() {
     const inputEl = document.getElementById('roomName');
-    const cleaned = stripCyrillic(filterXSS(inputEl.value).trim().replace(/\s+/g, '-'));
+    const cleaned = sanitizeRoomName(stripCyrillic(filterXSS(inputEl.value)));
     if (inputEl.value !== cleaned) inputEl.value = cleaned;
     const roomValid = isValidRoomName(cleaned);
 
@@ -219,8 +230,8 @@ function isValidRoomName(input) {
         return false;
     }
 
-    // Только латиница / цифры / безопасные символы для URL
-    if (!/^[A-Za-z0-9._:-]+$/.test(input)) {
+    // Латиница / цифры / безопасные символы URL (без «:» — ломает Traefik/Coolify)
+    if (!/^[A-Za-z0-9._-]+$/.test(input)) {
         return false;
     }
 

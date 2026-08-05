@@ -2669,12 +2669,12 @@ async function startServer() {
                     worker.appData.webRtcServer = webRtcServer;
                     log.info('WebRtcServer ready', { worker_pid: worker.pid, index: i });
                 } catch (wssErr) {
-                    log.error('WebRtcServer create failed for worker', {
+                    log.error('WebRtcServer create failed for worker — keeping worker without WebRtcServer', {
                         index: i,
                         worker_pid: worker.pid,
                         error: wssErr?.message || wssErr,
                     });
-                    throw wssErr;
+                    // Do not abort all workers: empty workers[] → createRoom crash → Coolify 502
                 }
             }
 
@@ -2703,8 +2703,19 @@ async function startServer() {
     }
 
     async function getMediasoupWorker() {
-        const worker = workers[nextMediasoupWorkerIdx];
-        if (++nextMediasoupWorkerIdx === workers.length) nextMediasoupWorkerIdx = 0;
+        if (!workers.length) {
+            log.warn('No mediasoup workers — retrying createWorkers');
+            try {
+                await createWorkers();
+            } catch (err) {
+                log.error('createWorkers retry failed', err?.message || err);
+            }
+        }
+        if (!workers.length) {
+            throw new Error('Mediasoup workers unavailable');
+        }
+        const worker = workers[nextMediasoupWorkerIdx % workers.length];
+        nextMediasoupWorkerIdx = (nextMediasoupWorkerIdx + 1) % workers.length;
         return worker;
     }
 
@@ -2750,6 +2761,7 @@ async function startServer() {
         });
 
         socket.on('createRoom', async ({ room_id, phone_token, lectorium }, callback) => {
+            try {
             // Security: reject invalid room ids (XSS / path traversal / empty).
             if (!Validator.isValidRoomName(room_id)) {
                 log.warn('[createRoom] - Invalid room name', { room_id });
@@ -2790,6 +2802,9 @@ async function startServer() {
             } else {
                 log.debug('Created room', { room_id: socket.room_id, lectorium: Boolean(lectorium) });
                 const worker = await getMediasoupWorker();
+                if (!worker) {
+                    return callback({ error: 'mediasoup workers unavailable — retry shortly' });
+                }
                 const room = new Room(socket.room_id, worker, io);
                 if (lectorium) {
                     room.setIsLectorium(true);
@@ -2805,6 +2820,14 @@ async function startServer() {
                 }
                 roomList.set(socket.room_id, room);
                 callback({ room_id: socket.room_id, lectorium: room.isLectorium() });
+            }
+            } catch (err) {
+                log.error('[createRoom] failed', err?.message || err);
+                try {
+                    callback({ error: err?.message || 'createRoom failed' });
+                } catch {
+                    /* ignore */
+                }
             }
         });
 

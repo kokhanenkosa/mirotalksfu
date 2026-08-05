@@ -123,7 +123,7 @@
         const yyyy = date.getFullYear();
         const hh = pad2(date.getHours());
         const mi = pad2(date.getMinutes());
-        return `${dd}-${mm}-${yyyy}-${hh}:${mi}`;
+        return `${dd}-${mm}-${yyyy}-${hh}-${mi}`;
     }
 
     function pickWord() {

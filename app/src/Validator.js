@@ -14,6 +14,11 @@ function isValidRoomName(input) {
         return false;
     }
 
+    // Reject characters that break proxies / Coolify Traefik (colon, spaces, slashes)
+    if (/[:\s/?#\\]/.test(room)) {
+        return false;
+    }
+
     return !hasPathTraversal(room);
 }
 
