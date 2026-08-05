@@ -252,7 +252,7 @@ let virtualBackgroundBlurLevel;
 let virtualBackgroundSelectedImage;
 let virtualBackgroundTransparent;
 
-let swalBackground = '#181818';
+let swalBackground = '#181818'; // light-gray surface; page bg is #141414
 
 let rc = null;
 let producer = null;
@@ -4695,21 +4695,9 @@ function redirectOnLeave(disconnectAll = false) {
     redirect && redirect.enabled ? openURL(redirect.url) : openURL('/newroom');
 }
 
-function userLog(icon, message, position = 'top-end', timer = 3000) {
-    const Toast = Swal.mixin({
-        background: swalBackground,
-        toast: true,
-        position: position,
-        showConfirmButton: false,
-        timer: timer,
-        timerProgressBar: true,
-    });
-    Toast.fire({
-        icon: icon,
-        title: message,
-        showClass: { popup: 'animate__animated animate__fadeInDown' },
-        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
-    });
+function userLog(_icon, _message, _position = 'top-end', _timer = 3000) {
+    // Toast notifications disabled (Cursor-style quiet UI)
+    return;
 }
 
 function saveDataToFile(dataURL, fileName) {
@@ -7208,17 +7196,17 @@ function renderDynamicThemeCards() {
 }
 
 const OPTRF_CURSOR_THEME = {
-    '--body-bg': '#181818',
-    '--trx-bg': '#181818',
-    '--msger-bg': '#1e1e1e',
-    '--left-msg-bg': '#252526',
-    '--right-msg-bg': '#2d2d2d',
-    '--select-bg': '#1e1e1e',
+    '--body-bg': '#141414',
+    '--trx-bg': '#141414',
+    '--msger-bg': '#181818',
+    '--left-msg-bg': '#181818',
+    '--right-msg-bg': '#181818',
+    '--select-bg': '#181818',
     '--select-focus-color': 'rgba(255, 255, 255, 0.2)',
-    '--tab-btn-active': '#252526',
-    '--settings-bg': '#1e1e1e',
-    '--wb-bg': '#181818',
-    '--btns-bg-color': 'rgba(24, 24, 24, 0.92)',
+    '--tab-btn-active': '#181818',
+    '--settings-bg': '#181818',
+    '--wb-bg': '#141414',
+    '--btns-bg-color': '#181818',
     '--dd-color': '#cccccc',
 };
 

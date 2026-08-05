@@ -3416,43 +3416,8 @@ class RoomClient {
                 pv.max = 100;
                 pv.value = 100;
 
+                // Keep volume + session time only (other video-bar icons disabled)
                 BUTTONS.producerVideo.audioVolumeInput && vb.appendChild(pv);
-                BUTTONS.producerVideo.muteAudioButton && vb.appendChild(au);
-                BUTTONS.producerVideo.videoPrivacyButton && !isScreen && vb.appendChild(vp);
-                BUTTONS.producerVideo.snapShotButton && vb.appendChild(ts);
-                BUTTONS.producerVideo.videoPictureInPicture &&
-                    this.isVideoPictureInPictureSupported &&
-                    vb.appendChild(pip);
-
-                // Local dropdown menu
-                const myDropdownDiv = document.createElement('div');
-                const myDropdownBtn = this.createButton(id + '__dropdownBtn', html.expand);
-                const myDropdownContent = document.createElement('div');
-                myDropdownDiv.className = 'navbar-dropdown';
-                myDropdownContent.className = 'navbar-dropdown-content';
-
-                myDropdownContent.appendChild(this.createDropdownItem(mv, 'Зеркальное видео', myDropdownContent));
-                BUTTONS.producerVideo.fullScreenButton &&
-                    this.isVideoFullScreenSupported &&
-                    myDropdownContent.appendChild(this.createDropdownItem(fs, 'На весь экран', myDropdownContent));
-
-                myDropdownDiv.appendChild(myDropdownBtn);
-                document.body.appendChild(myDropdownContent);
-                myDropdownBtn._dropdownContent = myDropdownContent;
-                this.handleDropdownEvents(myDropdownDiv, myDropdownBtn, myDropdownContent);
-
-                vb.appendChild(myDropdownDiv);
-                BUTTONS.producerVideo.audioVolumeInput && vb.appendChild(pv);
-                BUTTONS.producerVideo.muteAudioButton && vb.appendChild(au);
-                BUTTONS.producerVideo.videoPrivacyButton && !isScreen && vb.appendChild(vp);
-                BUTTONS.producerVideo.snapShotButton && vb.appendChild(ts);
-                BUTTONS.producerVideo.videoPictureInPicture &&
-                    this.isVideoPictureInPictureSupported &&
-                    vb.appendChild(pip);
-                BUTTONS.producerVideo.drawingButton && isScreen && vb.appendChild(dw);
-                BUTTONS.producerVideo.focusVideoButton && vb.appendChild(ha);
-                if (!this.isMobileDevice) vb.appendChild(pn);
-
                 vb.appendChild(st);
 
                 d.appendChild(elem);
@@ -5289,52 +5254,15 @@ class RoomClient {
         }
     }
 
-    userLog(icon, message, position, timer = 5000) {
-        const Toast = Swal.mixin({
-            background: swalBackground,
-            toast: true,
-            position: position,
-            showConfirmButton: false,
-            timer: timer,
-            timerProgressBar: true,
-        });
-        switch (icon) {
-            case 'html':
-                Toast.fire({
-                    icon: icon,
-                    html: message,
-                    showClass: { popup: 'animate__animated animate__fadeInDown' },
-                    hideClass: { popup: 'animate__animated animate__fadeOutUp' },
-                });
-                break;
-            default:
-                Toast.fire({
-                    icon: icon,
-                    title: message,
-                    showClass: { popup: 'animate__animated animate__fadeInDown' },
-                    hideClass: { popup: 'animate__animated animate__fadeOutUp' },
-                });
-        }
+    userLog(_icon, _message, _position, _timer = 5000) {
+        // Toast notifications disabled (Cursor-style quiet UI)
+        return;
     }
 
-    toast(icon, title, text, position = 'top-end', timer = 5000, sound = false) {
+    toast(_icon, _title, _text, _position = 'top-end', _timer = 5000, sound = false) {
         if (sound) this.sound('alert');
-
-        const Toast = Swal.mixin({
-            toast: true,
-            position: position,
-            showConfirmButton: false,
-            timer: timer,
-            timerProgressBar: true,
-            background: swalBackground,
-            showClass: { popup: 'animate__animated animate__fadeInDown' },
-            hideClass: { popup: 'animate__animated animate__fadeOutUp' },
-        });
-        Toast.fire({
-            icon: icon,
-            title: title,
-            text: text,
-        });
+        // Toast notifications disabled
+        return;
     }
 
     msgPopup(type, message, timer = 3000, position = 'center') {
@@ -13940,12 +13868,12 @@ class RoomClient {
         }
         const mode = this._stageScene?.mode || 0;
         bar.innerHTML = `
-            <span class="stage-scene-label"><i class="fas fa-clapperboard"></i> Сцены</span>
-            <button type="button" class="stage-scene-btn ${mode === 1 ? 'is-active' : ''}" data-scene="1" title="Экран модератора + кружок создателя">
-                <i class="fas fa-desktop"></i> Сцена 1
+            <span class="stage-scene-label"><i class="fas fa-clapperboard" aria-hidden="true"></i> Сцены</span>
+            <button type="button" class="stage-scene-btn ${mode === 1 ? 'is-active' : ''}" data-scene="1" title="Сцена 1 — экран модератора">
+                <i class="fas fa-desktop" aria-hidden="true"></i><span>Сцена 1</span>
             </button>
-            <button type="button" class="stage-scene-btn ${mode === 2 ? 'is-active' : ''}" data-scene="2" title="Камера создателя">
-                <i class="fas fa-video"></i> Сцена 2
+            <button type="button" class="stage-scene-btn ${mode === 2 ? 'is-active' : ''}" data-scene="2" title="Сцена 2 — камера создателя">
+                <i class="fas fa-video" aria-hidden="true"></i><span>Сцена 2</span>
             </button>
         `;
         bar.classList.remove('hidden');

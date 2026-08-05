@@ -535,7 +535,7 @@
 }
 
 .chat .chat-history .my-message {
-    background: linear-gradient(135deg, #1e3a5f, #1a2d47);
+    background: #141414;
     border: 1px solid rgba(59, 130, 246, 0.15);
     border-bottom-right-radius: 4px;
 }

@@ -18,7 +18,8 @@
 
 html,
 body {
-    background: #181818 !important;
+    background: #141414 !important;
+    background-image: none !important;
     color: var(--optrf-dark) !important;
     font-family: var(--optrf-font) !important;
 }
@@ -106,7 +107,12 @@ body {
     pointer-events: none !important;
 }
 
-.site-header::before {
+.site-header::before,
+.site-header::after {
+    content: none !important;
+    display: none !important;
+    background: none !important;
+    background-image: none !important;
     pointer-events: none !important;
 }
 

@@ -2,14 +2,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-    --optrf-room-bg: #181818;
+    /* Light gray = #181818 · Dark gray = #141414 */
+    --optrf-room-bg: #141414;
     --optrf-room-fg: #cccccc;
     --optrf-room-fg-bright: #e4e4e4;
     --optrf-room-muted: #6e6e6e;
     --optrf-room-border: #3c3c3c;
     --optrf-room-border-strong: #5a5a5a;
-    --optrf-room-surface: #1e1e1e;
-    --optrf-room-surface-2: #252526;
+    --optrf-room-surface: #181818;
+    --optrf-room-surface-2: #181818;
     --optrf-room-radius: 6px;
     --optrf-room-font: 'Inter', 'Segoe UI', system-ui, sans-serif;
     --optrf-room-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
@@ -22,15 +23,19 @@
     --color-focus: rgba(255, 255, 255, 0.25);
     --select-focus-color: rgba(255, 255, 255, 0.2);
     --videoBar-active: 1px solid var(--optrf-room-border-strong);
-    --body-bg: var(--optrf-room-bg) !important;
+    --body-bg: #141414 !important;
 }
 
 html,
 body,
 #bodyApp,
 .VideoGrid,
-#videoMediaContainer {
-    background: var(--optrf-room-bg) !important;
+#videoMediaContainer,
+#videoPinMediaContainer,
+.Camera,
+.videoDefault {
+    background: #141414 !important;
+    background-image: none !important;
     font-family: var(--optrf-room-font) !important;
     color: var(--optrf-room-fg);
 }
@@ -82,10 +87,11 @@ body,
 }
 
 .init-modal-size {
-    width: min(420px, 94vw) !important;
-    max-width: 420px !important;
+    width: min(640px, 94vw) !important;
+    max-width: 640px !important;
     height: auto !important;
-    padding: 28px 22px !important;
+    padding: 36px 32px !important;
+    background: #181818 !important;
 }
 
 .init-user,
@@ -141,7 +147,8 @@ body,
 
 @media screen and (min-width: 1025px) {
     .init-modal-size {
-        width: min(420px, 94vw) !important;
+        width: min(640px, 94vw) !important;
+        max-width: 640px !important;
     }
 
     .init-user {
@@ -364,7 +371,7 @@ body.dialog-split-active #videoMediaContainer {
     justify-content: stretch !important;
     flex-wrap: nowrap !important;
     overflow: hidden !important;
-    background: #0b0f14;
+    background: #141414;
 }
 
 /* Class-based mobile dialog (also when UA is mobile but viewport > 640px) */
@@ -430,7 +437,7 @@ body.dialog-split-active .dialog-split-slot {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    background: #0b0f14;
+    background: #141414;
     min-width: 0 !important;
     min-height: 0 !important;
 }
@@ -480,7 +487,7 @@ body.dialog-split-active .dialog-split-slot video.videoDefault {
     /* contain = keep source AR (16:9 / 9:16) with letterbox; never crop */
     object-fit: contain !important;
     display: block !important;
-    background: #0b0f14;
+    background: #141414;
 }
 
 body.dialog-split-active .dialog-split-placeholder {
@@ -519,7 +526,7 @@ body.dialog-with-stage.dialog-split-active:not(.dialog-split-mobile) #videoMedia
     grid-template-rows: none !important;
     gap: 4px !important;
     padding: 4px !important;
-    background: #0b0f14 !important;
+    background: #141414 !important;
     z-index: 2 !important;
 }
 
@@ -562,24 +569,27 @@ body.cam-bubble-stage #chatRoom {
     z-index: 50 !important;
 }
 
-/* Stage scene switcher (creator + moderators) */
+/* Stage scene switcher — pinned bottom-left, same size as lecture dock */
 .stage-scene-bar {
-    position: fixed;
-    left: 50%;
-    top: calc(var(--optrf-topbar-h, 48px) + 10px);
-    transform: translateX(-50%);
-    z-index: 46;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 12px;
-    background: rgba(12, 16, 22, 0.92);
-    border: 1px solid rgba(0, 168, 232, 0.45);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-    max-width: min(720px, calc(100vw - 24px));
-    flex-wrap: wrap;
-    justify-content: center;
+    position: fixed !important;
+    left: 14px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: calc(var(--bottom-btns-margin-bottom, 18px) + env(safe-area-inset-bottom, 0px)) !important;
+    transform: none !important;
+    z-index: 46 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    padding: 5px !important;
+    border-radius: 6px !important;
+    background: #181818 !important;
+    border: 1px solid #3c3c3c !important;
+    box-shadow: none !important;
+    max-width: none !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    font-family: var(--optrf-room-font) !important;
 }
 
 .stage-scene-bar.hidden {
@@ -587,47 +597,92 @@ body.cam-bubble-stage #chatRoom {
 }
 
 .stage-scene-label {
-    color: #fff;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    height: 50px !important;
+    padding: 0 10px !important;
+    color: #6e6e6e !important;
+    font-family: var(--optrf-room-font) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    white-space: nowrap !important;
 }
 
 .stage-scene-label i {
-    color: #00a8e8;
-    margin-right: 4px;
+    color: #6e6e6e !important;
+    margin: 0 !important;
+    font-size: 1.05rem !important;
 }
 
 .stage-scene-btn {
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 8px;
-    padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 12px;
-    font-weight: 700;
+    height: 50px !important;
+    min-height: 50px !important;
+    min-width: 50px !important;
+    padding: 0 14px !important;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    color: #cccccc !important;
+    font-family: var(--optrf-room-font) !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    line-height: 1 !important;
     cursor: pointer;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    box-shadow: none !important;
+    white-space: nowrap !important;
 }
 
 .stage-scene-btn i {
-    margin-right: 4px;
+    margin: 0 !important;
+    font-size: 1.15rem !important;
+    color: #cccccc !important;
 }
 
 .stage-scene-btn:hover {
-    background: rgba(0, 168, 232, 0.2);
+    background: #141414 !important;
+    color: #e4e4e4 !important;
+}
+
+.stage-scene-btn:hover i {
+    color: #e4e4e4 !important;
 }
 
 .stage-scene-btn.is-active {
-    background: #00a8e8;
-    border-color: #00a8e8;
-    color: #fff;
-    box-shadow: 0 0 0 2px rgba(0, 168, 232, 0.35);
+    background: #141414 !important;
+    border-color: #5a5a5a !important;
+    color: #e4e4e4 !important;
+    box-shadow: none !important;
+}
+
+.stage-scene-btn.is-active i {
+    color: #e4e4e4 !important;
 }
 
 @media (max-width: 640px) {
     .stage-scene-bar {
-        top: auto;
-        bottom: calc(var(--optrf-dock-h, 58px) + 56px);
+        left: 8px !important;
+        bottom: calc(var(--optrf-dock-h, 58px) + 8px) !important;
+        z-index: 1310 !important;
+        max-width: calc(100vw - 16px) !important;
+        overflow-x: auto !important;
+    }
+
+    .stage-scene-btn {
+        height: 40px !important;
+        min-height: 40px !important;
+        padding: 0 10px !important;
+        font-size: 11px !important;
+    }
+
+    .stage-scene-btn i {
+        font-size: 1rem !important;
     }
 }
 
@@ -1190,7 +1245,7 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         height: 100% !important;
         object-fit: contain !important;
         display: block !important;
-        background: #0b0f14;
+        background: #141414;
     }
 
     /* Нижний док: primary strip без горизонтального скролла */
@@ -1485,30 +1540,89 @@ body.optrf-compact-ui #mySettings .tab {
 
 /* Cursor room chrome */
 #bottomButtons {
-    background: rgba(24, 24, 24, 0.94) !important;
-    border: 1px solid var(--optrf-room-border, #3c3c3c) !important;
-    border-radius: var(--optrf-room-radius, 6px) !important;
+    background: #181818 !important;
+    border: 1px solid #3c3c3c !important;
+    border-radius: 6px !important;
     backdrop-filter: blur(12px);
 }
 
 #bottomButtons button {
     background: transparent !important;
-    color: var(--optrf-room-fg, #cccccc) !important;
-    border-radius: var(--optrf-room-radius, 6px) !important;
+    color: #cccccc !important;
+    border-radius: 6px !important;
 }
 
 #bottomButtons button:hover,
 #bottomButtons button.active {
-    background: var(--optrf-room-surface-2, #252526) !important;
-    color: var(--optrf-room-fg-bright, #e4e4e4) !important;
+    background: #141414 !important;
+    color: #e4e4e4 !important;
 }
 
 #mySettings,
 .chat-panel,
 #chatModule,
-.rc-panel {
-    background: var(--optrf-room-surface, #1e1e1e) !important;
-    border-color: var(--optrf-room-border, #3c3c3c) !important;
-    color: var(--optrf-room-fg, #cccccc) !important;
+.rc-panel,
+#chatRoom,
+.msger {
+    background: #181818 !important;
+    border-color: #3c3c3c !important;
+    color: #cccccc !important;
     font-family: var(--optrf-room-font) !important;
+}
+
+/* Video top bar: only volume + session time */
+.videoMenuBar > button,
+.videoMenuBar .navbar-dropdown,
+.videoMenuBar button,
+.videoAvatarMenuBar > button:not([id$='___pVolume']) {
+    display: none !important;
+}
+
+.videoMenuBar input[type='range'],
+.videoMenuBar .current-session-time,
+.videoMenuBar span[id$='__sessionTime'],
+.videoMenuBar span.current-session-time {
+    display: inline-flex !important;
+    visibility: visible !important;
+}
+
+.videoMenuBar {
+    background: #181818 !important;
+    border-radius: 0 !important;
+    justify-content: flex-end !important;
+    gap: 10px !important;
+}
+
+.videoMenuBar input[type='range'] {
+    accent-color: #cccccc;
+    width: 120px;
+}
+
+.videoMenuBar .current-session-time,
+.videoMenuBar span[id$='__sessionTime'] {
+    color: #cccccc !important;
+    font-family: var(--optrf-room-mono) !important;
+    font-size: 12px !important;
+    white-space: nowrap;
+}
+
+/* Kill toast notifications (desktop + mobile) */
+.swal2-container.swal2-toast-shown,
+.swal2-toast,
+div.swal2-container:has(.swal2-toast) {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Solid video tile backgrounds — no blue triangles */
+.Camera,
+.videoDefault,
+#videoMediaContainer,
+#videoPinMediaContainer,
+html[data-theme] .videoDefault,
+html[data-theme] .Camera,
+html[data-theme] video {
+    background: #141414 !important;
+    background-image: none !important;
 }

@@ -63,42 +63,42 @@ let BUTTONS = {
         customNoiseSuppression: true, // use RNNoise else WebRTC built-in
     },
     producerVideo: {
-        videoPictureInPicture: true,
-        videoMirrorButton: true,
-        fullScreenButton: true,
-        snapShotButton: true,
-        focusVideoButton: true,
-        muteAudioButton: true,
-        videoPrivacyButton: true,
+        videoPictureInPicture: false,
+        videoMirrorButton: false,
+        fullScreenButton: false,
+        snapShotButton: false,
+        focusVideoButton: false,
+        muteAudioButton: false,
+        videoPrivacyButton: false,
         audioVolumeInput: true,
-        drawingButton: true,
+        drawingButton: false,
     },
     consumerVideo: {
-        videoPictureInPicture: true,
-        videoMirrorButton: true,
-        fullScreenButton: true,
-        snapShotButton: true,
-        focusVideoButton: true,
-        sendMessageButton: true,
-        sendFileButton: true,
-        sendVideoButton: true,
-        muteVideoButton: true,
-        muteAudioButton: true,
+        videoPictureInPicture: false,
+        videoMirrorButton: false,
+        fullScreenButton: false,
+        snapShotButton: false,
+        focusVideoButton: false,
+        sendMessageButton: false,
+        sendFileButton: false,
+        sendVideoButton: false,
+        muteVideoButton: false,
+        muteAudioButton: false,
         audioVolumeInput: true,
-        geolocationButton: true, // Presenter
-        banButton: true, // presenter
-        ejectButton: true, // presenter
-        drawingButton: true, // presenter
+        geolocationButton: false, // Presenter
+        banButton: false, // presenter
+        ejectButton: false, // presenter
+        drawingButton: false, // presenter
     },
     videoOff: {
-        sendMessageButton: true,
-        sendFileButton: true,
-        sendVideoButton: true,
-        muteAudioButton: true,
+        sendMessageButton: false,
+        sendFileButton: false,
+        sendVideoButton: false,
+        muteAudioButton: false,
         audioVolumeInput: true,
-        geolocationButton: true, // Presenter
-        banButton: true, // presenter
-        ejectButton: true, // presenter
+        geolocationButton: false, // Presenter
+        banButton: false, // presenter
+        ejectButton: false, // presenter
     },
     chat: {
         chatPinButton: true,

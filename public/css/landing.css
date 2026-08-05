@@ -1184,18 +1184,8 @@ label {
         position: relative;
     }
     .site-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 700px;
-        background: #242830;
-        background: linear-gradient(80deg, rgba(36, 40, 48, 0.5) 0%, rgba(36, 40, 48, 0) 100%);
-        -webkit-transform-origin: 0;
-        transform-origin: 0;
-        -webkit-transform: skewY(-12deg);
-        transform: skewY(-12deg);
+        content: none !important;
+        display: none !important;
     }
 }
 .hero {

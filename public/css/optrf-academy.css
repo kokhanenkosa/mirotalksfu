@@ -3,12 +3,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-    /* —— Theme tokens (change these to recolor any block/border/text) —— */
-    --ac-bg: #181818;
-    --ac-bg-elevated: #1e1e1e;
-    --ac-surface: #1e1e1e;
-    --ac-surface-2: #252526;
-    --ac-surface-3: #2d2d2d;
+    /* —— Theme tokens: light gray #181818 · dark gray #141414 —— */
+    --ac-bg: #141414;
+    --ac-bg-elevated: #181818;
+    --ac-surface: #181818;
+    --ac-surface-2: #181818;
+    --ac-surface-3: #181818;
     --ac-text: #cccccc;
     --ac-text-bright: #e4e4e4;
     --ac-text-2: #9d9d9d;
@@ -97,18 +97,35 @@ body.academy-ui .cr-body {
     min-height: 100vh;
 }
 
-/* Kill any triangle / diagonal chrome */
+/* Kill any triangle / diagonal / skewed chrome — solid fill only */
 body.academy-ui .hero-figure,
 body.academy-ui .hero-figure-box,
 body.academy-ui .hero::before,
 body.academy-ui .hero::after,
 body.academy-ui .body-wrap::before,
 body.academy-ui .body-wrap::after,
+body.academy-ui .site-header::before,
+body.academy-ui .site-header::after,
 body.academy-ui .pa-bg,
 body.academy-ui .pa-orb,
-body.academy-ui .pa-grid {
+body.academy-ui .pa-grid,
+body.academy-ui .has-top-divider::before,
+body.academy-ui .has-bottom-divider::after {
+    content: none !important;
     display: none !important;
     background: none !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+html.academy-ui,
+body.academy-ui,
+body.academy-ui .body-wrap,
+body.academy-ui .academy-main,
+body.academy-ui main {
+    background: #141414 !important;
+    background-image: none !important;
 }
 
 body.academy-ui .site-header {
