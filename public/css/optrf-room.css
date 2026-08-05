@@ -139,11 +139,11 @@ body.dialog-split-active.dialog-split-mobile {
     --optrf-topbar-h: calc(48px + env(safe-area-inset-top, 0px));
 }
 
-body.dialog-split-active.dialog-split-mobile #videoPinMediaContainer {
+body.dialog-split-active.dialog-split-mobile:not(.dialog-with-stage) #videoPinMediaContainer {
     display: none !important;
 }
 
-body.dialog-split-active.dialog-split-mobile #videoMediaContainer {
+body.dialog-split-active.dialog-split-mobile:not(.dialog-with-stage) #videoMediaContainer {
     top: var(--optrf-topbar-h, 48px) !important;
     left: 0 !important;
     right: 0 !important;
@@ -263,6 +263,58 @@ body.dialog-split-active .dialog-waiting {
     gap: 10px;
     color: rgba(255, 255, 255, 0.72);
     font-size: 14px;
+}
+
+/*
+ * Dialog + co-lecturer stage (mod screen + creator circle):
+ * pin = stage; videoMediaContainer = guest strip. Override classic dialog CSS.
+ */
+body.dialog-with-stage.dialog-split-active #videoPinMediaContainer {
+    display: block !important;
+    z-index: 2 !important;
+}
+
+body.dialog-with-stage.dialog-split-active.dialog-split-mobile #videoPinMediaContainer {
+    display: block !important;
+}
+
+body.dialog-with-stage.dialog-split-active:not(.dialog-split-mobile) #videoMediaContainer {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    background: #0b0f14 !important;
+    z-index: 2 !important;
+}
+
+body.dialog-with-stage.dialog-split-active.dialog-split-mobile #videoMediaContainer {
+    display: flex !important;
+    flex-direction: row !important;
+    z-index: 2 !important;
+}
+
+body.dialog-with-stage.dialog-split-active .dialog-split-slot {
+    width: 100% !important;
+    height: 0 !important;
+    flex: 1 1 0 !important;
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+body.dialog-with-stage.dialog-split-active.dialog-split-mobile .dialog-split-slot {
+    width: 0 !important;
+    height: 100% !important;
+    flex: 1 1 0 !important;
+}
+
+body.dialog-with-stage #videoMediaContainer.cam-bubble-stage-hidden {
+    display: flex !important;
+}
+
+body.dialog-with-stage .stage-scene-bar {
+    /* Keep scene switcher above dialog controls */
+    z-index: 47;
 }
 
 /* Stage scene switcher (creator + moderators) */
@@ -813,11 +865,11 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
      * Dialog on mobile: single flex column for all slots.
      * Avoids two absolute containers overlapping under mobile !important rules.
      */
-    body.dialog-split-active.dialog-split-mobile #videoPinMediaContainer {
+    body.dialog-split-active.dialog-split-mobile:not(.dialog-with-stage) #videoPinMediaContainer {
         display: none !important;
     }
 
-    body.dialog-split-active.dialog-split-mobile #videoMediaContainer {
+    body.dialog-split-active.dialog-split-mobile:not(.dialog-with-stage) #videoMediaContainer {
         top: var(--optrf-topbar-h) !important;
         left: 0 !important;
         right: 0 !important;
@@ -830,6 +882,17 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         justify-content: stretch !important;
         overflow: hidden !important;
         z-index: 2;
+    }
+
+    body.dialog-with-stage.dialog-split-active.dialog-split-mobile #videoPinMediaContainer {
+        display: block !important;
+        z-index: 2 !important;
+    }
+
+    body.dialog-with-stage.dialog-split-active.dialog-split-mobile #videoMediaContainer {
+        display: flex !important;
+        flex-direction: row !important;
+        z-index: 2 !important;
     }
 
     body.dialog-split-active.dialog-split-mobile .dialog-split-slot {

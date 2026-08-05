@@ -45,6 +45,27 @@ function Area(Increment, Count, Width, Height, Margin = 10) {
 function resizeVideoMedia() {
     if (isHideALLVideosActive) return;
 
+    // Dialog + co-lecturer stage: pin owns stage; guest strip uses flex — don't override.
+    if (
+        typeof rc !== 'undefined' &&
+        rc?._dialogSplitActive &&
+        document.body.classList.contains('dialog-with-stage')
+    ) {
+        document.querySelectorAll('#videoPinMediaContainer .Camera, #videoPinMediaContainer .has-cam-bubble').forEach((el) => {
+            el.style.setProperty('width', '100%', 'important');
+            el.style.setProperty('height', '100%', 'important');
+            el.style.setProperty('margin', '0', 'important');
+            el.style.setProperty('max-width', 'none', 'important');
+            el.style.setProperty('max-height', 'none', 'important');
+        });
+        try {
+            if (rc?.reapplyCamBubbleLayouts) rc.reapplyCamBubbleLayouts();
+        } catch {
+            /* ignore */
+        }
+        return;
+    }
+
     // Dialog split owns tile geometry — do not let the grid resizer shrink/hide slots.
     if (typeof rc !== 'undefined' && rc?._dialogSplitActive) {
         document.querySelectorAll('.dialog-split-slot').forEach((el) => {

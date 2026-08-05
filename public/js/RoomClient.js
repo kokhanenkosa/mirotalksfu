@@ -12589,6 +12589,22 @@ class RoomClient {
         this._dialogSplitActive = true;
         this._applyingDialogSplit = true;
 
+        // Co-lecturer stage (mod screen + creator circle) must survive dialog
+        if (this._stageScene?.mode) {
+            document.body.classList.add('dialog-split-active', 'dialog-with-stage');
+            document.body.classList.remove('dialog-split-mobile');
+            const isMobileSplit = !!(this.isMobileDevice || window.innerWidth <= 768);
+            document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
+            try {
+                this.applyStageScene();
+                this.renderDialogControlsBar?.();
+            } finally {
+                this._applyingDialogSplit = false;
+            }
+            return;
+        }
+
+        document.body.classList.remove('dialog-with-stage');
         document.body.classList.add('dialog-split-active');
         this.clearDialogGridClasses();
 
@@ -12940,11 +12956,12 @@ class RoomClient {
 
     exitDialogSplitLayout() {
         if (!this._dialogSplitActive) return;
+        const restoreStage = Boolean(this._stageScene?.mode);
         this._dialogSplitActive = false;
         this._pendingRoomDialog = null;
         this.teardownDialogFilmstrip();
         this.clearDialogGridClasses();
-        document.body.classList.remove('dialog-split-active', 'dialog-split-mobile');
+        document.body.classList.remove('dialog-split-active', 'dialog-split-mobile', 'dialog-with-stage');
 
         document.querySelectorAll('.Camera[data-dialog-hidden="1"]').forEach((el) => {
             el.style.display = '';
@@ -12971,13 +12988,40 @@ class RoomClient {
             el.style.gridColumn = '';
             el.style.gridRow = '';
             el.style.justifySelf = '';
-            if (el.parentElement === this.videoPinMediaContainer || el.parentElement?.id === 'dialogFilmstrip') {
+            // Keep screen tile in pin if stage scene continues
+            if (el.parentElement?.id === 'dialogFilmstrip') {
+                this.videoMediaContainer.appendChild(el);
+            } else if (
+                el.parentElement === this.videoPinMediaContainer &&
+                !el.classList.contains('has-cam-bubble') &&
+                el.dataset?.mediaKind !== 'screen'
+            ) {
                 this.videoMediaContainer.appendChild(el);
             }
         });
         document.querySelectorAll('.dialog-split-placeholder').forEach((el) => {
             el.parentElement?.removeChild(el);
         });
+
+        this._dialogGuestId = null;
+        this._dialogGuestIds = [];
+        this._dialogPresenterId = null;
+        this._dialogActiveSpeakerId = null;
+
+        // Lectorium guest: after dialog ends, own avatar must not stay on stage
+        if (!isPresenter && (isLectoriumEnabled || isBroadcastingEnabled) && !this._broadcastSpotlit) {
+            this.removeVideoOff(this.peer_id);
+            this.removeDialogPlaceholder(this.peer_id);
+        }
+
+        if (restoreStage) {
+            // Keep co-lecturer stage (mod screen + creator circle) after dialog ends
+            this.hideDialogControlsBar?.();
+            this.applyStageScene();
+            this.renderStageSceneBar?.();
+            this.refreshLocalCameraMirror?.();
+            return;
+        }
 
         this.videoPinMediaContainer.style.display = 'none';
         this.videoPinMediaContainer.style.width = '';
@@ -12996,16 +13040,6 @@ class RoomClient {
         this.videoMediaContainer.style.gap = '';
         this.videoMediaContainer.style.padding = '';
         this.isVideoPinned = false;
-        this._dialogGuestId = null;
-        this._dialogGuestIds = [];
-        this._dialogPresenterId = null;
-        this._dialogActiveSpeakerId = null;
-
-        // Lectorium guest: after dialog ends, own avatar must not stay on stage
-        if (!isPresenter && (isLectoriumEnabled || isBroadcastingEnabled) && !this._broadcastSpotlit) {
-            this.removeVideoOff(this.peer_id);
-            this.removeDialogPlaceholder(this.peer_id);
-        }
 
         // Restore stage width next to pinned chat
         if (this.isChatPinned && !this.isMobileDevice) {
@@ -13283,6 +13317,157 @@ class RoomClient {
         return this.forcePinMediaTile(tile);
     }
 
+    /** Collect guest camera wraps for dialog (never creator/mod screen — those live in stage). */
+    getDialogGuestWraps(guestIds = []) {
+        const creatorId = this._stageScene?.creatorId || this._meetingCreatorId;
+        const modId = this._stageScene?.moderatorId;
+        return (guestIds || [])
+            .filter((id) => id && id !== creatorId && id !== modId)
+            .map((id) => {
+                let wrap = this.getCameraWrapByPeerId(id);
+                if (wrap && wrap.classList.contains('dialog-split-placeholder')) wrap = null;
+                if (!wrap) wrap = this.getId(id + '__videoOff');
+                if (!wrap) wrap = this.ensureDialogPlaceholder(id);
+                if (wrap) {
+                    wrap.dataset.dialogHidden = '0';
+                    wrap.dataset.stageHidden = '0';
+                    wrap.style.display = '';
+                    wrap.style.removeProperty('display');
+                    wrap.classList.remove('cam-bubble-source-hidden');
+                    if (wrap.parentElement !== this.videoMediaContainer) {
+                        this.videoMediaContainer.appendChild(wrap);
+                    }
+                }
+                return wrap;
+            })
+            .filter(Boolean);
+    }
+
+    /**
+     * Layout: pin stage (mod screen + creator circle / creator cam) + guest strip beside/below.
+     * Used when dialog runs together with co-lecturer stage scenes.
+     */
+    layoutDialogGuestsBesideStage(guestIds = []) {
+        if (!this.videoPinMediaContainer || !this.videoMediaContainer) return;
+        const guests = guestIds.length ? guestIds : this._dialogGuestIds || [];
+        const guestWraps = this.getDialogGuestWraps(guests);
+        const isMobileSplit = !!(this.isMobileDevice || window.innerWidth <= 768);
+        const chatPct = !isMobileSplit && this.isChatPinned ? 25 : 0;
+        const stagePct = 100 - chatPct;
+        // Stage (screen+bubble) takes most of the area; guests get a side/bottom strip
+        const pinFrac = isMobileSplit ? 0.55 : guestWraps.length ? 0.62 : 1;
+        const pinPct = stagePct * pinFrac;
+        const guestPct = stagePct - pinPct;
+        const setImp = (el, prop, value) => el?.style?.setProperty(prop, value, 'important');
+
+        document.body.classList.add('dialog-with-stage', 'cam-bubble-stage', 'stage-scene-active');
+        document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
+
+        // Pin = co-lecturer stage
+        setImp(this.videoPinMediaContainer, 'display', 'block');
+        setImp(this.videoPinMediaContainer, 'position', 'absolute');
+        setImp(this.videoPinMediaContainer, 'top', isMobileSplit ? 'var(--optrf-topbar-h, 48px)' : '0');
+        setImp(this.videoPinMediaContainer, 'left', '0');
+        setImp(this.videoPinMediaContainer, 'right', 'auto');
+        setImp(this.videoPinMediaContainer, 'bottom', 'auto');
+        setImp(this.videoPinMediaContainer, 'overflow', 'hidden');
+        if (isMobileSplit) {
+            setImp(this.videoPinMediaContainer, 'width', '100%');
+            setImp(
+                this.videoPinMediaContainer,
+                'height',
+                `calc((100% - var(--optrf-dock-h, 58px) - var(--optrf-topbar-h, 48px)) * ${pinFrac})`
+            );
+        } else {
+            setImp(this.videoPinMediaContainer, 'width', `${pinPct}%`);
+            setImp(this.videoPinMediaContainer, 'height', '100%');
+        }
+
+        // Guest strip
+        this.videoMediaContainer.classList.remove('cam-bubble-stage-hidden');
+        setImp(this.videoMediaContainer, 'display', guestWraps.length ? 'flex' : 'none');
+        setImp(this.videoMediaContainer, 'position', 'absolute');
+        setImp(this.videoMediaContainer, 'overflow', 'hidden');
+        setImp(this.videoMediaContainer, 'flex-direction', isMobileSplit ? 'row' : 'column');
+        setImp(this.videoMediaContainer, 'flex-wrap', 'nowrap');
+        setImp(this.videoMediaContainer, 'gap', '4px');
+        setImp(this.videoMediaContainer, 'padding', '4px');
+        setImp(this.videoMediaContainer, 'box-sizing', 'border-box');
+        setImp(this.videoMediaContainer, 'grid-template-columns', '');
+        setImp(this.videoMediaContainer, 'grid-template-rows', '');
+
+        if (isMobileSplit) {
+            setImp(this.videoMediaContainer, 'left', '0');
+            setImp(this.videoMediaContainer, 'width', '100%');
+            setImp(
+                this.videoMediaContainer,
+                'top',
+                `calc(var(--optrf-topbar-h, 48px) + (100% - var(--optrf-dock-h, 58px) - var(--optrf-topbar-h, 48px)) * ${pinFrac})`
+            );
+            setImp(
+                this.videoMediaContainer,
+                'height',
+                `calc((100% - var(--optrf-dock-h, 58px) - var(--optrf-topbar-h, 48px)) * ${1 - pinFrac})`
+            );
+        } else {
+            setImp(this.videoMediaContainer, 'top', '0');
+            setImp(this.videoMediaContainer, 'left', `${pinPct}%`);
+            setImp(this.videoMediaContainer, 'width', `${guestPct}%`);
+            setImp(this.videoMediaContainer, 'height', '100%');
+        }
+
+        // Hide non-guest / non-pin tiles
+        const keep = new Set([
+            ...guestWraps,
+            ...this.videoPinMediaContainer.querySelectorAll('.Camera'),
+        ]);
+        document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
+            if (keep.has(el)) return;
+            el.dataset.stageHidden = '1';
+            el.dataset.dialogHidden = '1';
+            el.style.display = 'none';
+            el.classList.remove('dialog-split-slot', 'dialog-split-left', 'dialog-split-right');
+        });
+
+        guestWraps.forEach((wrap, index) => {
+            if (!wrap) return;
+            wrap.dataset.dialogHidden = '0';
+            wrap.dataset.stageHidden = '0';
+            wrap.classList.add('dialog-split-slot', 'dialog-split-right', `dialog-slot-${index}`);
+            setImp(wrap, 'display', 'block');
+            setImp(wrap, 'position', 'relative');
+            setImp(wrap, 'flex', '1 1 0');
+            setImp(wrap, 'width', isMobileSplit ? '0' : '100%');
+            setImp(wrap, 'height', isMobileSplit ? '100%' : '0');
+            setImp(wrap, 'min-width', '0');
+            setImp(wrap, 'min-height', '0');
+            setImp(wrap, 'margin', '0');
+            setImp(wrap, 'max-width', 'none');
+            setImp(wrap, 'max-height', 'none');
+            const v = wrap.querySelector('video');
+            if (v) {
+                setImp(v, 'position', 'absolute');
+                setImp(v, 'inset', '0');
+                setImp(v, 'width', '100%');
+                setImp(v, 'height', '100%');
+                setImp(v, 'object-fit', 'contain');
+                try {
+                    v.play?.().catch?.(() => {});
+                } catch {
+                    /* ignore */
+                }
+            }
+            this.bindDialogSourceAspect?.(wrap, isMobileSplit);
+        });
+
+        // Fill pin camera tile
+        this.videoPinMediaContainer.querySelectorAll('.Camera, .has-cam-bubble').forEach((el) => {
+            setImp(el, 'width', '100%');
+            setImp(el, 'height', '100%');
+            setImp(el, 'margin', '0');
+        });
+    }
+
     applyStageScene() {
         if (!this._stageScene?.mode) {
             this.clearStageSceneVisuals();
@@ -13294,28 +13479,28 @@ class RoomClient {
         document.body.classList.toggle('stage-scene-1', mode === 1);
         document.body.classList.toggle('stage-scene-2', mode === 2);
 
-        // Always refresh moderator id if screen moved
         const liveModId = this.findScreenSharingModeratorId() || moderatorId;
         if (liveModId && liveModId !== this._stageScene.moderatorId) {
             this._stageScene.moderatorId = liveModId;
         }
         const modId = this._stageScene.moderatorId || liveModId;
+        const dialogGuests = this._dialogSplitActive ? [...(this._dialogGuestIds || [])] : [];
+        const guestKeep = dialogGuests
+            .map((id) => this.getCameraWrapByPeerId(id) || this.getId(id + '__videoOff') || this.ensureDialogPlaceholder(id))
+            .filter(Boolean);
 
         if (mode === 2) {
-            // Creator camera full stage — tear down circle first, keep pin usable
             this._stageSceneActive = false;
             if (modId) this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: true });
             this.revealStageHiddenTiles();
-            this.applyCamBubbleStageLayout(false);
 
             const creatorTile =
                 this.getPeerMediaTile(creatorId, 'video') || this.getId?.(creatorId + '__videoOff');
             if (creatorTile) {
                 creatorTile.classList.remove('cam-bubble-source-hidden');
                 this.forcePinMediaTile(creatorTile);
-                this.hideNonStageTiles([creatorTile]);
+                this.hideNonStageTiles([creatorTile, ...guestKeep]);
             }
-            // Hide moderator screen while scene 2 is active
             if (modId) {
                 const screenTile = this.getPeerMediaTile(modId, 'screen');
                 if (screenTile && screenTile !== creatorTile) {
@@ -13323,17 +13508,14 @@ class RoomClient {
                     screenTile.style.display = 'none';
                 }
             }
-            try {
-                handleAspectRatio();
-            } catch {
-                /* ignore */
-            }
-            // Re-assert pin fill after grid pass
-            if (creatorTile) this.forcePinMediaTile(creatorTile);
-            this.applyCamBubbleStageLayout(false);
-            // Scene 2 still uses pin as full stage without bubble class
             document.body.classList.add('cam-bubble-stage');
-            this.applyCamBubbleStageLayout(true);
+            if (this._dialogSplitActive) {
+                this.layoutDialogGuestsBesideStage(dialogGuests);
+            } else {
+                this.applyCamBubbleStageLayout(true);
+            }
+            this.renderStageSceneBar?.();
+            if (this._dialogSplitActive) this.renderDialogControlsBar?.();
             return;
         }
 
@@ -13344,6 +13526,9 @@ class RoomClient {
         const screenTile = this.getPeerMediaTile(modId, 'screen');
         if (!screenTile) {
             this.userLog?.('warning', 'Нет демонстрации экрана для сцены 1', 'top-end', 4000);
+            if (this._dialogSplitActive) {
+                this.layoutDialogGuestsBesideStage(dialogGuests);
+            }
             [300, 800, 1600, 3200].forEach((ms) => {
                 setTimeout(() => {
                     if (this._stageScene?.mode === 1) this.applyStageScene();
@@ -13352,12 +13537,10 @@ class RoomClient {
             return;
         }
 
-        // Strip old bubble without collapsing stage mid-switch
         this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: false });
         this.forcePinMediaTile(screenTile);
-        this.hideNonStageTiles([screenTile]);
+        this.hideNonStageTiles([screenTile, ...guestKeep]);
 
-        // Creator camera must be hidden in the grid; used only inside the circle
         const creatorVideo =
             this.getPeerMediaTile(creatorId, 'video') || this.getId?.(creatorId + '__videoOff');
         if (creatorVideo && creatorVideo !== screenTile) {
@@ -13367,27 +13550,25 @@ class RoomClient {
         }
 
         const ok = this.applyCamBubble(modId, creatorId);
-        this.applyCamBubbleStageLayout(true);
-        if (!ok) {
-            // Still keep full-bleed screen even if camera stream is missing
+        if (this._dialogSplitActive) {
+            this.layoutDialogGuestsBesideStage(dialogGuests);
+        } else {
             this.applyCamBubbleStageLayout(true);
+        }
+        if (!ok) {
             [250, 700, 1500, 3000].forEach((ms) => {
                 setTimeout(() => {
                     if (this._stageScene?.mode !== 1) return;
-                    this.forcePinMediaTile(this.getPeerMediaTile(modId, 'screen') || screenTile);
-                    this.hideNonStageTiles([this.getPeerMediaTile(modId, 'screen') || screenTile]);
+                    const st = this.getPeerMediaTile(modId, 'screen') || screenTile;
+                    this.forcePinMediaTile(st);
                     this.applyCamBubble(modId, creatorId);
-                    this.applyCamBubbleStageLayout(true);
+                    if (this._dialogSplitActive) this.layoutDialogGuestsBesideStage(dialogGuests);
+                    else this.applyCamBubbleStageLayout(true);
                 }, ms);
             });
         }
-        try {
-            handleAspectRatio();
-        } catch {
-            /* ignore */
-        }
-        this.applyCamBubbleStageLayout(true);
         this.renderStageSceneBar?.();
+        if (this._dialogSplitActive) this.renderDialogControlsBar?.();
     }
 
     /** When a moderator starts screen share — offer / auto-switch to scene 1. */
@@ -13395,7 +13576,6 @@ class RoomClient {
         if (!isPresenter) return;
         const creatorId = this.ensureMeetingCreatorId();
         if (!creatorId) return;
-        // Moderator (or creator) sharing → scene 1
         if (!this._stageScene) {
             this._stageScene = {
                 mode: 1,
@@ -13411,7 +13591,6 @@ class RoomClient {
         this.broadcastStageScene(true);
         this.applyStageScene();
         this.renderStageSceneBar();
-        // Ensure creator has camera for the circle
         if (creatorId === this.peer_id && !this.producerExist(mediaType.video)) {
             this.peerMediaStartForced?.(mediaType.video)?.catch?.(() => {});
         }
@@ -14884,6 +15063,11 @@ class RoomClient {
 
     applyCamBubbleStageLayout(active) {
         if (!this.videoPinMediaContainer || !this.videoMediaContainer) return;
+        // Dialog + co-lecturer stage: keep guest strip visible beside pin
+        if (active && this._dialogSplitActive && this._stageScene?.mode) {
+            this.layoutDialogGuestsBesideStage(this._dialogGuestIds || []);
+            return;
+        }
         const on = Boolean(active && this.isVideoPinned);
         document.body.classList.toggle('cam-bubble-stage', on);
         if (on) {
@@ -15883,7 +16067,11 @@ class RoomClient {
                 this.videoPinMediaContainer.style.display = 'block';
                 this.isVideoPinned = true;
             }
-            this.applyCamBubbleStageLayout(true);
+            if (this._dialogSplitActive && this._stageScene?.mode) {
+                this.layoutDialogGuestsBesideStage(this._dialogGuestIds || []);
+            } else {
+                this.applyCamBubbleStageLayout(true);
+            }
         }
 
         try {
@@ -15893,7 +16081,11 @@ class RoomClient {
         }
         // Re-assert full-bleed after aspect-ratio/grid pass
         if (shouldStage || document.body.classList.contains('cam-bubble-stage')) {
-            this.applyCamBubbleStageLayout(true);
+            if (this._dialogSplitActive && this._stageScene?.mode) {
+                this.layoutDialogGuestsBesideStage(this._dialogGuestIds || []);
+            } else {
+                this.applyCamBubbleStageLayout(true);
+            }
         }
         this.syncCamBubbleButton();
         return true;
