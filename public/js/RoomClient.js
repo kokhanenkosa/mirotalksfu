@@ -12683,17 +12683,16 @@ class RoomClient {
         this._dialogSplitActive = true;
         this._applyingDialogSplit = true;
 
-        // Co-lecturer stage (mod screen + creator circle) must survive dialog
+        // Co-lecturer stage (mod screen + creator circle) must survive dialog.
+        // All room viewers (incl. non-dialog guests) see stage + dialog guest cameras.
         if (this._stageScene?.mode) {
-            const participant = this.isLocalDialogParticipant();
-            document.body.classList.add('dialog-split-active');
-            document.body.classList.toggle('dialog-with-stage', participant);
+            document.body.classList.add('dialog-split-active', 'dialog-with-stage');
             document.body.classList.remove('dialog-split-mobile');
             const isMobileSplit = !!(this.isMobileDevice || window.innerWidth <= 768);
-            if (participant) document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
+            document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
             try {
                 this.applyStageScene();
-                if (participant) this.renderDialogControlsBar?.();
+                if (this.isLocalDialogParticipant()) this.renderDialogControlsBar?.();
                 else this.hideDialogControlsBar?.();
             } finally {
                 this._applyingDialogSplit = false;
@@ -13495,6 +13494,12 @@ class RoomClient {
                     if (wrap.parentElement !== this.videoMediaContainer) {
                         this.videoMediaContainer.appendChild(wrap);
                     }
+                    const v = wrap.querySelector('video');
+                    try {
+                        if (v?.paused) v.play?.().catch?.(() => {});
+                    } catch {
+                        /* ignore */
+                    }
                 }
                 return wrap;
             })
@@ -13642,16 +13647,17 @@ class RoomClient {
             this._stageScene.moderatorId = liveModId;
         }
         const modId = this._stageScene.moderatorId || liveModId;
-        // Only dialog participants see guest strip; spectators keep full mod screen + circle
-        const dialogParticipant = this._dialogSplitActive && this.isLocalDialogParticipant();
-        const dialogGuests = dialogParticipant ? [...(this._dialogGuestIds || [])] : [];
+        // Everyone in the room sees dialog guest cameras beside the stage (not only invitees)
+        const showDialogGuests = Boolean(this._dialogSplitActive);
+        const dialogGuests = showDialogGuests ? [...(this._dialogGuestIds || [])] : [];
         const guestKeep = dialogGuests
             .map((id) => this.getCameraWrapByPeerId(id) || this.getId(id + '__videoOff') || this.ensureDialogPlaceholder(id))
             .filter(Boolean);
         const layoutStage = () => {
-            if (dialogParticipant) this.layoutDialogGuestsBesideStage(dialogGuests);
+            if (showDialogGuests) this.layoutDialogGuestsBesideStage(dialogGuests);
             else this.applyCamBubbleStageLayout(true);
         };
+        const dialogParticipant = showDialogGuests && this.isLocalDialogParticipant();
 
         if (mode === 2) {
             this._stageSceneActive = false;
@@ -13687,8 +13693,7 @@ class RoomClient {
         const screenTile = this.getPeerMediaTile(modId, 'screen');
         if (!screenTile) {
             this.userLog?.('warning', 'Нет демонстрации экрана для сцены 1', 'top-end', 4000);
-            if (dialogParticipant) this.layoutDialogGuestsBesideStage(dialogGuests);
-            else this.applyCamBubbleStageLayout(true);
+            layoutStage();
             [300, 800, 1600, 3200].forEach((ms) => {
                 setTimeout(() => {
                     if (this._stageScene?.mode === 1) this.applyStageScene();
@@ -15228,8 +15233,8 @@ class RoomClient {
 
     applyCamBubbleStageLayout(active) {
         if (!this.videoPinMediaContainer || !this.videoMediaContainer) return;
-        // Dialog + co-lecturer stage: guest strip only for dialog participants
-        if (active && this._dialogSplitActive && this._stageScene?.mode && this.isLocalDialogParticipant()) {
+        // Dialog + co-lecturer stage: guest strip for all viewers (incl. spectators)
+        if (active && this._dialogSplitActive && this._stageScene?.mode) {
             this.layoutDialogGuestsBesideStage(this._dialogGuestIds || []);
             return;
         }
@@ -16252,11 +16257,7 @@ class RoomClient {
                 this.videoPinMediaContainer.style.display = 'block';
                 this.isVideoPinned = true;
             }
-            if (
-                this._dialogSplitActive &&
-                this._stageScene?.mode &&
-                this.isLocalDialogParticipant()
-            ) {
+            if (this._dialogSplitActive && this._stageScene?.mode) {
                 this.layoutDialogGuestsBesideStage(this._dialogGuestIds || []);
             } else {
                 this.applyCamBubbleStageLayout(true);
@@ -16270,11 +16271,7 @@ class RoomClient {
         }
         // Re-assert full-bleed after aspect-ratio/grid pass
         if (shouldStage || document.body.classList.contains('cam-bubble-stage')) {
-            if (
-                this._dialogSplitActive &&
-                this._stageScene?.mode &&
-                this.isLocalDialogParticipant()
-            ) {
+            if (this._dialogSplitActive && this._stageScene?.mode) {
                 this.layoutDialogGuestsBesideStage(this._dialogGuestIds || []);
             } else {
                 this.applyCamBubbleStageLayout(true);
