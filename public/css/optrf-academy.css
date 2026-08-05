@@ -712,9 +712,83 @@ body.academy-ui .pulse {
     animation: none;
 }
 
+/* Neutralize old dashboard layout when authenticated (was breaking after leave-room) */
+body.academy-ui.is-phone-authenticated main,
+body.academy-ui.is-phone-authenticated .academy-main,
+body.academy-ui.phone-session-pending .academy-main,
+body.academy-ui.is-phone-guest .academy-main {
+    min-height: 100vh !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 80px 20px 56px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: var(--ac-bg) !important;
+    box-sizing: border-box !important;
+}
+
+body.academy-ui.is-phone-authenticated .academy-stage,
+body.academy-ui.phone-session-pending .academy-stage,
+body.academy-ui.is-phone-guest .academy-stage {
+    width: min(100%, var(--ac-max)) !important;
+    max-width: var(--ac-max) !important;
+    margin: 0 auto !important;
+    gap: var(--ac-gap) !important;
+}
+
+body.academy-ui.is-phone-authenticated .dashboard-section,
+body.academy-ui.is-phone-authenticated .dashboard-container,
+body.academy-ui.is-phone-authenticated .dashboard-shell,
+body.academy-ui.is-phone-authenticated .cta.section,
+body.academy-ui.is-phone-authenticated .cta-inner {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+body.academy-ui.is-phone-authenticated .dashboard-account,
+body.academy-ui.is-phone-authenticated .phone-cabinet {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+body.academy-ui.is-phone-authenticated .phone-cabinet-head {
+    border-bottom: 1px solid var(--ac-border) !important;
+    padding-bottom: 16px !important;
+}
+
+body.academy-ui.is-phone-authenticated .dashboard-create,
+body.academy-ui.is-phone-authenticated #createRoomPanel {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--ac-gap) !important;
+}
+
+body.academy-ui.is-phone-authenticated .site-header .container,
+body.academy-ui.is-phone-authenticated .site-footer .container {
+    max-width: none !important;
+}
+
 @media (max-width: 480px) {
-    .academy-main {
-        padding: 64px 16px 40px;
+    .academy-main,
+    body.academy-ui.is-phone-authenticated .academy-main {
+        padding: 64px 16px 40px !important;
     }
 
     .academy-stage {

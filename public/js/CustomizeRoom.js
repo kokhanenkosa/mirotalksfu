@@ -50,9 +50,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const generateRoomId = () => {
-        const fromGen = window.RoomNameGen?.DEFAULT || window.RoomNameGen?.generate?.();
+        const fromGen = window.RoomNameGen?.generate?.();
         if (fromGen) return String(fromGen).replace(/[:\s]+/g, '-');
-        return 'study-room';
+        const d = new Date();
+        const p = (n) => String(n).padStart(2, '0');
+        return `study-room-${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}-${p(d.getHours())}-${p(d.getMinutes())}`;
     };
 
     // —— Defaults (as on the annotated screenshot) ——

@@ -130,8 +130,9 @@
         return WORDS[Math.floor(Math.random() * WORDS.length)];
     }
 
-    function generate(_date = new Date()) {
-        return 'study room';
+    function generate(date = new Date()) {
+        // Unique per create so the opener is always room owner/presenter
+        return `study-room-${formatStamp(date)}`;
     }
 
     window.RoomNameGen = {
@@ -139,6 +140,6 @@
         generate,
         formatStamp,
         pickWord,
-        DEFAULT: 'study room',
+        DEFAULT_PREFIX: 'study-room',
     };
 })();

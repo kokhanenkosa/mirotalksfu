@@ -2798,6 +2798,25 @@ async function startServer() {
             socket.room_id = room_id;
 
             if (roomList.has(socket.room_id)) {
+                const existing = roomList.get(socket.room_id);
+                // Reclaim orphan empty rooms so the opener becomes presenter
+                if (
+                    existing &&
+                    !existing.createdByPhone &&
+                    socket.phone_session?.canCreate &&
+                    existing.getPeersCount() === 0
+                ) {
+                    existing.createdByPhone = socket.phone_session.phone;
+                    try {
+                        await phoneStore.recordRoomCreated(
+                            socket.phone_session.phone,
+                            socket.room_id,
+                            existing.sessionId
+                        );
+                    } catch (err) {
+                        log.warn('PhoneStore recordRoomCreated on reclaim failed', err.message);
+                    }
+                }
                 callback({ error: 'already exists' });
             } else {
                 log.debug('Created room', { room_id: socket.room_id, lectorium: Boolean(lectorium) });
@@ -2887,6 +2906,29 @@ async function startServer() {
                 }
                 isObserver = requestedObserver && phoneSession.isSuperAdmin;
                 socket.isSuperAdminObserver = isObserver;
+                // Empty room without owner: first creator/super-admin claims it (fixes reuse of fixed room names).
+                if (
+                    room &&
+                    !room.createdByPhone &&
+                    !isObserver &&
+                    phoneSession.canCreate &&
+                    room.getPeersCount() === 0
+                ) {
+                    room.createdByPhone = phoneSession.phone;
+                    try {
+                        await phoneStore.recordRoomCreated(
+                            phoneSession.phone,
+                            room.id,
+                            room.sessionId
+                        );
+                    } catch (err) {
+                        log.warn('PhoneStore recordRoomCreated on claim failed', err.message);
+                    }
+                    log.debug('[Join] - Claimed empty room ownership', {
+                        room_id: room.id,
+                        phone: phoneSession.phone,
+                    });
+                }
                 // Ведущий только создатель комнаты или супер-админ. join_first/клиентский флаг игнорируем.
                 is_presenter =
                     !isObserver && phoneAuth.canPresent(phoneSession.phone, room?.createdByPhone);

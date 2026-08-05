@@ -9,7 +9,7 @@ if (!document.querySelector('script[src$="/js/RussianUI.js"], script[src$="../js
 }
 
 // Сброс старого кэша исходного брендинга
-const brandDataKey = 'brandData_optrf_v5';
+const brandDataKey = 'brandData_optrf_v6';
 
 /** Жёстко фиксируем hero-тексты — env/Coolify не должен их перетирать */
 const OPTRF_HERO = {
@@ -123,7 +123,7 @@ let BRAND = {
         title: '<strong>OPTRF</strong>',
         html: `
             <hr />
-            <span>&copy; ${new Date().getFullYear()} OPTRF. Все права защищены. точно 222</span>
+            <span>&copy; ${new Date().getFullYear()} OPTRF Academy. Все права защищены.</span>
             <hr />
         `,
     },
