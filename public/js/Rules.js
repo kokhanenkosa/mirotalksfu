@@ -117,10 +117,10 @@ let BUTTONS = {
     },
     participantsList: {
         saveInfoButton: true, // presenter
-        sendFileAllButton: true, // presenter
+        sendFileAllButton: false, // presenter
         ejectAllButton: true, // presenter
-        sendFileButton: true, // presenter & guests
-        geoLocationButton: true, // presenter
+        sendFileButton: false, // presenter & guests
+        geoLocationButton: false, // presenter
         banButton: true, // presenter
         ejectButton: true, // presenter
     },

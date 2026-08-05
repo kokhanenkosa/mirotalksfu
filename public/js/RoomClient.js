@@ -4140,19 +4140,8 @@ class RoomClient {
                 eBtn._dropdownContent = eVc;
                 this.handleDropdownEvents(eDiv, eBtn, eVc);
 
-                vb.appendChild(eDiv);
+                // Keep volume only on consumer video bar (icons/toasts disabled)
                 BUTTONS.consumerVideo.audioVolumeInput && vb.appendChild(pv);
-                vb.appendChild(au);
-                vb.appendChild(cm);
-                if (fsQuick) vb.appendChild(fsQuick);
-                BUTTONS.consumerVideo.snapShotButton && vb.appendChild(ts);
-                BUTTONS.consumerVideo.videoPictureInPicture &&
-                    this.isVideoPictureInPictureSupported &&
-                    vb.appendChild(pip);
-                BUTTONS.consumerVideo.drawingButton && remoteIsScreen && vb.appendChild(dw);
-                BUTTONS.consumerVideo.focusVideoButton && vb.appendChild(ha);
-
-                if (!this.isMobileDevice) vb.appendChild(pn);
 
                 d.appendChild(elem);
                 d.appendChild(remoteVideoLoader);
@@ -13240,8 +13229,10 @@ class RoomClient {
     }
 
     setPeerPresenter(peer_id) {
-        if (!isPresenter) {
-            return this.userLog('warning', 'Только модератор может назначать модераторов', 'top-end');
+        const amPresenter = Boolean(isPresenter || this.peer_info?.peer_presenter);
+        if (!amPresenter) {
+            console.warn('[setPeerPresenter] denied locally — not presenter');
+            return;
         }
         if (!peer_id || peer_id === this.peer_id) return;
 
@@ -13256,15 +13247,23 @@ class RoomClient {
         Swal.fire({
             background: swalBackground,
             position: 'center',
-            imageUrl: image.user,
             title: 'Сделать модератором',
             text: 'Участник получит права ведущего: управление медиа, диалог, настройки комнаты.',
-            showDenyButton: true,
+            showDenyButton: false,
+            showCancelButton: true,
             confirmButtonText: 'Да',
-            denyButtonText: 'Нет',
+            cancelButtonText: 'Отмена',
             heightAuto: false,
             allowOutsideClick: false,
-            customClass: { container: 'optrf-swal-above-stage' },
+            buttonsStyling: false,
+            customClass: {
+                container: 'optrf-swal-above-stage',
+                popup: 'optrf-share-popup',
+                confirmButton: 'optrf-swal-btn',
+                cancelButton: 'optrf-swal-btn optrf-swal-btn--ghost',
+                title: 'optrf-swal-title',
+                actions: 'optrf-swal-actions',
+            },
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -13272,9 +13271,18 @@ class RoomClient {
             this.socket.emit('setPeerPresenter', {
                 peer_id,
                 peer_name: this.peer_name,
-                peer_uuid: this.peer_uuid,
+                peer_uuid: this.peer_uuid || this.peer_info?.peer_uuid || '',
             });
-            this.userLog('success', 'Запрос на назначение модератора отправлен', 'top-end', 3000);
+            // Optimistic local update so list refreshes even if toast is muted
+            try {
+                const mapped = this.peers?.get?.(peer_id);
+                if (mapped?.peer_info) mapped.peer_info.peer_presenter = true;
+                if (typeof isParticipantsListOpen !== 'undefined' && isParticipantsListOpen) {
+                    getRoomParticipants();
+                }
+            } catch {
+                /* ignore */
+            }
         });
     }
 

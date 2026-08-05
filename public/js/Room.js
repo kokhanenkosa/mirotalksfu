@@ -1713,49 +1713,36 @@ function checkMedia() {
 // SHARE ROOM
 // ####################################################
 
-async function shareRoom(useNavigator = false) {
-    if (navigator.share && useNavigator) {
-        try {
-            await navigator.share({ url: RoomURL });
-            userLog('info', 'Ссылка на комнату отправлена', 'top-end');
-        } catch (err) {
-            share();
-        }
-    } else {
-        share();
-    }
-    function share() {
-        sound('open');
+async function shareRoom(_useNavigator = false) {
+    // Never open native OS share sheet — only our copy-link dialog
+    sound('open');
 
-        Swal.fire({
-            background: swalBackground,
-            position: 'center',
-            title: 'Поделиться комнатой',
-            html: '',
-            showDenyButton: false,
-            showCancelButton: true,
-            confirmButtonText: 'Копировать ссылку',
-            cancelButtonText: 'Закрыть',
-            customClass: {
-                popup: 'optrf-share-popup',
-                confirmButton: 'optrf-swal-btn',
-                cancelButton: 'optrf-swal-btn optrf-swal-btn--ghost',
-                title: 'optrf-swal-title',
-                actions: 'optrf-swal-actions',
-            },
-            buttonsStyling: false,
-            showClass: { popup: 'animate__animated animate__fadeInDown' },
-            hideClass: { popup: 'animate__animated animate__fadeOutUp' },
-        }).then((result) => {
-            if (result.isConfirmed) {
-                copyRoomURL();
-            }
-            // share screen on join
-            if (isScreenAllowed) {
-                rc.shareScreen();
-            }
-        });
-    }
+    Swal.fire({
+        background: swalBackground,
+        position: 'center',
+        title: 'Поделиться комнатой',
+        html: '',
+        showDenyButton: false,
+        showCancelButton: false,
+        showCloseButton: true,
+        confirmButtonText: 'Копировать ссылку',
+        customClass: {
+            popup: 'optrf-share-popup',
+            confirmButton: 'optrf-swal-btn',
+            title: 'optrf-swal-title',
+            actions: 'optrf-swal-actions',
+        },
+        buttonsStyling: false,
+        showClass: { popup: 'animate__animated animate__fadeInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+    }).then((result) => {
+        if (result.isConfirmed) {
+            copyRoomURL();
+        }
+        if (isScreenAllowed) {
+            rc.shareScreen();
+        }
+    });
 }
 
 // ####################################################
@@ -2470,7 +2457,7 @@ function handleButtons() {
     document.addEventListener('click', handleExitMenuOutsideClick);
 
     shareButton.onclick = () => {
-        shareRoom(true);
+        shareRoom(false);
     };
     shareButton.onmouseenter = () => {
         if (isMobileDevice || !BUTTONS.popup.shareRoomQrOnHover) return;
@@ -2569,7 +2556,7 @@ function handleButtons() {
         playSpeaker(speakerSelect?.value, 'speaker');
     };
     roomId.onclick = () => {
-        isMobileDevice ? shareRoom(true) : copyRoomURL();
+        shareRoom(false);
     };
     roomSendEmail.onclick = () => {
         shareRoomByEmail();
@@ -2734,7 +2721,7 @@ function handleButtons() {
         rc.toggleShowParticipants(true);
     };
     chatShareRoomBtn.onclick = (e) => {
-        shareRoom(true);
+        shareRoom(false);
     };
     chatGhostButton.onclick = (e) => {
         rc.chatToggleBg();
@@ -6893,45 +6880,12 @@ function getParticipantsList(peers) {
                     })
                 );
 
-                if (BUTTONS.participantsList.sendFileButton) {
-                    menuItems += renderParticipantMenuItem(
-                        renderParticipantActionButton({
-                            buttonClass: 'btn-sm ml5',
-                            buttonId: `${peer_id}___shareFile`,
-                            onClick: `rc.selectFileToShare('${peer_id}', false, ${JSON.stringify(peer_name)})`,
-                            iconHtml: peer_sendFile,
-                            label: 'Отправить файл',
-                        })
-                    );
-                }
-
-                menuItems += renderParticipantMenuItem(
-                    renderParticipantActionButton({
-                        buttonClass: 'btn-sm ml5',
-                        buttonId: `${peer_id}___sendVideoTo`,
-                        onClick: `rc.shareVideo('${peer_id}', ${JSON.stringify(peer_name)});`,
-                        iconHtml: _PEER.sendVideo,
-                        label: 'Показать аудио / видео',
-                    })
-                );
-
-                if (BUTTONS.participantsList.geoLocationButton) {
-                    menuItems += renderParticipantMenuItem(
-                        renderParticipantActionButton({
-                            buttonClass: 'btn-sm ml5',
-                            buttonId: `${peer_id}___geoLocation`,
-                            onClick: `rc.askPeerGeoLocation(this.id)`,
-                            iconHtml: peer_geoLocation,
-                            label: 'Запросить геолокацию',
-                        })
-                    );
-                }
                 if (!peer_info.peer_presenter) {
                     menuItems += renderParticipantMenuItem(
                         renderParticipantActionButton({
                             buttonClass: 'btn-sm ml5',
                             buttonId: `${peer_id}___makeModerator`,
-                            onClick: `rc.setPeerPresenter('${peer_id}')`,
+                            onClick: `event.stopPropagation();rc.setPeerPresenter('${peer_id}')`,
                             iconHtml: '<i class="fas fa-user-shield"></i>',
                             label: 'Сделать модератором',
                         })

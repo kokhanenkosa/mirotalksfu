@@ -4175,14 +4175,20 @@ async function startServer() {
             const { room, peer: requester } = getRoomAndPeer(socket);
             if (!room || !requester) return;
 
-            const requesterIsPresenter = isPeerPresenter(
-                socket.room_id,
-                socket.id,
-                requester.peer_info?.peer_name,
-                requester.peer_info?.peer_uuid
-            );
+            // Trust live peer_info.presenter first (phone-auth rooms often miss presenters[] uuid match)
+            const requesterIsPresenter =
+                Boolean(requester.peer_info?.peer_presenter || requester.peer_presenter) ||
+                isPeerPresenter(
+                    socket.room_id,
+                    socket.id,
+                    requester.peer_info?.peer_name,
+                    requester.peer_info?.peer_uuid
+                );
             if (!requesterIsPresenter) {
-                log.warn('[setPeerPresenter] denied — requester is not presenter', { socket_id: socket.id });
+                log.warn('[setPeerPresenter] denied — requester is not presenter', {
+                    socket_id: socket.id,
+                    peer_presenter: requester.peer_info?.peer_presenter,
+                });
                 return;
             }
 
@@ -4199,6 +4205,12 @@ async function startServer() {
             presenters[socket.room_id][targetId] = {
                 peer_name: targetPeer.peer_info.peer_name,
                 peer_uuid: targetPeer.peer_info.peer_uuid,
+                is_presenter: true,
+            };
+            // Keep requester registered as presenter too (uuid drift safety)
+            presenters[socket.room_id][socket.id] = {
+                peer_name: requester.peer_info?.peer_name,
+                peer_uuid: requester.peer_info?.peer_uuid,
                 is_presenter: true,
             };
 
@@ -5775,28 +5787,28 @@ async function startServer() {
 
     function isPeerPresenter(room_id, peer_id, peer_name, peer_uuid) {
         try {
-            // 1. Direct lookup by peer_id (server-assigned socket.id — not user-controlled)
-            const storedPresenter = presenters[room_id]?.[peer_id];
-            if (storedPresenter) {
-                const isPresenter =
-                    storedPresenter.peer_name === peer_name &&
-                    storedPresenter.peer_uuid === peer_uuid &&
-                    storedPresenter.is_presenter === true;
+            const room = roomList.get(room_id);
+            const peer = room?.getPeer(peer_id);
 
+            // 0. Live peer flag (authoritative after join / promote)
+            if (peer?.peer_info?.peer_presenter || peer?.peer_presenter) {
+                return true;
+            }
+
+            // 1. Direct lookup by peer_id — match by id+flag; name/uuid may drift after rename
+            const storedPresenter = presenters[room_id]?.[peer_id];
+            if (storedPresenter?.is_presenter === true) {
                 log.debug('isPeerPresenter Check (stored)', {
                     room_id: room_id,
                     peer_id: peer_id,
                     peer_name: peer_name,
                     peer_uuid: peer_uuid,
-                    isPresenter: isPresenter,
+                    isPresenter: true,
                 });
-
-                return isPresenter;
+                return true;
             }
 
             // 2. Static presenter list — verify against server-side registered name, not user input
-            const room = roomList.get(room_id);
-            const peer = room?.getPeer(peer_id);
             if (peer && hostCfg?.presenters?.list?.includes(peer.peer_info.peer_name)) {
                 log.debug('isPeerPresenter Check (static list)', {
                     room_id: room_id,
