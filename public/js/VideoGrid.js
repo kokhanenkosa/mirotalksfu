@@ -63,6 +63,23 @@ function resizeVideoMedia() {
         return;
     }
 
+    // Cam-bubble / stage scene: pinned screen must stay full-bleed — never shrink via grid math.
+    if (document.body.classList.contains('cam-bubble-stage')) {
+        document.querySelectorAll('#videoPinMediaContainer .Camera, #videoPinMediaContainer .has-cam-bubble').forEach((el) => {
+            el.style.setProperty('width', '100%', 'important');
+            el.style.setProperty('height', '100%', 'important');
+            el.style.setProperty('margin', '0', 'important');
+            el.style.setProperty('max-width', 'none', 'important');
+            el.style.setProperty('max-height', 'none', 'important');
+        });
+        try {
+            if (typeof rc !== 'undefined' && rc?.reapplyCamBubbleLayouts) rc.reapplyCamBubbleLayouts();
+        } catch {
+            /* ignore */
+        }
+        return;
+    }
+
     let Margin = 5;
     let videoMediaContainer = document.getElementById('videoMediaContainer');
     let Cameras = document.getElementsByClassName('Camera');
@@ -135,6 +152,14 @@ function resetZoom() {
 function setWidth(Cameras, width, bigWidth, margin, maxHeight, isOneVideoElement) {
     ratio = customRatio ? 0.68 : ratio;
     for (let s = 0; s < Cameras.length; s++) {
+        // Pinned screen + cam bubble must fill the pin stage (not grid tile size)
+        if (
+            Cameras[s].classList.contains('has-cam-bubble') ||
+            Cameras[s].classList.contains('is-pinned-video') ||
+            Cameras[s].parentElement?.id === 'videoPinMediaContainer'
+        ) {
+            continue;
+        }
         Cameras[s].style.width = width + 'px';
         Cameras[s].style.margin = margin + 'px';
         Cameras[s].style.height = width * ratio + 'px';

@@ -14778,17 +14778,58 @@ class RoomClient {
 
     applyCamBubbleStageLayout(active) {
         if (!this.videoPinMediaContainer || !this.videoMediaContainer) return;
-        if (active && this.isVideoPinned) {
-            this.videoPinMediaContainer.style.top = '0';
-            this.videoPinMediaContainer.style.left = '0';
-            this.videoPinMediaContainer.style.width = '100%';
-            this.videoPinMediaContainer.style.height = '100%';
-            this.videoPinMediaContainer.style.display = 'block';
+        const on = Boolean(active && this.isVideoPinned);
+        document.body.classList.toggle('cam-bubble-stage', on);
+        if (on) {
+            // Leave room for pinned chat on desktop; full width on mobile
+            const chatPct = !this.isMobileDevice && this.isChatPinned ? 25 : 0;
+            const stagePct = 100 - chatPct;
+            const setImp = (el, prop, value) => el?.style?.setProperty(prop, value, 'important');
+            setImp(this.videoPinMediaContainer, 'display', 'block');
+            setImp(this.videoPinMediaContainer, 'top', this.isMobileDevice ? 'var(--optrf-topbar-h, 48px)' : '0');
+            setImp(this.videoPinMediaContainer, 'left', '0');
+            setImp(this.videoPinMediaContainer, 'right', 'auto');
+            setImp(this.videoPinMediaContainer, 'bottom', 'auto');
+            setImp(this.videoPinMediaContainer, 'width', `${stagePct}%`);
+            setImp(
+                this.videoPinMediaContainer,
+                'height',
+                this.isMobileDevice
+                    ? 'calc(100% - var(--optrf-dock-h, 58px) - var(--optrf-topbar-h, 48px))'
+                    : '100%'
+            );
+            setImp(this.videoPinMediaContainer, 'overflow', 'hidden');
             this.videoMediaContainer.style.display = 'none';
             this.videoMediaContainer.classList.add('cam-bubble-stage-hidden');
+
+            // Force the screen tile to fill the pin stage (grid resizer used to shrink it)
+            this.videoPinMediaContainer.querySelectorAll('.Camera, .has-cam-bubble').forEach((el) => {
+                setImp(el, 'width', '100%');
+                setImp(el, 'height', '100%');
+                setImp(el, 'margin', '0');
+                setImp(el, 'max-width', 'none');
+                setImp(el, 'max-height', 'none');
+                setImp(el, 'border-radius', '0');
+                setImp(el, 'position', 'relative');
+                const v =
+                    el.querySelector(':scope > video') ||
+                    [...el.querySelectorAll('video')].find((vid) => !vid.closest('.cam-bubble'));
+                if (v) {
+                    setImp(v, 'position', 'absolute');
+                    setImp(v, 'inset', '0');
+                    setImp(v, 'width', '100%');
+                    setImp(v, 'height', '100%');
+                    setImp(v, 'object-fit', 'contain');
+                    v.dataset.camBubbleFit = '1';
+                }
+            });
         } else {
+            document.body.classList.remove('cam-bubble-stage');
             this.videoMediaContainer.style.display = '';
             this.videoMediaContainer.classList.remove('cam-bubble-stage-hidden');
+            ['top', 'left', 'right', 'bottom', 'width', 'height', 'overflow', 'display'].forEach((p) => {
+                this.videoPinMediaContainer.style.removeProperty(p);
+            });
             if (this.isVideoPinned && typeof pinVideoPosition !== 'undefined') {
                 this.toggleVideoPin(pinVideoPosition.value);
             }
@@ -15724,14 +15765,26 @@ class RoomClient {
         if (!videoTile.dataset.mediaKind) videoTile.dataset.mediaKind = 'video';
         if (!videoTile.dataset.peerId) videoTile.dataset.peerId = camId;
 
-        // Полный холст и у лектора, и у зрителя с закреплённым экраном
-        if (
-            this.isVideoPinned &&
-            this.videoPinMediaContainer &&
-            screenTile.parentElement === this.videoPinMediaContainer
-        ) {
-            this.applyCamBubbleStageLayout(true);
-        } else if (peerId === this.peer_id || this._stageSceneActive) {
+        // Ensure screen is on the pin stage, then force full-bleed (never let grid shrink it)
+        const shouldStage =
+            peerId === this.peer_id ||
+            this._stageSceneActive ||
+            (this.isVideoPinned && screenTile.parentElement === this.videoPinMediaContainer);
+        if (shouldStage) {
+            if (screenTile.parentElement !== this.videoPinMediaContainer) {
+                try {
+                    this.pinPeerMediaTile(peerId, 'screen');
+                } catch {
+                    /* ignore */
+                }
+            }
+            // If still not pinned, move manually for local stage
+            if (screenTile.parentElement !== this.videoPinMediaContainer && this.videoPinMediaContainer) {
+                screenTile.classList.add('Camera', 'is-pinned-video');
+                this.videoPinMediaContainer.appendChild(screenTile);
+                this.videoPinMediaContainer.style.display = 'block';
+                this.isVideoPinned = true;
+            }
             this.applyCamBubbleStageLayout(true);
         }
 
@@ -15739,6 +15792,10 @@ class RoomClient {
             handleAspectRatio();
         } catch {
             /* ignore */
+        }
+        // Re-assert full-bleed after aspect-ratio/grid pass
+        if (shouldStage || document.body.classList.contains('cam-bubble-stage')) {
+            this.applyCamBubbleStageLayout(true);
         }
         this.syncCamBubbleButton();
         return true;
