@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" class="academy-ui">
     <head>
-        <title id="title">Настройка комнаты — OPTRF</title>
+        <title id="title">Настройка комнаты — OPTRF Academy</title>
         <link id="icon" rel="shortcut icon" href="../images/logo-no-background.svg" />
         <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo-no-background.svg" />
 
@@ -20,14 +20,16 @@
 
         <script src="../js/ThemeInit.js"></script>
         <script defer src="../js/Theme.js"></script>
+        <link rel="stylesheet" href="../css/fonts.css" />
         <link rel="stylesheet" type="text/css" href="../css/CustomizeRoom.css" />
         <link rel="stylesheet" type="text/css" href="../css/optrf-room.css" />
         <link rel="stylesheet" href="../css/optrf-theme.css" />
+        <link rel="stylesheet" href="../css/optrf-academy.css" />
 
         <!-- xss (provides filterXSS) -->
         <script src="https://cdn.jsdelivr.net/npm/xss/dist/xss.min.js"></script>
     </head>
-    <body>
+    <body class="academy-ui">
         <header class="cr-header">
             <div class="cr-container cr-header-inner">
                 <a class="cr-home" href="/" aria-label="На главную" title="На главную">
@@ -39,7 +41,8 @@
         <main class="cr-page">
             <div class="cr-container">
                 <section class="cr-card" aria-label="Вход в комнату">
-                    <h1 class="cr-title">Настройка входа в комнату</h1>
+                    <h1 class="cr-title">OPTRF Academy</h1>
+                    <p class="academy-sub" style="margin-bottom: 28px">Настройка входа в комнату</p>
 
                     <form id="customizeRoomForm" class="cr-form" autocomplete="off">
                         <!-- Room id is auto-generated (hidden) -->
@@ -121,28 +124,25 @@
                             />
                         </div>
 
-                        <!-- Default: Лекторий (hidden UI) -->
-                        <fieldset class="cr-mode" aria-label="Режим комнаты" hidden>
-                            <legend class="cr-label">Режим комнаты</legend>
-                            <label class="cr-mode-option" for="modeCall">
-                                <input id="modeCall" name="roomMode" type="radio" value="call" />
-                                <span class="cr-mode-body">
-                                    <span class="cr-mode-title">Созвон</span>
-                                    <span class="cr-mode-desc"
-                                        >Все участники видны плитками на сцене — как обычная встреча.</span
-                                    >
-                                </span>
-                            </label>
-                            <label class="cr-mode-option" for="modeLectorium">
-                                <input id="modeLectorium" name="roomMode" type="radio" value="lectorium" checked />
-                                <span class="cr-mode-body">
-                                    <span class="cr-mode-title">Лекторий</span>
-                                    <span class="cr-mode-desc"
-                                        >На сцене только ведущий. Слушатели без плиток — только в списке чата и
-                                        участников.</span
-                                    >
-                                </span>
-                            </label>
+                        <fieldset class="cr-mode academy-block" aria-label="Тип комнаты">
+                            <legend class="cr-label academy-label">Выберите тип комнаты</legend>
+                            <div class="academy-type-row">
+                                <label class="academy-type is-active" for="modeLectorium" id="labelModeLectorium">
+                                    <input
+                                        id="modeLectorium"
+                                        name="roomMode"
+                                        type="radio"
+                                        value="lectorium"
+                                        checked
+                                        hidden
+                                    />
+                                    Лекция
+                                </label>
+                                <label class="academy-type" for="modeCall" id="labelModeCall">
+                                    <input id="modeCall" name="roomMode" type="radio" value="call" hidden />
+                                    Конференция
+                                </label>
+                            </div>
                         </fieldset>
 
                         <div class="cr-toggle-grid" aria-label="Параметры входа">
@@ -238,7 +238,7 @@
 
                         <p id="crError" class="cr-error" hidden></p>
 
-                        <button class="cr-submit" type="submit">Войти в комнату</button>
+                        <button class="cr-submit academy-cta" type="submit">Войти в комнату</button>
                     </form>
                 </section>
             </div>

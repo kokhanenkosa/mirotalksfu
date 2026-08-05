@@ -9,13 +9,13 @@ if (!document.querySelector('script[src$="/js/RussianUI.js"], script[src$="../js
 }
 
 // Сброс старого кэша исходного брендинга
-const brandDataKey = 'brandData_optrf_v4';
+const brandDataKey = 'brandData_optrf_v5';
 
 /** Жёстко фиксируем hero-тексты — env/Coolify не должен их перетирать */
 const OPTRF_HERO = {
-    title: 'Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.',
+    title: 'OPTRF Academy',
     description:
-        'Начните видеозвонок в один клик. Без установки программ и плагинов — сразу к разговору, чату и демонстрации экрана.',
+        'Образовательная платформа<br />дистрибьютера табачной продукции OPTRF.STORE',
 };
 try {
     window.sessionStorage.removeItem('brandData');
@@ -67,24 +67,25 @@ const loginButton = document.getElementById('loginButton');
 let BRAND = {
     app: {
         language: 'ru',
-        name: 'OPTRF',
+        name: 'OPTRF Academy',
         title: OPTRF_HERO.title,
         description: OPTRF_HERO.description,
-        joinDescription: 'Введите название комнаты.<br />Например, вот такое:',
+        joinDescription: 'Введите название комнаты',
         joinButtonLabel: 'Создать комнату',
         customizeButtonLabel: 'Настроить комнату',
         joinLastLabel: 'Недавняя комната:',
     },
     site: {
-        title: 'OPTRF — видеоконференции',
+        title: 'OPTRF Academy',
         icon: '../images/logo-no-background.svg',
         appleTouchIcon: '../images/logo-no-background.svg',
-        newRoomTitle: 'Название.<br />Ссылка.<br />Встреча.',
-        newRoomDescription: 'У каждой комнаты свой URL. Придумайте название и отправьте ссылку участникам.',
+        newRoomTitle: 'OPTRF Academy',
+        newRoomDescription: 'Создайте комнату и отправьте ссылку участникам.',
     },
     meta: {
-        description: 'Платформа онлайн-обучения OPTRF: занятия в браузере, видео, чат и демонстрация экрана.',
-        keywords: 'видеоконференции, видеозвонок, вебинар, чат, демонстрация экрана, онлайн-обучение',
+        description:
+            'OPTRF Academy — образовательная платформа дистрибьютера табачной продукции OPTRF.STORE.',
+        keywords: 'optrf academy, обучение, видеоконференции, лекция, конференция',
     },
     html: {
         topSponsors: false,
@@ -259,7 +260,7 @@ function customizeApp() {
         appTitle.innerHTML = BRAND.app?.title;
     }
     if (appDescription && BRAND.app?.description) {
-        appDescription.textContent = BRAND.app.description;
+        appDescription.innerHTML = BRAND.app.description;
     }
     if (joinDescription && BRAND.app?.joinDescription) {
         joinDescription.innerHTML = BRAND.app.joinDescription;

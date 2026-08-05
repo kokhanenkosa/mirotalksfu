@@ -70,6 +70,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modeCallEl) modeCallEl.checked = false;
     if (modeLectoriumEl) modeLectoriumEl.checked = true;
 
+    const syncModeToggleUI = () => {
+        const lectLabel = document.getElementById('labelModeLectorium');
+        const callLabel = document.getElementById('labelModeCall');
+        const lectOn = Boolean(modeLectoriumEl?.checked);
+        lectLabel?.classList.toggle('is-active', lectOn);
+        callLabel?.classList.toggle('is-active', !lectOn);
+    };
+    modeCallEl?.addEventListener('change', syncModeToggleUI);
+    modeLectoriumEl?.addEventListener('change', syncModeToggleUI);
+    syncModeToggleUI();
+
     // Never show share / QR on this simplified page
     if (shareBtn) shareBtn.hidden = true;
     if (qrWrapEl) qrWrapEl.hidden = true;
@@ -166,8 +177,8 @@ document.addEventListener('DOMContentLoaded', () => {
         url.searchParams.set('chat', boolToFlag(!!chatEl?.checked));
         url.searchParams.set('hide', boolToFlag(!!hideEl?.checked));
         url.searchParams.set('notify', boolToFlag(!!notifyEl?.checked));
-        // Always lectorium for this simplified create flow
-        url.searchParams.set('lectorium', '1');
+        const isLectorium = Boolean(modeLectoriumEl?.checked);
+        url.searchParams.set('lectorium', isLectorium ? '1' : '0');
 
         url.searchParams.set('duration', duration);
 

@@ -1,13 +1,13 @@
-/* OPTRF — акценты комнаты в цветах optrf.store */
+/* OPTRF Academy — монохромные акценты комнаты */
 :root {
-    --optrf-blue: #00a8e8;
-    --optrf-blue-hover: #019ad5;
-    --color-accent: #00a8e8;
-    --color-accent-strong: #019ad5;
-    --color-accent-soft: rgba(0, 168, 232, 0.14);
-    --color-focus: rgba(0, 168, 232, 0.65);
-    --select-focus-color: rgba(0, 168, 232, 0.5);
-    --videoBar-active: 1px solid rgba(0, 168, 232, 0.4);
+    --optrf-blue: #ffffff;
+    --optrf-blue-hover: #e8e8e8;
+    --color-accent: #ffffff;
+    --color-accent-strong: #e8e8e8;
+    --color-accent-soft: rgba(255, 255, 255, 0.12);
+    --color-focus: rgba(255, 255, 255, 0.55);
+    --select-focus-color: rgba(255, 255, 255, 0.4);
+    --videoBar-active: 1px solid rgba(255, 255, 255, 0.35);
 }
 
 .spinner-logo {
@@ -18,12 +18,31 @@
 
 .swal2-confirm,
 button.swal2-confirm {
-    background: var(--optrf-blue) !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-radius: 999px !important;
+    font-family: 'NeutralFace', 'Segoe UI', system-ui, sans-serif !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 .swal2-confirm:hover,
 button.swal2-confirm:hover {
-    background: var(--optrf-blue-hover) !important;
+    background: #e8e8e8 !important;
+    color: #000000 !important;
+}
+
+.swal2-popup {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border: 1px solid #3a3a3a !important;
+    border-radius: 18px !important;
+    font-family: 'NeutralFace', 'Segoe UI', system-ui, sans-serif !important;
+}
+
+.swal2-title,
+.swal2-html-container {
+    color: #ffffff !important;
 }
 
 /* Legacy Room palette remains in the DOM for compatibility with Room.js only. */
@@ -1256,4 +1275,37 @@ body.optrf-compact-ui #mySettings .tab {
         min-width: 32px !important;
         height: 40px !important;
     }
+}
+
+/* Academy room chrome — monochrome dock / panels */
+body {
+    font-family: 'NeutralFace', 'Segoe UI', system-ui, sans-serif;
+}
+
+#bottomButtons {
+    background: rgba(26, 26, 26, 0.92) !important;
+    border: 1px solid #3a3a3a !important;
+    border-radius: 999px !important;
+    backdrop-filter: blur(12px);
+}
+
+#bottomButtons button {
+    background: transparent !important;
+    color: #ffffff !important;
+    border-radius: 999px !important;
+}
+
+#bottomButtons button:hover,
+#bottomButtons button.active {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+
+#mySettings,
+.chat-panel,
+#chatModule,
+.rc-panel {
+    background: #1a1a1a !important;
+    border-color: #3a3a3a !important;
+    color: #ffffff !important;
 }

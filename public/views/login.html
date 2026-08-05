@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru" class="no-js">
+<html lang="ru" class="no-js academy-ui">
     <head>
         <!-- Title and Icon -->
 
-        <title id="title">Вход — OPTRF</title>
+        <title id="title">Вход — OPTRF Academy</title>
         <link id="icon" rel="shortcut icon" href="../images/logo-no-background.svg" />
         <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo-no-background.svg" />
 
@@ -59,6 +59,7 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
         <link rel="stylesheet" href="../css/optrf-theme.css" />
+        <link rel="stylesheet" href="../css/optrf-academy.css" />
 
         <!-- Js scripts -->
 
@@ -78,7 +79,7 @@
         <!-- sweetalert -->
         <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11.4.8"></script>
     </head>
-    <body class="is-boxed has-animations">
+    <body class="is-boxed has-animations academy-ui">
         <div class="body-wrap">
             <header class="site-header reveal-from-top">
                 <div class="container">
@@ -99,17 +100,22 @@
                 </div>
             </header>
 
-            <main class="site-content">
+            <main class="site-content academy-main">
                 <section class="hero section center-card-section">
                     <div class="container">
-                        <div class="hero-inner">
+                        <div class="hero-inner academy-stage">
                             <div class="login-card reveal-from-bottom" data-reveal-delay="150">
                                 <div id="loginForm" class="login-form-section" role="form" aria-label="Вход">
-                                    <div class="login-icon">
+                                    <h1 class="academy-title" style="font-size: 28px; margin-bottom: 12px">
+                                        OPTRF Academy
+                                    </h1>
+                                    <div class="login-icon" hidden>
                                         <i id="loginIconEl" class="fa-solid fa-lock"></i>
                                     </div>
-                                    <h2 id="loginHeading" class="login-title">С возвращением</h2>
-                                    <p id="loginDescription" class="login-description">Введите данные для входа.</p>
+                                    <h2 id="loginHeading" class="login-title academy-label">Вход</h2>
+                                    <p id="loginDescription" class="login-description academy-sub">
+                                        Введите данные для входа
+                                    </p>
                                     <div class="login-input-group">
                                         <i class="fa-solid fa-user"></i>
                                         <input

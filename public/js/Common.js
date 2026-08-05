@@ -195,10 +195,35 @@ if (adultCnt) {
     };
 }
 
+// Academy room-type toggle (Лекция / Конференция)
+(() => {
+    const toggle = document.getElementById('roomTypeToggle');
+    const hidden = document.getElementById('roomType');
+    if (!toggle || !hidden) return;
+
+    toggle.addEventListener('click', (e) => {
+        const btn = e.target.closest('.academy-type');
+        if (!btn) return;
+        const type = btn.getAttribute('data-room-type') || 'lectorium';
+        hidden.value = type;
+        toggle.querySelectorAll('.academy-type').forEach((el) => {
+            const on = el === btn;
+            el.classList.toggle('is-active', on);
+            el.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+    });
+})();
+
 function genRoom() {
     const input = document.getElementById('roomName');
     txt = makeRoomName();
     shuffleText(input, txt);
+}
+
+function getSelectedRoomType() {
+    const hidden = document.getElementById('roomType');
+    const v = (hidden && hidden.value) || 'lectorium';
+    return v === 'conference' ? 'conference' : 'lectorium';
 }
 
 function joinRoom() {
@@ -213,7 +238,10 @@ function joinRoom() {
         return;
     }
 
-    window.location.href = '/join/?room=' + encodeURIComponent(cleaned);
+    const type = getSelectedRoomType();
+    const lectorium = type === 'lectorium' ? '1' : '0';
+    window.location.href =
+        '/join/?room=' + encodeURIComponent(cleaned) + '&lectorium=' + encodeURIComponent(lectorium);
     window.localStorage.lastRoom = cleaned;
 }
 

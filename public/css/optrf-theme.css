@@ -2,72 +2,50 @@
 @import url('./fonts.css');
 
 :root {
-    --optrf-accent: #00a8e8;
-    --optrf-accent-hover: #0196cf;
-    --optrf-accent-soft: rgba(0, 168, 232, 0.14);
+    /* Academy monochrome (forced dark product look) */
+    --optrf-accent: #ffffff;
+    --optrf-accent-hover: #e8e8e8;
+    --optrf-accent-soft: rgba(255, 255, 255, 0.12);
     --optrf-success: #16a36a;
     --optrf-danger: #dc3545;
     --optrf-font: 'NeutralFace', 'Segoe UI', system-ui, sans-serif;
-    --optrf-radius-sm: 8px;
-    --optrf-radius: 12px;
-    --optrf-radius-lg: 18px;
-    --optrf-shadow: 0 8px 30px rgba(15, 24, 34, 0.09);
-    --optrf-shadow-lg: 0 18px 55px rgba(15, 24, 34, 0.14);
-    --optrf-bg: #f4f5f6;
-    --optrf-bg-elevated: #ffffff;
-    --optrf-surface: #ffffff;
-    --optrf-surface-2: #f8f9fa;
-    --optrf-surface-3: #eef1f3;
-    --optrf-text: #17191b;
-    --optrf-text-2: #3b4146;
-    --optrf-muted: #7a8289;
-    --optrf-border: #e2e5e8;
-    --optrf-input: #ffffff;
-    --optrf-video-tile: #17191d;
+    --optrf-radius-sm: 12px;
+    --optrf-radius: 16px;
+    --optrf-radius-lg: 24px;
+    --optrf-shadow: none;
+    --optrf-shadow-lg: none;
+    --optrf-bg: #1a1a1a;
+    --optrf-bg-elevated: #1f1f1f;
+    --optrf-surface: #222222;
+    --optrf-surface-2: #2a2a2a;
+    --optrf-surface-3: #333333;
+    --optrf-text: #ffffff;
+    --optrf-text-2: #c8c8c8;
+    --optrf-muted: #555555;
+    --optrf-border: #3a3a3a;
+    --optrf-input: transparent;
+    --optrf-video-tile: #111111;
 }
 
-html[data-theme='light'] {
-    --optrf-bg: #f4f5f6;
-    --optrf-bg-elevated: #ffffff;
-    --optrf-surface: #ffffff;
-    --optrf-surface-2: #f8f9fa;
-    --optrf-surface-3: #eef1f3;
-    --optrf-text: #17191b;
-    --optrf-text-2: #3b4146;
-    --optrf-muted: #7a8289;
-    --optrf-border: #e2e5e8;
-    --optrf-overlay: rgba(255, 255, 255, 0.93);
-    --optrf-header: rgba(255, 255, 255, 0.9);
-    --optrf-footer: #151719;
-    --optrf-footer-text: #c9cdd1;
-    --optrf-input: #ffffff;
-    --optrf-video-tile: #17191d;
-    /* Совместимость со старым optrf-brand.css. */
-    --optrf-blue: var(--optrf-accent);
-    --optrf-blue-hover: var(--optrf-accent-hover);
-    --optrf-dark: var(--optrf-text);
-    --optrf-dark-2: var(--optrf-text-2);
-    --optrf-gray: var(--optrf-text-2);
-}
-
+html[data-theme='light'],
 html[data-theme='dark'] {
-    --optrf-bg: #0f1113;
-    --optrf-bg-elevated: #15181b;
-    --optrf-surface: #181b1e;
-    --optrf-surface-2: #202428;
-    --optrf-surface-3: #292e33;
-    --optrf-text: #f3f5f6;
-    --optrf-text-2: #c9cfd4;
-    --optrf-muted: #929ba3;
-    --optrf-border: #30363b;
-    --optrf-overlay: rgba(20, 23, 26, 0.94);
-    --optrf-header: rgba(15, 17, 19, 0.9);
-    --optrf-footer: #090a0b;
-    --optrf-footer-text: #c9cdd1;
-    --optrf-input: #202428;
-    --optrf-video-tile: #090a0c;
-    --optrf-shadow: 0 8px 30px rgba(0, 0, 0, 0.28);
-    --optrf-shadow-lg: 0 18px 55px rgba(0, 0, 0, 0.38);
+    --optrf-bg: #1a1a1a;
+    --optrf-bg-elevated: #1f1f1f;
+    --optrf-surface: #222222;
+    --optrf-surface-2: #2a2a2a;
+    --optrf-surface-3: #333333;
+    --optrf-text: #ffffff;
+    --optrf-text-2: #c8c8c8;
+    --optrf-muted: #555555;
+    --optrf-border: #3a3a3a;
+    --optrf-overlay: rgba(20, 20, 20, 0.94);
+    --optrf-header: transparent;
+    --optrf-footer: #111111;
+    --optrf-footer-text: #888888;
+    --optrf-input: transparent;
+    --optrf-video-tile: #111111;
+    --optrf-shadow: none;
+    --optrf-shadow-lg: none;
     /* Совместимость со старым optrf-brand.css. */
     --optrf-blue: var(--optrf-accent);
     --optrf-blue-hover: var(--optrf-accent-hover);
@@ -100,14 +78,9 @@ body {
     font-family: var(--optrf-font) !important;
 }
 
-html[data-theme='light'] .hero {
-    background: linear-gradient(180deg, #ffffff 0%, #f0f7fb 55%, var(--optrf-bg) 100%) !important;
-}
-
+html[data-theme='light'] .hero,
 html[data-theme='dark'] .hero {
-    background:
-        radial-gradient(circle at 75% 20%, rgba(0, 168, 232, 0.12), transparent 38%),
-        linear-gradient(180deg, #15191c 0%, var(--optrf-bg) 100%) !important;
+    background: var(--optrf-bg) !important;
 }
 
 .site-header,
@@ -255,9 +228,9 @@ select:focus,
 .pa-btn,
 .cr-submit,
 .btn-primary {
-    color: #fff !important;
-    background: var(--optrf-accent) !important;
-    border-color: var(--optrf-accent) !important;
+    color: #000 !important;
+    background: #ffffff !important;
+    border-color: #ffffff !important;
     box-shadow: none !important;
 }
 
@@ -266,7 +239,8 @@ select:focus,
 .pa-btn:hover,
 .cr-submit:hover,
 .btn-primary:hover {
-    background: var(--optrf-accent-hover) !important;
+    color: #000 !important;
+    background: #e8e8e8 !important;
 }
 
 .button-secondary,

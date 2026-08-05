@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="ru" class="no-js">
+<html lang="ru" class="no-js academy-ui">
     <head>
-        <title id="title">OPTRF — видеоконференции</title>
+        <title id="title">OPTRF Academy</title>
         <link id="icon" rel="shortcut icon" href="../images/logo-no-background.svg" />
         <link id="appleTouchIcon" rel="apple-touch-icon" href="../images/logo-no-background.svg" />
 
@@ -12,7 +12,7 @@
         <meta
             id="description"
             name="description"
-            content="Платформа онлайн-обучения OPTRF: занятия в браузере, видео, чат и демонстрация экрана."
+            content="OPTRF Academy — образовательная платформа дистрибьютера табачной продукции OPTRF.STORE."
         />
 
         <meta property="og:type" content="{{OG_TYPE}}" />
@@ -31,6 +31,7 @@
         <link rel="stylesheet" type="text/css" href="../css/phoneAuth.css" />
         <link rel="stylesheet" type="text/css" href="../css/optrf-brand.css" />
         <link rel="stylesheet" href="../css/optrf-theme.css" />
+        <link rel="stylesheet" href="../css/optrf-academy.css" />
 
         <script defer src="../js/Widget.js"></script>
         <script defer src="../js/Brand.js"></script>
@@ -41,7 +42,7 @@
         <script src="https://unpkg.com/scrollreveal@4.0.0/dist/scrollreveal.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/xss/dist/xss.min.js"></script>
     </head>
-    <body class="is-boxed has-animations phone-session-pending">
+    <body class="is-boxed has-animations phone-session-pending academy-ui">
         <div class="body-wrap">
             <header class="site-header">
                 <div class="container">
@@ -67,455 +68,272 @@
                 </div>
             </header>
 
-            <main>
-                <section class="hero reveal-from-bottom">
-                    <div class="container">
-                        <div class="hero-inner">
-                            <div class="hero-copy">
-                                <h1 id="appTitle" class="hero-title mt-0">
-                                    Платформа онлайн-обучения.<br />Учитесь. Общайтесь. Вместе.
-                                </h1>
-                                <p id="appDescription" class="hero-paragraph">
-                                    Начните видеозвонок в один клик. Без установки программ и плагинов — сразу к
-                                    разговору, чату и демонстрации экрана.
-                                </p>
-                            </div>
-                            <div class="hero-figure anime-element">
-                                <svg class="placeholder" width="528" height="396" viewBox="0 0 528 396">
-                                    <rect width="528" height="396" style="fill: transparent" />
-                                </svg>
-                                <div class="hero-figure-box hero-figure-box-01" data-rotation="45deg"></div>
-                                <div class="hero-figure-box hero-figure-box-02" data-rotation="-45deg"></div>
-                                <div class="hero-figure-box hero-figure-box-03" data-rotation="0deg"></div>
-                                <div class="hero-figure-box hero-figure-box-04" data-rotation="-135deg"></div>
-                                <div class="hero-figure-box hero-figure-box-05"></div>
-                                <div class="hero-figure-box hero-figure-box-06"></div>
-                                <div class="hero-figure-box hero-figure-box-07"></div>
-                                <div class="hero-figure-box hero-figure-box-08" data-rotation="-22deg"></div>
-                                <div class="hero-figure-box hero-figure-box-09" data-rotation="-52deg"></div>
-                                <div class="hero-figure-box hero-figure-box-10" data-rotation="-50deg"></div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+            <main class="academy-main">
+                <div class="academy-stage">
+                    <header class="academy-brand">
+                        <h1 id="appTitle" class="academy-title">OPTRF Academy</h1>
+                        <p id="appDescription" class="academy-sub">
+                            Образовательная платформа<br />
+                            дистрибьютера табачной продукции OPTRF.STORE
+                        </p>
+                    </header>
 
-                <section class="cta section dashboard-section">
-                    <div class="container dashboard-container">
-                        <div class="cta-inner section-inner br-12 dashboard-shell">
-                            <!-- Гейт: та же форма + Thinking Orbs, что на /phone-auth -->
-                            <div id="phoneGate" class="phone-gate phone-gate--orbs" hidden>
-                                <section class="pa-panel pa-panel--embed" id="paPanel" aria-label="Вход по телефону">
-                                    <div class="pa-steps" aria-hidden="true">
-                                        <span class="pa-step is-active" data-step="1"></span>
-                                        <span class="pa-step-line" id="paStepLine"></span>
-                                        <span class="pa-step" data-step="2" id="paStep2"></span>
+                    <!-- Гейт: вход по телефону -->
+                    <div id="phoneGate" class="phone-gate phone-gate--orbs" hidden>
+                        <section class="pa-panel pa-panel--embed" id="paPanel" aria-label="Вход по телефону">
+                            <div class="pa-steps" aria-hidden="true">
+                                <span class="pa-step is-active" data-step="1"></span>
+                                <span class="pa-step-line" id="paStepLine"></span>
+                                <span class="pa-step" data-step="2" id="paStep2"></span>
+                            </div>
+
+                            <div class="pa-icon-wrap pa-icon-wrap--lg" id="paIconWrap">
+                                <div class="pa-icon-ring"></div>
+                                <div
+                                    class="pa-icon pa-orb-host pa-orb-host--lg"
+                                    id="paIcon"
+                                    data-thinking-orb
+                                    data-orb-state="composing"
+                                    data-orb-size="64"
+                                    data-orb-display="128"
+                                ></div>
+                            </div>
+
+                            <h2 class="pa-title" id="paTitle">Вход по телефону</h2>
+                            <p class="pa-sub" id="paSub">
+                                Чтобы создать комнату или войти на встречу, нужен код из Telegram или SMS.
+                            </p>
+
+                            <div class="pa-stage">
+                                <div class="pa-step-view is-active" id="stepPhone">
+                                    <label class="pa-label academy-label" for="phoneInput">Номер телефона</label>
+                                    <div class="pa-field">
+                                        <span class="pa-field-prefix">+7</span>
+                                        <input
+                                            id="phoneInput"
+                                            class="pa-input"
+                                            type="tel"
+                                            inputmode="tel"
+                                            placeholder="900 123-45-67"
+                                            autocomplete="tel-national"
+                                            maxlength="16"
+                                            required
+                                        />
                                     </div>
-
-                                    <div class="pa-icon-wrap pa-icon-wrap--lg" id="paIconWrap">
-                                        <div class="pa-icon-ring"></div>
-                                        <div
-                                            class="pa-icon pa-orb-host pa-orb-host--lg"
-                                            id="paIcon"
+                                    <button id="sendCodeBtn" class="pa-btn" type="button">
+                                        <span class="pa-btn-label">Получить код</span>
+                                        <span
+                                            class="pa-btn-orb"
                                             data-thinking-orb
                                             data-orb-state="composing"
-                                            data-orb-size="64"
-                                            data-orb-display="128"
-                                        ></div>
-                                    </div>
+                                            data-orb-size="20"
+                                            aria-hidden="true"
+                                        ></span>
+                                    </button>
+                                </div>
 
-                                    <h1 class="pa-title" id="paTitle">Вход телефоном</h1>
-                                    <p class="pa-sub" id="paSub">
-                                        Чтобы создать комнату или войти на встречу, нужен код из Telegram или SMS.
-                                    </p>
-
-                                    <div class="pa-stage">
-                                        <div class="pa-step-view is-active" id="stepPhone">
-                                            <label class="pa-label" for="phoneInput">Номер телефона</label>
-                                            <div class="pa-field">
-                                                <span class="pa-field-prefix">+7</span>
-                                                <input
-                                                    id="phoneInput"
-                                                    class="pa-input"
-                                                    type="tel"
-                                                    inputmode="tel"
-                                                    placeholder="900 123-45-67"
-                                                    autocomplete="tel-national"
-                                                    maxlength="16"
-                                                    required
-                                                />
-                                            </div>
-                                            <button id="sendCodeBtn" class="pa-btn" type="button">
-                                                <span class="pa-btn-label">Получить код</span>
-                                                <span
-                                                    class="pa-btn-orb"
-                                                    data-thinking-orb
-                                                    data-orb-state="composing"
-                                                    data-orb-size="20"
-                                                    aria-hidden="true"
-                                                ></span>
-                                            </button>
+                                <div class="pa-step-view" id="stepCode" hidden>
+                                    <p class="pa-hint" id="codeHint"></p>
+                                    <label class="pa-label academy-label" for="codeInput">Код подтверждения</label>
+                                    <div class="pa-code-wrap">
+                                        <div class="pa-otp" id="otpBoxes" aria-hidden="true">
+                                            <span></span><span></span><span></span><span></span
+                                            ><span></span><span></span>
                                         </div>
-
-                                        <div class="pa-step-view" id="stepCode" hidden>
-                                            <p class="pa-hint" id="codeHint"></p>
-                                            <label class="pa-label" for="codeInput">Код подтверждения</label>
-                                            <div class="pa-code-wrap">
-                                                <div class="pa-otp" id="otpBoxes" aria-hidden="true">
-                                                    <span></span><span></span><span></span><span></span
-                                                    ><span></span><span></span>
-                                                </div>
-                                                <input
-                                                    id="codeInput"
-                                                    class="pa-input-code"
-                                                    type="text"
-                                                    inputmode="numeric"
-                                                    autocomplete="one-time-code"
-                                                    maxlength="6"
-                                                    required
-                                                    aria-label="Код подтверждения"
-                                                />
-                                            </div>
-                                            <button id="verifyCodeBtn" class="pa-btn" type="button">
-                                                <span class="pa-btn-label">Войти</span>
-                                                <span
-                                                    class="pa-btn-orb"
-                                                    data-thinking-orb
-                                                    data-orb-state="solving"
-                                                    data-orb-size="20"
-                                                    aria-hidden="true"
-                                                ></span>
-                                            </button>
-                                            <div class="pa-actions">
-                                                <button id="resendBtn" class="pa-link" type="button">
-                                                    Отправить ещё раз
-                                                </button>
-                                                <button id="changePhoneBtn" class="pa-link" type="button">
-                                                    Другой номер
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div class="pa-step-view pa-success" id="stepSuccess" hidden>
-                                            <div class="pa-check" aria-hidden="true">
-                                                <svg viewBox="0 0 52 52">
-                                                    <circle cx="26" cy="26" r="24" fill="none" />
-                                                    <path fill="none" d="M14 27.5l7.5 7.5L38 17" />
-                                                </svg>
-                                            </div>
-                                            <p class="pa-success-text">Готово. Открываем кабинет…</p>
-                                        </div>
+                                        <input
+                                            id="codeInput"
+                                            class="pa-input-code"
+                                            type="text"
+                                            inputmode="numeric"
+                                            autocomplete="one-time-code"
+                                            maxlength="6"
+                                            required
+                                            aria-label="Код подтверждения"
+                                        />
                                     </div>
-
-                                    <div id="phoneAuthError" class="pa-error" role="alert" aria-live="polite" hidden>
-                                        <span id="phoneAuthErrorText"></span>
+                                    <button id="verifyCodeBtn" class="pa-btn" type="button">
+                                        <span class="pa-btn-label">Войти</span>
+                                        <span
+                                            class="pa-btn-orb"
+                                            data-thinking-orb
+                                            data-orb-state="solving"
+                                            data-orb-size="20"
+                                            aria-hidden="true"
+                                        ></span>
+                                    </button>
+                                    <div class="pa-actions">
+                                        <button id="resendBtn" class="pa-link" type="button">Отправить ещё раз</button>
+                                        <button id="changePhoneBtn" class="pa-link" type="button">Другой номер</button>
                                     </div>
-                                </section>
+                                </div>
+
+                                <div class="pa-step-view pa-success" id="stepSuccess" hidden>
+                                    <div class="pa-check" aria-hidden="true">
+                                        <svg viewBox="0 0 52 52">
+                                            <circle cx="26" cy="26" r="24" fill="none" />
+                                            <path fill="none" d="M14 27.5l7.5 7.5L38 17" />
+                                        </svg>
+                                    </div>
+                                    <p class="pa-success-text">Готово. Открываем кабинет…</p>
+                                </div>
                             </div>
 
-                            <!-- Мини-кабинет после авторизации -->
-                            <div id="phoneCabinet" class="phone-cabinet dashboard-account" hidden>
-                                <div class="phone-cabinet-head">
-                                    <div class="phone-cabinet-identity">
-                                        <div class="phone-cabinet-user">
-                                            <span class="phone-cabinet-label">Телефон</span>
-                                            <strong id="phoneCabinetNumber" class="phone-cabinet-number"></strong>
-                                        </div>
-                                        <div class="phone-cabinet-name">
-                                            <span class="phone-cabinet-label">Имя</span>
-                                            <div class="phone-cabinet-name-inline">
-                                                <strong id="phoneDisplayNameText" class="phone-cabinet-name-text"></strong>
-                                                <input
-                                                    id="phoneDisplayName"
-                                                    class="phone-cabinet-name-input"
-                                                    type="text"
-                                                    maxlength="32"
-                                                    placeholder="Как вас представлять"
-                                                    autocomplete="nickname"
-                                                    hidden
-                                                />
-                                                <button
-                                                    id="phoneEditNameBtn"
-                                                    class="phone-cabinet-edit-name"
-                                                    type="button"
-                                                    aria-label="Изменить имя"
-                                                    title="Изменить имя"
-                                                >
-                                                    <i class="fas fa-pen" aria-hidden="true"></i>
-                                                </button>
-                                            </div>
-                                            <p
-                                                id="phoneNameStatus"
-                                                class="phone-cabinet-status"
-                                                aria-live="polite"
-                                            ></p>
-                                        </div>
-                                    </div>
-                                    <div class="phone-cabinet-actions">
-                                        <a
-                                            id="superAdminBtn"
-                                            class="button button-primary br-6"
-                                            href="/super-admin"
+                            <div id="phoneAuthError" class="pa-error" role="alert" aria-live="polite" hidden>
+                                <span id="phoneAuthErrorText"></span>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Мини-кабинет после авторизации -->
+                    <div id="phoneCabinet" class="phone-cabinet dashboard-account" hidden>
+                        <div class="phone-cabinet-head">
+                            <div class="phone-cabinet-identity">
+                                <div class="phone-cabinet-user">
+                                    <span class="phone-cabinet-label">Телефон</span>
+                                    <strong id="phoneCabinetNumber" class="phone-cabinet-number"></strong>
+                                </div>
+                                <div class="phone-cabinet-name">
+                                    <span class="phone-cabinet-label">Имя</span>
+                                    <div class="phone-cabinet-name-inline">
+                                        <strong id="phoneDisplayNameText" class="phone-cabinet-name-text"></strong>
+                                        <input
+                                            id="phoneDisplayName"
+                                            class="phone-cabinet-name-input"
+                                            type="text"
+                                            maxlength="32"
+                                            placeholder="Как вас представлять"
+                                            autocomplete="nickname"
                                             hidden
-                                            >Супер-админ</a
+                                        />
+                                        <button
+                                            id="phoneEditNameBtn"
+                                            class="phone-cabinet-edit-name"
+                                            type="button"
+                                            aria-label="Изменить имя"
+                                            title="Изменить имя"
                                         >
-                                        <button id="phoneLogoutBtn" class="button button-secondary br-6" type="button">
-                                            Выйти
+                                            <i class="fas fa-pen" aria-hidden="true"></i>
                                         </button>
                                     </div>
+                                    <p id="phoneNameStatus" class="phone-cabinet-status" aria-live="polite"></p>
                                 </div>
-                                <div id="phoneRoomsBlock" class="phone-rooms" hidden>
-                                    <div class="phone-rooms-section">
-                                        <h4 class="phone-rooms-title">Активные комнаты</h4>
-                                        <ul id="phoneActiveRooms" class="phone-rooms-list"></ul>
-                                        <p id="phoneActiveEmpty" class="phone-rooms-empty" hidden>
-                                            Сейчас нет активных комнат
-                                        </p>
-                                    </div>
-                                    <div class="phone-rooms-section">
-                                        <h4 class="phone-rooms-title">История</h4>
-                                        <ul id="phoneHistoryRooms" class="phone-rooms-list"></ul>
-                                        <p id="phoneHistoryEmpty" class="phone-rooms-empty" hidden>
-                                            История пока пуста — появится после создания комнат
-                                        </p>
-                                    </div>
-                                </div>
-                                <p id="phoneGuestHint" class="phone-guest-hint" hidden>
-                                    Этот номер может только присоединяться к уже созданным комнатам по ссылке.
-                                    Создание встреч доступно организаторам.
+                            </div>
+                            <div class="phone-cabinet-actions">
+                                <a
+                                    id="superAdminBtn"
+                                    class="button button-primary br-6"
+                                    href="/super-admin"
+                                    hidden
+                                    >Супер-админ</a
+                                >
+                                <button id="phoneLogoutBtn" class="button button-secondary br-6" type="button">
+                                    Выйти
+                                </button>
+                            </div>
+                        </div>
+                        <div id="phoneRoomsBlock" class="phone-rooms" hidden>
+                            <div class="phone-rooms-section">
+                                <h4 class="phone-rooms-title">Активные комнаты</h4>
+                                <ul id="phoneActiveRooms" class="phone-rooms-list"></ul>
+                                <p id="phoneActiveEmpty" class="phone-rooms-empty" hidden>
+                                    Сейчас нет активных комнат
                                 </p>
                             </div>
-
-                            <!-- Создание комнаты — только после авторизации организатора -->
-                            <div id="createRoomPanel" class="dashboard-create" hidden>
-                                <h3 id="joinDescription" class="section-title mt-0">
-                                    Введите название комнаты.<br />
-                                    Например, вот такое:
-                                </h3>
-                                <div>
-                                    <div class="mb-24">
-                                        <label for="roomName"></label>
-                                        <div class="form-group-desktop">
-                                            <div class="room-input-wrapper">
-                                                <input
-                                                    id="roomName"
-                                                    class="form-input"
-                                                    type="text"
-                                                    maxlength="64"
-                                                    value=""
-                                                />
-                                                <button
-                                                    id="genRoomButton"
-                                                    class="button button-primary br-6 fas fa-arrows-rotate gen-room-btn"
-                                                    title="Сгенерировать название"
-                                                ></button>
-                                            </div>
-                                            <button id="joinRoomButton" class="button button-primary pulse">
-                                                Создать комнату
-                                            </button>
-                                        </div>
-                                        <div class="mt-16">
-                                            <button
-                                                id="customizeRoomButton"
-                                                class="button button-secondary button-block br-6"
-                                            >
-                                                Настроить комнату
-                                            </button>
-                                        </div>
-                                        <div class="mt-8">
-                                            <button
-                                                id="scheduleMeetingBtn"
-                                                class="schedule-meeting-btn"
-                                                type="button"
-                                                hidden
-                                            >
-                                                <i class="fas fa-calendar-check"></i> Запланировать встречу
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div id="lastRoomContainer" class="last-room">
-                                        <span id="joinLastLabel">Недавняя комната:</span>
-                                        <a id="lastRoom"></a>
-                                    </div>
-                                </div>
+                            <div class="phone-rooms-section">
+                                <h4 class="phone-rooms-title">История</h4>
+                                <ul id="phoneHistoryRooms" class="phone-rooms-list"></ul>
+                                <p id="phoneHistoryEmpty" class="phone-rooms-empty" hidden>
+                                    История пока пуста — появится после создания комнат
+                                </p>
                             </div>
                         </div>
+                        <p id="phoneGuestHint" class="phone-guest-hint" hidden>
+                            Этот номер может только присоединяться к уже созданным комнатам по ссылке. Создание встреч
+                            доступно организаторам.
+                        </p>
                     </div>
-                </section>
 
-                <!-- Скрываются через brand.html, оставлены пустыми-заглушками для Brand.js -->
-                <section id="topSponsors" class="clients section mt-48 mb-48" style="display: none"></section>
-
-                <section id="features" class="features section mt-48 mb-48" style="display: none">
-                    <div class="container-sm">
-                        <div class="pricing-header text-center reveal-from-bottom mt-32" data-reveal-delay="150">
-                            <br />
-                            <h2 class="section-title mt-0">
-                                Неограниченное число комнат и участников — без лимита по времени звонка
-                            </h2>
-                            <p class="section-paragraph mb-0">
-                                Высокое качество видео и низкая задержка. Работает во всех
-                                современных браузерах и на любых устройствах.
-                            </p>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="features-inner section-inner has-bottom-divider">
-                            <div class="features-wrap">
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img
-                                                class="wh-200-150"
-                                                src="../svg/screenSharing.svg"
-                                                alt="Демонстрация экрана"
-                                            />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Демонстрация экрана</h4>
-                                        <p class="text-sm mb-0">
-                                            Показывайте экран, окно приложения, документы и презентации участникам
-                                            встречи.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img
-                                                class="wh-200-150"
-                                                src="../svg/webcamStreaming.svg"
-                                                alt="Видео с камеры"
-                                            />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Видео с камеры</h4>
-                                        <p class="text-sm mb-0">
-                                            Качественная видеосвязь — до 8K и 60 кадров в секунду для живого общения.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img
-                                                class="wh-200-150"
-                                                src="../svg/audioStreaming.svg"
-                                                alt="Аудио"
-                                            />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Чистый звук</h4>
-                                        <p class="text-sm mb-0">
-                                            Подавление эха и шума — ваша речь остаётся разборчивой.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img class="wh-200-150" src="../svg/webcamChat.svg" alt="Чат" />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Чат</h4>
-                                        <p class="text-sm mb-0">
-                                            Переписка во время встречи с эмодзи и личными сообщениями.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img
-                                                class="wh-200-150"
-                                                src="../svg/recordingMeeting.svg"
-                                                alt="Запись"
-                                            />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Запись встречи</h4>
-                                        <p class="text-sm mb-0">
-                                            Записывайте экран, видео и звук в браузере, чтобы сохранить или поделиться.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img
-                                                class="wh-200-150"
-                                                src="../svg/collaborativeWhitboard.svg"
-                                                alt="Доска"
-                                            />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Совместная доска</h4>
-                                        <p class="text-sm mb-0">
-                                            Интерактивная доска для схем, заметок и объяснений прямо на встрече.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img
-                                                class="wh-200-150"
-                                                src="../svg/fileSharing.svg"
-                                                alt="Файлы"
-                                            />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Обмен файлами</h4>
-                                        <p class="text-sm mb-0">
-                                            Отправляйте файлы любого типа всем участникам комнаты.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img
-                                                class="wh-200-150"
-                                                src="../svg/virtualBackgrounds.svg"
-                                                alt="Фон"
-                                            />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Виртуальный фон</h4>
-                                        <p class="text-sm mb-0">
-                                            Настраиваемый фон для приватности и аккуратного вида на встрече.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img
-                                                class="wh-200-150"
-                                                src="../svg/totalPrivacy.svg"
-                                                alt="Конфиденциальность"
-                                            />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Конфиденциальность</h4>
-                                        <p class="text-sm mb-0">
-                                            Данные остаются между вами и участниками. Мы не собираем и не передаём
-                                            личную информацию.
-                                        </p>
-                                    </div>
-                                </div>
-                                <div class="feature text-center is-revealing">
-                                    <div class="feature-inner">
-                                        <div class="feature-icon">
-                                            <img
-                                                class="wh-200-150"
-                                                src="../svg/maximumSecurity.svg"
-                                                alt="Безопасность"
-                                            />
-                                        </div>
-                                        <h4 class="feature-title mt-24">Безопасность</h4>
-                                        <p class="text-sm mb-0">
-                                            Медиа-потоки шифруются по протоколу SRTP (WebRTC).
-                                        </p>
-                                    </div>
-                                </div>
+                    <!-- Создание комнаты — стиль Academy mockup -->
+                    <div id="createRoomPanel" class="dashboard-create academy-create" hidden>
+                        <h3 id="joinDescription" class="section-title mt-0">Введите название комнаты</h3>
+                        <div class="academy-block">
+                            <label class="academy-label" for="roomName">Введите название комнаты</label>
+                            <div class="room-input-wrapper">
+                                <input
+                                    id="roomName"
+                                    class="form-input academy-input"
+                                    type="text"
+                                    maxlength="64"
+                                    value=""
+                                    placeholder="ROOM-1"
+                                />
+                                <button
+                                    id="genRoomButton"
+                                    class="button button-primary br-6 fas fa-arrows-rotate gen-room-btn"
+                                    title="Сгенерировать название"
+                                    type="button"
+                                    hidden
+                                ></button>
                             </div>
                         </div>
-                    </div>
-                </section>
 
+                        <div class="academy-block">
+                            <span class="academy-label" id="roomTypeLabel">Выберите тип комнаты</span>
+                            <div
+                                class="academy-type-row"
+                                role="group"
+                                aria-labelledby="roomTypeLabel"
+                                id="roomTypeToggle"
+                            >
+                                <button
+                                    type="button"
+                                    class="academy-type is-active"
+                                    data-room-type="lectorium"
+                                    aria-pressed="true"
+                                >
+                                    Лекция
+                                </button>
+                                <button
+                                    type="button"
+                                    class="academy-type"
+                                    data-room-type="conference"
+                                    aria-pressed="false"
+                                >
+                                    Конференция
+                                </button>
+                            </div>
+                            <input type="hidden" id="roomType" value="lectorium" />
+                        </div>
+
+                        <div class="academy-block">
+                            <button id="joinRoomButton" class="button button-primary pulse academy-cta" type="button">
+                                Создать комнату
+                            </button>
+                            <button
+                                id="customizeRoomButton"
+                                class="button button-secondary button-block br-6"
+                                type="button"
+                                hidden
+                            >
+                                Настроить комнату
+                            </button>
+                            <button id="scheduleMeetingBtn" class="schedule-meeting-btn" type="button" hidden>
+                                <i class="fas fa-calendar-check"></i> Запланировать встречу
+                            </button>
+                        </div>
+
+                        <div id="lastRoomContainer" class="last-room" hidden>
+                            <span id="joinLastLabel">Недавняя комната:</span>
+                            <a id="lastRoom"></a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Скрытые заглушки для Brand.js -->
+                <section id="topSponsors" class="clients section" style="display: none"></section>
+                <section id="features" class="features section" style="display: none"></section>
                 <section id="teams" style="display: none"></section>
-                <section id="tryEasier" class="cta section mt-48 mb-48" style="display: none"></section>
+                <section id="tryEasier" style="display: none"></section>
                 <section id="poweredBy" style="display: none"></section>
                 <section id="sponsors" style="display: none"></section>
                 <section id="pastSponsors" style="display: none"></section>
@@ -536,7 +354,7 @@
                             <li><a href="/about">О сервисе</a></li>
                             <li><a href="/privacy">Конфиденциальность</a></li>
                         </ul>
-                        <div class="footer-copyright">&copy; 2026 OPTRF. Все права защищены. точно 222</div>
+                        <div class="footer-copyright">&copy; 2026 OPTRF Academy</div>
                     </div>
                 </div>
             </footer>
