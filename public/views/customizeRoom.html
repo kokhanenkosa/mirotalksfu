@@ -42,201 +42,201 @@
                     <h1 class="cr-title">Настройка входа в комнату</h1>
 
                     <form id="customizeRoomForm" class="cr-form" autocomplete="off">
-                    <div class="cr-field">
-                        <label class="cr-label" for="room">Комната</label>
-                        <div class="cr-input-wrap">
-                            <input
-                                id="room"
-                                name="room"
-                                class="cr-input"
-                                type="text"
-                                inputmode="text"
-                                placeholder="komnata123"
-                                maxlength="64"
-                                required
-                            />
-                            <button
-                                id="crRandomRoom"
-                                class="cr-input-action"
-                                type="button"
-                                aria-label="Сгенерировать название комнаты"
-                                title="Сгенерировать название комнаты"
-                            >
-                                Случайное
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="cr-field">
-                        <label class="cr-label" for="roomPassword">Пароль комнаты</label>
-                        <input
-                            id="roomPassword"
-                            name="roomPassword"
-                            class="cr-input"
-                            type="password"
-                            inputmode="text"
-                            placeholder="Необязательный пароль"
-                            maxlength="128"
-                        />
-                        <p class="cr-hint">Оставьте пустым, чтобы не использовать пароль.</p>
-                    </div>
-
-                    <div class="cr-field">
-                        <label class="cr-label" for="name">Имя</label>
-                        <input
-                            id="name"
-                            name="name"
-                            class="cr-input"
-                            type="text"
-                            inputmode="text"
-                            placeholder="Ваше отображаемое имя"
-                            maxlength="64"
-                        />
-                    </div>
-
-                    <div class="cr-field">
-                        <label class="cr-label" for="avatar">URL аватара</label>
-                        <input
-                            id="avatar"
-                            name="avatar"
-                            class="cr-input"
-                            type="url"
-                            inputmode="url"
-                            placeholder="https://..."
-                            maxlength="512"
-                        />
-                        <p class="cr-hint">Оставьте пустым, чтобы не использовать аватар.</p>
-                    </div>
-
-                    <div class="cr-field">
-                        <label class="cr-label" for="token">Токен</label>
-                        <input
-                            id="token"
-                            name="token"
-                            class="cr-input"
-                            type="text"
-                            inputmode="text"
-                            placeholder="JWT-токен"
-                            maxlength="2048"
-                        />
-                        <p class="cr-hint">Требуется, если включена защита ведущего или авторизация пользователей.</p>
-                    </div>
-
-                    <fieldset class="cr-mode" aria-label="Режим комнаты">
-                        <legend class="cr-label">Режим комнаты</legend>
-                        <label class="cr-mode-option" for="modeCall">
-                            <input id="modeCall" name="roomMode" type="radio" value="call" checked />
-                            <span class="cr-mode-body">
-                                <span class="cr-mode-title">Созвон</span>
-                                <span class="cr-mode-desc">Все участники видны плитками на сцене — как обычная встреча.</span>
-                            </span>
-                        </label>
-                        <label class="cr-mode-option" for="modeLectorium">
-                            <input id="modeLectorium" name="roomMode" type="radio" value="lectorium" />
-                            <span class="cr-mode-body">
-                                <span class="cr-mode-title">Лекторий</span>
-                                <span class="cr-mode-desc"
-                                    >На сцене только ведущий. Слушатели без плиток — только в списке чата и
-                                    участников.</span
-                                >
-                            </span>
-                        </label>
-                    </fieldset>
-
-                    <div class="cr-toggle-grid" aria-label="Параметры входа">
-                        <label class="cr-toggle" for="audio">
-                            <span class="cr-toggle-text">Аудио</span>
-                            <span class="cr-switch-wrap">
-                                <input id="audio" name="audio" type="checkbox" />
-                                <span class="cr-switch" aria-hidden="true"></span>
-                            </span>
-                        </label>
-
-                        <label class="cr-toggle" for="video">
-                            <span class="cr-toggle-text">Видео</span>
-                            <span class="cr-switch-wrap">
-                                <input id="video" name="video" type="checkbox" />
-                                <span class="cr-switch" aria-hidden="true"></span>
-                            </span>
-                        </label>
-
-                        <label class="cr-toggle" for="screen">
-                            <span class="cr-toggle-text">Экран</span>
-                            <span class="cr-switch-wrap">
-                                <input id="screen" name="screen" type="checkbox" />
-                                <span class="cr-switch" aria-hidden="true"></span>
-                            </span>
-                        </label>
-
-                        <label class="cr-toggle" for="chat">
-                            <span class="cr-toggle-text">Чат</span>
-                            <span class="cr-switch-wrap">
-                                <input id="chat" name="chat" type="checkbox" />
-                                <span class="cr-switch" aria-hidden="true"></span>
-                            </span>
-                        </label>
-
-                        <label class="cr-toggle" for="hide">
-                            <span class="cr-toggle-text">Скрыть меня</span>
-                            <span class="cr-switch-wrap">
-                                <input id="hide" name="hide" type="checkbox" />
-                                <span class="cr-switch" aria-hidden="true"></span>
-                            </span>
-                        </label>
-
-                        <label class="cr-toggle" for="notify">
-                            <span class="cr-toggle-text">Поделиться</span>
-                            <span class="cr-switch-wrap">
-                                <input id="notify" name="notify" type="checkbox" />
-                                <span class="cr-switch" aria-hidden="true"></span>
-                            </span>
-                        </label>
-                    </div>
-
-                    <div class="cr-field">
-                        <label class="cr-label" for="duration">Продолжительность (необязательно)</label>
-                        <input
-                            id="duration"
-                            name="duration"
-                            class="cr-input"
-                            type="text"
-                            inputmode="numeric"
-                            placeholder="00:30:00"
-                            pattern="^\d{2}:\d{2}:\d{2}$"
-                            maxlength="8"
-                        />
-                        <p class="cr-hint">Формат ЧЧ:ММ:СС. Оставьте пустым без ограничения времени.</p>
-                    </div>
-
-                    <div class="cr-field">
-                        <label class="cr-label" for="crPreviewUrl">Ссылка для входа</label>
-                        <div class="cr-preview-row">
-                            <input id="crPreviewUrl" class="cr-input cr-preview" type="text" readonly />
-                            <div class="cr-actions" aria-label="Действия со ссылкой">
-                                <button id="crCopy" class="cr-copy" type="button" aria-label="Копировать ссылку">
-                                    <span class="cr-copy-icon" aria-hidden="true">⧉</span>
-                                    <span>Копировать</span>
-                                </button>
+                        <!-- Room id is auto-generated (hidden) -->
+                        <div class="cr-field" hidden>
+                            <label class="cr-label" for="room">Комната</label>
+                            <div class="cr-input-wrap">
+                                <input
+                                    id="room"
+                                    name="room"
+                                    class="cr-input"
+                                    type="text"
+                                    inputmode="text"
+                                    placeholder="komnata123"
+                                    maxlength="64"
+                                    required
+                                />
                                 <button
-                                    id="crShare"
-                                    class="cr-copy"
+                                    id="crRandomRoom"
+                                    class="cr-input-action"
                                     type="button"
-                                    aria-label="Поделиться ссылкой"
+                                    aria-label="Сгенерировать название комнаты"
+                                    title="Сгенерировать название комнаты"
                                     hidden
                                 >
-                                    <span class="cr-copy-icon" aria-hidden="true">↗</span>
-                                    <span>Поделиться</span>
+                                    Случайное
                                 </button>
                             </div>
                         </div>
-                        <div id="crQrWrap" class="cr-qr-wrap" hidden>
-                            <div id="crQr" class="cr-qr" role="img" aria-label="QR-код ссылки для входа"></div>
-                            <p class="cr-hint cr-qr-hint">Отсканируйте камерой, чтобы открыть ссылку.</p>
-                        </div>
-                        <p id="crStatus" class="cr-hint" role="status" aria-live="polite"></p>
-                    </div>
 
-                    <p id="crError" class="cr-error" hidden></p>
+                        <div class="cr-field" hidden>
+                            <label class="cr-label" for="roomPassword">Пароль комнаты</label>
+                            <input
+                                id="roomPassword"
+                                name="roomPassword"
+                                class="cr-input"
+                                type="password"
+                                inputmode="text"
+                                placeholder="Необязательный пароль"
+                                maxlength="128"
+                            />
+                        </div>
+
+                        <div class="cr-field">
+                            <label class="cr-label" for="name">Имя</label>
+                            <input
+                                id="name"
+                                name="name"
+                                class="cr-input"
+                                type="text"
+                                inputmode="text"
+                                placeholder="Ваше отображаемое имя"
+                                maxlength="64"
+                            />
+                        </div>
+
+                        <div class="cr-field" hidden>
+                            <label class="cr-label" for="avatar">URL аватара</label>
+                            <input
+                                id="avatar"
+                                name="avatar"
+                                class="cr-input"
+                                type="url"
+                                inputmode="url"
+                                placeholder="https://..."
+                                maxlength="512"
+                            />
+                        </div>
+
+                        <div class="cr-field" hidden>
+                            <label class="cr-label" for="token">Токен</label>
+                            <input
+                                id="token"
+                                name="token"
+                                class="cr-input"
+                                type="text"
+                                inputmode="text"
+                                placeholder="JWT-токен"
+                                maxlength="2048"
+                            />
+                        </div>
+
+                        <!-- Default: Лекторий (hidden UI) -->
+                        <fieldset class="cr-mode" aria-label="Режим комнаты" hidden>
+                            <legend class="cr-label">Режим комнаты</legend>
+                            <label class="cr-mode-option" for="modeCall">
+                                <input id="modeCall" name="roomMode" type="radio" value="call" />
+                                <span class="cr-mode-body">
+                                    <span class="cr-mode-title">Созвон</span>
+                                    <span class="cr-mode-desc"
+                                        >Все участники видны плитками на сцене — как обычная встреча.</span
+                                    >
+                                </span>
+                            </label>
+                            <label class="cr-mode-option" for="modeLectorium">
+                                <input id="modeLectorium" name="roomMode" type="radio" value="lectorium" checked />
+                                <span class="cr-mode-body">
+                                    <span class="cr-mode-title">Лекторий</span>
+                                    <span class="cr-mode-desc"
+                                        >На сцене только ведущий. Слушатели без плиток — только в списке чата и
+                                        участников.</span
+                                    >
+                                </span>
+                            </label>
+                        </fieldset>
+
+                        <div class="cr-toggle-grid" aria-label="Параметры входа">
+                            <label class="cr-toggle" for="audio">
+                                <span class="cr-toggle-text">Аудио</span>
+                                <span class="cr-switch-wrap">
+                                    <input id="audio" name="audio" type="checkbox" checked />
+                                    <span class="cr-switch" aria-hidden="true"></span>
+                                </span>
+                            </label>
+
+                            <label class="cr-toggle" for="video">
+                                <span class="cr-toggle-text">Видео</span>
+                                <span class="cr-switch-wrap">
+                                    <input id="video" name="video" type="checkbox" checked />
+                                    <span class="cr-switch" aria-hidden="true"></span>
+                                </span>
+                            </label>
+
+                            <label class="cr-toggle" for="screen" hidden>
+                                <span class="cr-toggle-text">Экран</span>
+                                <span class="cr-switch-wrap">
+                                    <input id="screen" name="screen" type="checkbox" />
+                                    <span class="cr-switch" aria-hidden="true"></span>
+                                </span>
+                            </label>
+
+                            <label class="cr-toggle" for="chat">
+                                <span class="cr-toggle-text">Чат</span>
+                                <span class="cr-switch-wrap">
+                                    <input id="chat" name="chat" type="checkbox" checked />
+                                    <span class="cr-switch" aria-hidden="true"></span>
+                                </span>
+                            </label>
+
+                            <label class="cr-toggle" for="hide">
+                                <span class="cr-toggle-text">Скрыть меня</span>
+                                <span class="cr-switch-wrap">
+                                    <input id="hide" name="hide" type="checkbox" />
+                                    <span class="cr-switch" aria-hidden="true"></span>
+                                </span>
+                            </label>
+
+                            <label class="cr-toggle" for="notify" hidden>
+                                <span class="cr-toggle-text">Поделиться</span>
+                                <span class="cr-switch-wrap">
+                                    <input id="notify" name="notify" type="checkbox" />
+                                    <span class="cr-switch" aria-hidden="true"></span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="cr-field" hidden>
+                            <label class="cr-label" for="duration">Продолжительность (необязательно)</label>
+                            <input
+                                id="duration"
+                                name="duration"
+                                class="cr-input"
+                                type="text"
+                                inputmode="numeric"
+                                placeholder="00:30:00"
+                                pattern="^\d{2}:\d{2}:\d{2}$"
+                                maxlength="8"
+                            />
+                        </div>
+
+                        <div class="cr-field">
+                            <label class="cr-label" for="crPreviewUrl">Ссылка для входа</label>
+                            <div class="cr-preview-row">
+                                <input id="crPreviewUrl" class="cr-input cr-preview" type="text" readonly />
+                                <div class="cr-actions" aria-label="Действия со ссылкой">
+                                    <button id="crCopy" class="cr-copy" type="button" aria-label="Копировать ссылку">
+                                        <span class="cr-copy-icon" aria-hidden="true">⧉</span>
+                                        <span>Копировать</span>
+                                    </button>
+                                    <button
+                                        id="crShare"
+                                        class="cr-copy"
+                                        type="button"
+                                        aria-label="Поделиться ссылкой"
+                                        hidden
+                                    >
+                                        <span class="cr-copy-icon" aria-hidden="true">↗</span>
+                                        <span>Поделиться</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="crQrWrap" class="cr-qr-wrap" hidden>
+                                <div id="crQr" class="cr-qr" role="img" aria-label="QR-код ссылки для входа"></div>
+                            </div>
+                            <p id="crStatus" class="cr-hint" role="status" aria-live="polite"></p>
+                        </div>
+
+                        <p id="crError" class="cr-error" hidden></p>
 
                         <button class="cr-submit" type="submit">Войти в комнату</button>
                     </form>
@@ -244,9 +244,8 @@
             </div>
         </main>
 
-        <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
         <script src="../js/RoomNameGen.js"></script>
-        <script src="../js/CustomizeRoom.js?v=20260803-1"></script>
+        <script src="../js/CustomizeRoom.js?v=20260805-1"></script>
         <script defer src="../js/RussianUI.js"></script>
     </body>
 </html>
