@@ -3223,18 +3223,43 @@ class RoomClient {
     }
 
     hideVideoLoader(container) {
-        const loader = container.querySelector('.video-loader');
-        if (loader) loader.style.display = 'none';
+        if (!container) return;
+        container.querySelectorAll?.('.video-loader')?.forEach((loader) => {
+            loader.style.display = 'none';
+        });
     }
 
     hideVideoLoaderOnPlay(videoElem) {
-        const container = videoElem.parentElement;
-        if (!container) return;
-        const hide = () => {
-            this.hideVideoLoader(container);
-            videoElem.removeEventListener('playing', hide);
-        };
-        videoElem.addEventListener('playing', hide);
+        const container = videoElem?.parentElement;
+        if (!container || !videoElem) return;
+        const hide = () => this.hideVideoLoader(container);
+        // Already rendering — don't wait for a 'playing' event we may have missed
+        if (videoElem.readyState >= 2 && !videoElem.paused) {
+            hide();
+            return;
+        }
+        videoElem.addEventListener('playing', hide, { once: true });
+        // Fallback: stage/pin moves can swallow the first playing event
+        setTimeout(hide, 1500);
+    }
+
+    /** Keep pinned screen video alive after DOM/style moves (black stage + living circle). */
+    ensureScreenVideoPlaying(screenTile) {
+        if (!screenTile) return;
+        this.hideVideoLoader(screenTile);
+        const screenVideo =
+            screenTile.querySelector(':scope > video') ||
+            [...screenTile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
+        if (!screenVideo) return;
+        screenVideo.style.removeProperty('display');
+        screenVideo.style.removeProperty('visibility');
+        screenVideo.style.removeProperty('opacity');
+        if (screenVideo.style.display === 'none') screenVideo.style.display = '';
+        try {
+            if (screenVideo.paused) screenVideo.play?.().catch?.(() => {});
+        } catch {
+            /* ignore */
+        }
     }
 
     createElement(id, type, className) {
@@ -15203,6 +15228,8 @@ class RoomClient {
                 setImp(el, 'max-height', 'none');
                 setImp(el, 'border-radius', '0');
                 setImp(el, 'position', 'relative');
+                delete el.dataset.stageHidden;
+                el.style.removeProperty('display');
                 const v =
                     el.querySelector(':scope > video') ||
                     [...el.querySelectorAll('video')].find((vid) => !vid.closest('.cam-bubble'));
@@ -15212,12 +15239,20 @@ class RoomClient {
                     setImp(v, 'width', '100%');
                     setImp(v, 'height', '100%');
                     setImp(v, 'object-fit', 'contain');
+                    setImp(v, 'opacity', '1');
+                    setImp(v, 'visibility', 'visible');
                     v.dataset.camBubbleFit = '1';
+                    try {
+                        if (v.paused) v.play?.().catch?.(() => {});
+                    } catch {
+                        /* ignore */
+                    }
                 }
+                this.hideVideoLoader(el);
             });
         } else {
             document.body.classList.remove('cam-bubble-stage');
-            this.videoMediaContainer.style.display = '';
+            this.videoMediaContainer.style.removeProperty('display');
             this.videoMediaContainer.classList.remove('cam-bubble-stage-hidden');
             ['top', 'left', 'right', 'bottom', 'width', 'height', 'overflow', 'display'].forEach((p) => {
                 this.videoPinMediaContainer.style.removeProperty(p);
@@ -16098,7 +16133,13 @@ class RoomClient {
         if (screenVideo) {
             screenVideo.style.objectFit = 'contain';
             screenVideo.dataset.camBubbleFit = '1';
+            try {
+                if (screenVideo.paused) screenVideo.play?.().catch?.(() => {});
+            } catch {
+                /* ignore */
+            }
         }
+        this.hideVideoLoader(screenTile);
 
         const editable = this.isCamBubbleEditable(peerId);
         let layout = this.getCamBubbleLayoutForPeer(peerId);
@@ -16466,6 +16507,16 @@ class RoomClient {
 
     refreshCamBubble(peerId) {
         if (!peerId) return;
+        // Co-lecturer scene owns mod screen + creator circle — never strip it via personal bubble flag
+        if (
+            this._stageScene?.mode === 1 &&
+            (peerId === this._stageScene.moderatorId || peerId === this.findScreenSharingModeratorId())
+        ) {
+            const ok = this.applyCamBubble(peerId, this._stageScene.creatorId);
+            if (!ok) this.scheduleCamBubbleRetry(peerId);
+            this.ensureScreenVideoPlaying(this.getPeerMediaTile(peerId, 'screen'));
+            return;
+        }
         if (this.isCamBubbleActiveForPeer(peerId)) {
             const ok = this.applyCamBubble(peerId);
             if (!ok) this.scheduleCamBubbleRetry(peerId);
