@@ -56,11 +56,20 @@ button.swal2-confirm:hover {
 
 .hand-raise-alerts-host--floating {
     position: fixed;
-    top: auto;
-    bottom: 96px;
+    top: calc(var(--optrf-topbar-h, 48px) + 56px);
+    bottom: auto;
     left: 16px;
     right: auto;
-    max-width: min(280px, calc(100vw - 32px));
+    z-index: 55;
+    max-width: min(320px, calc(100vw - 32px));
+}
+
+/* Above stage scene bar while co-lecturer layout is active */
+body.stage-scene-active .hand-raise-alerts-host--floating,
+body.cam-bubble-stage .hand-raise-alerts-host--floating,
+body.dialog-with-stage .hand-raise-alerts-host--floating {
+    top: calc(var(--optrf-topbar-h, 48px) + 64px);
+    z-index: 55;
 }
 
 .hand-raise-alerts-host.hidden {
@@ -501,7 +510,7 @@ body.dialog-split-active .dialog-split-slot[id$='__videoOff'] p[id$='__name'] {
 
 /* Guest leave bar sits above mobile dock */
 body.dialog-split-mobile .dialog-controls-bar {
-    bottom: calc(var(--optrf-dock-h, 58px) + 10px);
+    bottom: calc(var(--optrf-dock-h, 58px) + 8px);
     z-index: 1250;
 }
 
@@ -510,12 +519,40 @@ body.dialog-split-mobile .dialog-controls-bar {
 }
 
 @media (max-width: 768px) {
-    .dialog-controls-bar {
-        bottom: 100px;
-        left: 12px;
-        right: 12px;
+    /* Compact chip — do not cover bottom speaker strip */
+    .dialog-controls-bar,
+    body.dialog-split-mobile .dialog-controls-bar {
+        top: calc(var(--optrf-topbar-h, 48px) + 8px);
+        bottom: auto;
+        left: auto;
+        right: 8px;
         transform: none;
-        max-width: none;
+        max-width: min(220px, calc(100vw - 16px));
+        padding: 4px 6px;
+        gap: 4px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .dialog-controls-end-btn,
+    body.dialog-split-mobile .dialog-controls-end-btn {
+        padding: 4px 8px;
+        font-size: 10px;
+        border-radius: 6px;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .dialog-controls-end-btn i {
+        margin-right: 3px;
+        font-size: 10px;
+    }
+
+    .dialog-controls-label,
+    .dialog-controls-remove-btn,
+    .dialog-controls-add-btn {
+        font-size: 10px;
+        padding: 4px 6px;
     }
 }
 
@@ -1111,14 +1148,44 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         z-index: 1100 !important;
     }
 
-    #mySettings {
+    #mySettings,
+    #mySettings.center {
+        position: fixed !important;
         z-index: 1200 !important;
         width: 100% !important;
         height: 100% !important;
         max-height: 100dvh !important;
+        min-height: 0 !important;
         border-radius: 0 !important;
         left: 0 !important;
         top: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        transform: none !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        box-sizing: border-box !important;
+        padding-bottom: calc(var(--optrf-dock-h, 58px) + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    #mySettings .mySettingsMain {
+        flex: 1 1 auto;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: hidden;
+    }
+
+    #mySettings .tab {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: calc(100dvh - 48px) !important;
+        overflow-y: auto !important;
+    }
+
+    #mySettings .tabActions {
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
     }
 
     #camBubbleControlPanel {
@@ -1136,6 +1203,31 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
 /* Класс с JS (matchMedia) — то же поведение, если UA desktop в узком окне */
 body.optrf-compact-ui .optrf-compact-extra {
     display: contents;
+}
+
+body.optrf-compact-ui #mySettings,
+body.optrf-compact-ui #mySettings.center {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    transform: none !important;
+    overflow-y: auto !important;
+    z-index: 1200 !important;
+    border-radius: 0 !important;
+    padding-bottom: calc(var(--optrf-dock-h, 58px) + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+body.optrf-compact-ui #mySettings .tab {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - 48px) !important;
+    overflow-y: auto !important;
 }
 
 @media screen and (max-width: 390px) {

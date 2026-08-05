@@ -378,6 +378,7 @@ class RoomClient {
         this.isFollowMeActive = false;
         this.isChatPinned = false;
         this._handRaiseAlerts = new Map(); // peerId -> { name }
+        this._dialogGuestNames = new Map(); // peerId -> display name (kept for dialog remove buttons)
         this._dialogSplitActive = false;
         this._dialogGuestId = null;
         this._dialogGuestIds = [];
@@ -5286,11 +5287,26 @@ class RoomClient {
 
     toggleMySettings() {
         let mySettings = this.getId('mySettings');
-        mySettings.style.top = '50%';
-        mySettings.style.left = '50%';
-        if (this.isMobileDevice) {
+        const compact = !!(this.isMobileDevice || window.innerWidth <= 768);
+        if (compact) {
+            // Avoid .center translate(-50%,-50%) which pushes a full-screen panel off-viewport
+            mySettings.style.top = '0';
+            mySettings.style.left = '0';
+            mySettings.style.right = '0';
+            mySettings.style.bottom = '0';
             mySettings.style.width = '100%';
             mySettings.style.height = '100%';
+            mySettings.style.maxHeight = '100dvh';
+            mySettings.style.minHeight = '0';
+            mySettings.style.transform = 'none';
+        } else {
+            mySettings.style.top = '50%';
+            mySettings.style.left = '50%';
+            mySettings.style.right = '';
+            mySettings.style.bottom = '';
+            mySettings.style.transform = '';
+            mySettings.style.maxHeight = '';
+            mySettings.style.minHeight = '';
         }
         mySettings.classList.toggle('show');
         this.isMySettingsOpen = !this.isMySettingsOpen;
@@ -11934,6 +11950,7 @@ class RoomClient {
                 peer_name: this.peer_name,
                 peer_uuid: this.peer_uuid,
             });
+            this.rememberDialogGuestName(peer_id, this.getPeerDisplayName(peer_id));
             this.clearHandRaiseAlert(peer_id);
         }
 
@@ -12325,11 +12342,8 @@ class RoomClient {
             .join('');
         const guestButtons = (this._dialogGuestIds || [])
             .map((guestId) => {
-                const name =
-                    this.peers?.get?.(guestId)?.peer_info?.peer_name ||
-                    this._handRaiseAlerts.get(guestId)?.name ||
-                    'Гость';
-                return `<button type="button" class="dialog-controls-remove-btn" data-peer-id="${filterXSS(guestId)}" title="Убрать из диалога">
+                const name = this.getPeerDisplayName(guestId);
+                return `<button type="button" class="dialog-controls-remove-btn" data-peer-id="${filterXSS(guestId)}" title="Убрать ${filterXSS(name)} из диалога">
                     <i class="fas fa-user-minus"></i> ${filterXSS(name)}
                 </button>`;
             })
@@ -12383,19 +12397,66 @@ class RoomClient {
 
     ensureHandRaiseHost() {
         let host = document.getElementById('handRaiseAlertsHost');
-        if (host) return host;
-        host = document.createElement('div');
-        host.id = 'handRaiseAlertsHost';
-        host.className = 'hand-raise-alerts-host';
+        if (!host) {
+            host = document.createElement('div');
+            host.id = 'handRaiseAlertsHost';
+            host.className = 'hand-raise-alerts-host';
+        }
+        // Stage / cam-bubble hide own video tile — always float on body so invite stays visible
         const myWrap = this.getCameraWrapByPeerId(this.peer_id);
-        if (myWrap) {
-            if (getComputedStyle(myWrap).position === 'static') myWrap.style.position = 'relative';
-            myWrap.appendChild(host);
-        } else {
-            document.body.appendChild(host);
+        const wrapHidden =
+            !myWrap ||
+            myWrap.dataset?.stageHidden === '1' ||
+            myWrap.classList.contains('cam-bubble-source-hidden') ||
+            myWrap.style.display === 'none' ||
+            document.body.classList.contains('stage-scene-active') ||
+            document.body.classList.contains('cam-bubble-stage') ||
+            document.body.classList.contains('dialog-with-stage');
+        if (wrapHidden) {
+            if (host.parentElement !== document.body) document.body.appendChild(host);
             host.classList.add('hand-raise-alerts-host--floating');
+        } else {
+            if (getComputedStyle(myWrap).position === 'static') myWrap.style.position = 'relative';
+            if (host.parentElement !== myWrap) myWrap.appendChild(host);
+            host.classList.remove('hand-raise-alerts-host--floating');
         }
         return host;
+    }
+
+    /** Resolve display name for dialog controls (never bare "Гость" when a real name exists). */
+    getPeerDisplayName(peerId) {
+        if (!peerId) return 'Гость';
+        const cached = this._dialogGuestNames?.get?.(peerId);
+        if (cached && String(cached).trim()) return String(cached).trim();
+        const fromPeers = this.peers?.get?.(peerId)?.peer_info?.peer_name;
+        if (fromPeers && String(fromPeers).trim()) return String(fromPeers).trim();
+        // peers Map may key by id; also scan values if structure differs
+        try {
+            for (const [id, peer] of this.peers?.entries?.() || []) {
+                const info = peer?.peer_info || peer;
+                if (id === peerId || info?.peer_id === peerId) {
+                    const n = info?.peer_name;
+                    if (n && String(n).trim()) return String(n).trim();
+                }
+            }
+        } catch {
+            /* ignore */
+        }
+        const nameEl = this.getId?.(peerId + '__name');
+        const fromDom = (nameEl?.textContent || nameEl?.innerText || '')
+            .replace(/^⭐️\s*/u, '')
+            .replace(/\s*\(me\)\s*$/i, '')
+            .trim();
+        if (fromDom) return fromDom;
+        const fromAlert = this._handRaiseAlerts?.get?.(peerId)?.name;
+        if (fromAlert && String(fromAlert).trim()) return String(fromAlert).trim();
+        return 'Гость';
+    }
+
+    rememberDialogGuestName(peerId, name) {
+        if (!peerId) return;
+        const n = String(name || '').trim();
+        if (n) this._dialogGuestNames.set(peerId, n);
     }
 
     showHandRaiseAlert(peerId, peerName) {
@@ -12574,6 +12635,7 @@ class RoomClient {
         this._dialogPresenterId = presenterId;
         this._dialogGuestIds = guestIds;
         this._dialogGuestId = guestIds[0];
+        guestIds.forEach((id) => this.rememberDialogGuestName(id, this.getPeerDisplayName(id)));
 
         // Pin chat first (before dialog flag) so stage width is 75%
         if (!this.isMobileDevice && !this.isChatPinned) {
@@ -13007,6 +13069,7 @@ class RoomClient {
         this._dialogGuestIds = [];
         this._dialogPresenterId = null;
         this._dialogActiveSpeakerId = null;
+        this._dialogGuestNames?.clear?.();
 
         // Lectorium guest: after dialog ends, own avatar must not stay on stage
         if (!isPresenter && (isLectoriumEnabled || isBroadcastingEnabled) && !this._broadcastSpotlit) {
@@ -13017,9 +13080,41 @@ class RoomClient {
         if (restoreStage) {
             // Keep co-lecturer stage (mod screen + creator circle) after dialog ends
             this.hideDialogControlsBar?.();
+            // Drop guest-strip geometry (set with !important) so pin can fill again
+            const clearGeom = (el) => {
+                if (!el?.style) return;
+                [
+                    'top',
+                    'left',
+                    'right',
+                    'bottom',
+                    'width',
+                    'height',
+                    'overflow',
+                    'display',
+                    'flex-direction',
+                    'flex-wrap',
+                    'gap',
+                    'padding',
+                    'grid-template-columns',
+                    'grid-template-rows',
+                    'box-sizing',
+                ].forEach((p) => el.style.removeProperty(p));
+            };
+            clearGeom(this.videoPinMediaContainer);
+            clearGeom(this.videoMediaContainer);
+            this.videoMediaContainer?.classList.remove('cam-bubble-stage-hidden');
             this.applyStageScene();
+            this.applyCamBubbleStageLayout?.(Boolean(this._stageScene?.mode));
             this.renderStageSceneBar?.();
             this.refreshLocalCameraMirror?.();
+            // Re-assert full-bleed after grid/chat layout settles
+            [50, 200, 500].forEach((ms) => {
+                setTimeout(() => {
+                    if (!this._stageScene?.mode || this._dialogSplitActive) return;
+                    this.applyStageScene();
+                }, ms);
+            });
             return;
         }
 
@@ -13516,6 +13611,7 @@ class RoomClient {
             }
             this.renderStageSceneBar?.();
             if (this._dialogSplitActive) this.renderDialogControlsBar?.();
+            if (isPresenter && this._handRaiseAlerts?.size) this.renderHandRaiseAlerts();
             return;
         }
 
@@ -13569,6 +13665,8 @@ class RoomClient {
         }
         this.renderStageSceneBar?.();
         if (this._dialogSplitActive) this.renderDialogControlsBar?.();
+        // Re-attach hand-raise banners if they were inside a now-hidden tile
+        if (isPresenter && this._handRaiseAlerts?.size) this.renderHandRaiseAlerts();
     }
 
     /** When a moderator starts screen share — offer / auto-switch to scene 1. */
@@ -15089,7 +15187,11 @@ class RoomClient {
                     : '100%'
             );
             setImp(this.videoPinMediaContainer, 'overflow', 'hidden');
-            this.videoMediaContainer.style.display = 'none';
+            // Clear leftover dialog guest-strip geometry, then hide grid
+            ['left', 'top', 'right', 'bottom', 'width', 'height', 'flex-direction', 'flex-wrap', 'gap', 'padding'].forEach(
+                (p) => this.videoMediaContainer.style.removeProperty(p)
+            );
+            this.videoMediaContainer.style.setProperty('display', 'none', 'important');
             this.videoMediaContainer.classList.add('cam-bubble-stage-hidden');
 
             // Force the screen tile to fill the pin stage (grid resizer used to shrink it)
