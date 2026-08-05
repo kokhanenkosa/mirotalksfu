@@ -14854,7 +14854,7 @@ class RoomClient {
             videoTile.classList.remove('cam-bubble-source-hidden');
             videoTile.style.display = '';
         }
-        if (peerId === this.peer_id) {
+        if (peerId === this.peer_id || this._stageSceneActive || document.body.classList.contains('cam-bubble-stage')) {
             this.applyCamBubbleStageLayout(false);
             this.hideCamBubbleControlPanel();
         }
