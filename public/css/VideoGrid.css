@@ -538,6 +538,20 @@ body.stage-scene-active .Camera[data-stage-hidden='1'] {
     display: none !important;
 }
 
+/* Loader must never cover the pinned screen under the creator circle */
+body.stage-scene-active #videoPinMediaContainer .video-loader,
+body.cam-bubble-stage #videoPinMediaContainer .video-loader,
+#videoPinMediaContainer .has-cam-bubble > .video-loader {
+    display: none !important;
+}
+
+body.stage-scene-active #videoPinMediaContainer .has-cam-bubble > video,
+body.cam-bubble-stage #videoPinMediaContainer .has-cam-bubble > video {
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 1;
+}
+
 .Camera.cam-bubble-source-hidden,
 .cam-bubble-source-hidden {
     display: none !important;

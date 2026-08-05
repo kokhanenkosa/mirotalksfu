@@ -13428,6 +13428,7 @@ class RoomClient {
             tile.querySelector(':scope > video') ||
             [...tile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
         if (video?.id) this.pinnedVideoPlayerId = video.id;
+        if (tile.dataset?.mediaKind === 'screen') this.ensureScreenVideoPlaying(tile);
         return true;
     }
 
@@ -13692,6 +13693,13 @@ class RoomClient {
         if (this._dialogSplitActive) this.renderDialogControlsBar?.();
         // Re-attach hand-raise banners if they were inside a now-hidden tile
         if (isPresenter && this._handRaiseAlerts?.size) this.renderHandRaiseAlerts();
+        this.ensureScreenVideoPlaying(screenTile);
+        [100, 400, 1200].forEach((ms) => {
+            setTimeout(() => {
+                if (this._stageScene?.mode !== 1) return;
+                this.ensureScreenVideoPlaying(this.getPeerMediaTile(modId, 'screen') || screenTile);
+            }, ms);
+        });
     }
 
     /** When a moderator starts screen share — offer / auto-switch to scene 1. */
