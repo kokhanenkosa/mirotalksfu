@@ -252,7 +252,7 @@ let virtualBackgroundBlurLevel;
 let virtualBackgroundSelectedImage;
 let virtualBackgroundTransparent;
 
-let swalBackground = 'radial-gradient(#393939, #000000)'; //'rgba(0, 0, 0, 0.7)';
+let swalBackground = '#181818';
 
 let rc = null;
 let producer = null;
@@ -1450,7 +1450,14 @@ async function whoAreYou() {
         inputValue: default_name,
         html: initUser, // Inject HTML
         confirmButtonText: `Присоединиться к встрече`,
-        customClass: { popup: 'init-modal-size' },
+        buttonsStyling: false,
+        customClass: {
+            popup: 'init-modal-size optrf-share-popup',
+            confirmButton: 'optrf-swal-btn',
+            title: 'optrf-swal-title',
+            actions: 'optrf-swal-actions',
+            input: 'optrf-swal-input',
+        },
         showClass: { popup: 'animate__animated animate__fadeInDown' },
         hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         willOpen: () => {
@@ -1724,32 +1731,30 @@ async function shareRoom(useNavigator = false) {
             background: swalBackground,
             position: 'center',
             title: 'Поделиться комнатой',
-            html: renderRoomTemplate('popupShareRoomTemplate', {
-                text: {
-                    roomUrl: RoomURL,
-                },
-            }),
-            showDenyButton: true,
+            html: '',
+            showDenyButton: false,
             showCancelButton: true,
-            cancelButtonColor: 'red',
-            denyButtonColor: 'green',
-            confirmButtonText: `Копировать ссылку`,
-            denyButtonText: `Пригласить по почте`,
-            cancelButtonText: `Close`,
+            confirmButtonText: 'Копировать ссылку',
+            cancelButtonText: 'Закрыть',
+            customClass: {
+                popup: 'optrf-share-popup',
+                confirmButton: 'optrf-swal-btn',
+                cancelButton: 'optrf-swal-btn optrf-swal-btn--ghost',
+                title: 'optrf-swal-title',
+                actions: 'optrf-swal-actions',
+            },
+            buttonsStyling: false,
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
             if (result.isConfirmed) {
                 copyRoomURL();
-            } else if (result.isDenied) {
-                shareRoomByEmail();
             }
             // share screen on join
             if (isScreenAllowed) {
                 rc.shareScreen();
             }
         });
-        makeRoomQR();
     }
 }
 
@@ -7202,147 +7207,32 @@ function renderDynamicThemeCards() {
     }
 }
 
+const OPTRF_CURSOR_THEME = {
+    '--body-bg': '#181818',
+    '--trx-bg': '#181818',
+    '--msger-bg': '#1e1e1e',
+    '--left-msg-bg': '#252526',
+    '--right-msg-bg': '#2d2d2d',
+    '--select-bg': '#1e1e1e',
+    '--select-focus-color': 'rgba(255, 255, 255, 0.2)',
+    '--tab-btn-active': '#252526',
+    '--settings-bg': '#1e1e1e',
+    '--wb-bg': '#181818',
+    '--btns-bg-color': 'rgba(24, 24, 24, 0.92)',
+    '--dd-color': '#cccccc',
+};
+
 let themeMap = {
-    default: {
-        '--body-bg': 'linear-gradient(135deg, #0e0e14, #1e1e28)',
-        '--trx-bg': 'linear-gradient(135deg, #0e0e14, #1e1e28)',
-        '--msger-bg': 'linear-gradient(135deg, #0e0e14, #1e1e28)',
-        '--left-msg-bg': '#141420',
-        '--right-msg-bg': '#1a1a26',
-        '--select-bg': '#161622',
-        '--select-focus-color': 'rgba(102, 190, 255, 0.5)',
-        '--tab-btn-active': '#1e1e28',
-        '--settings-bg': 'linear-gradient(135deg, #0e0e14, #1e1e28)',
-        '--wb-bg': 'linear-gradient(135deg, #0e0e14, #1e1e28)',
-        '--btns-bg-color': 'rgba(10, 10, 16, 0.8)',
-        '--dd-color': '#E8E8EC',
-    },
-    dark: {
-        '--body-bg': 'linear-gradient(135deg, #0d0d12, #181820)',
-        '--trx-bg': 'linear-gradient(135deg, #0d0d12, #181820)',
-        '--msger-bg': 'linear-gradient(135deg, #0d0d12, #181820)',
-        '--left-msg-bg': '#111118',
-        '--right-msg-bg': '#1a1a22',
-        '--select-bg': '#14141c',
-        '--select-focus-color': 'rgba(154, 186, 255, 0.42)',
-        '--tab-btn-active': '#181820',
-        '--settings-bg': 'linear-gradient(135deg, #0d0d12, #181820)',
-        '--wb-bg': 'linear-gradient(135deg, #0d0d12, #181820)',
-        '--btns-bg-color': 'rgba(10, 10, 16, 0.85)',
-        '--dd-color': '#E0E0E6',
-    },
-    grey: {
-        '--body-bg': 'linear-gradient(135deg, #1c1c24, #3a3a46)',
-        '--trx-bg': 'linear-gradient(135deg, #1c1c24, #3a3a46)',
-        '--msger-bg': 'linear-gradient(135deg, #1c1c24, #3a3a46)',
-        '--left-msg-bg': '#24242e',
-        '--right-msg-bg': '#32323e',
-        '--select-bg': '#222230',
-        '--select-focus-color': 'rgba(196, 204, 224, 0.38)',
-        '--tab-btn-active': '#3a3a46',
-        '--settings-bg': 'linear-gradient(135deg, #1c1c24, #3a3a46)',
-        '--wb-bg': 'linear-gradient(135deg, #1c1c24, #3a3a46)',
-        '--btns-bg-color': 'rgba(22, 22, 30, 0.75)',
-        '--dd-color': '#E4E4EA',
-    },
-    green: {
-        '--body-bg': 'linear-gradient(135deg, #0f1d1a, #1a3830)',
-        '--trx-bg': 'linear-gradient(135deg, #0f1d1a, #1a3830)',
-        '--msger-bg': 'linear-gradient(135deg, #0f1d1a, #1a3830)',
-        '--left-msg-bg': '#0d1816',
-        '--right-msg-bg': '#1e2e2a',
-        '--select-bg': '#122420',
-        '--select-focus-color': 'rgba(111, 207, 151, 0.42)',
-        '--tab-btn-active': '#1a3830',
-        '--settings-bg': 'linear-gradient(135deg, #0f1d1a, #1a3830)',
-        '--wb-bg': 'linear-gradient(135deg, #0f1d1a, #1a3830)',
-        '--btns-bg-color': 'rgba(12, 24, 20, 0.75)',
-        '--dd-color': '#6FCF97',
-    },
-    blue: {
-        '--body-bg': 'linear-gradient(135deg, #111827, #1e3050)',
-        '--trx-bg': 'linear-gradient(135deg, #111827, #1e3050)',
-        '--msger-bg': 'linear-gradient(135deg, #111827, #1e3050)',
-        '--left-msg-bg': '#0e1420',
-        '--right-msg-bg': '#1a2840',
-        '--select-bg': '#131c30',
-        '--select-focus-color': 'rgba(107, 163, 214, 0.45)',
-        '--tab-btn-active': '#1e3050',
-        '--settings-bg': 'linear-gradient(135deg, #111827, #1e3050)',
-        '--wb-bg': 'linear-gradient(135deg, #111827, #1e3050)',
-        '--btns-bg-color': 'rgba(14, 20, 34, 0.75)',
-        '--dd-color': '#6BA3D6',
-    },
-    red: {
-        '--body-bg': 'linear-gradient(135deg, #1c1015, #332028)',
-        '--trx-bg': 'linear-gradient(135deg, #1c1015, #332028)',
-        '--msger-bg': 'linear-gradient(135deg, #1c1015, #332028)',
-        '--left-msg-bg': '#180e12',
-        '--right-msg-bg': '#2a1c22',
-        '--select-bg': '#20141a',
-        '--select-focus-color': 'rgba(224, 112, 112, 0.42)',
-        '--tab-btn-active': '#332028',
-        '--settings-bg': 'linear-gradient(135deg, #1c1015, #332028)',
-        '--wb-bg': 'linear-gradient(135deg, #1c1015, #332028)',
-        '--btns-bg-color': 'rgba(22, 12, 16, 0.75)',
-        '--dd-color': '#E07070',
-    },
-    purple: {
-        '--body-bg': 'linear-gradient(135deg, #18102a, #2e2045)',
-        '--trx-bg': 'linear-gradient(135deg, #18102a, #2e2045)',
-        '--msger-bg': 'linear-gradient(135deg, #18102a, #2e2045)',
-        '--left-msg-bg': '#140e22',
-        '--right-msg-bg': '#261c3a',
-        '--select-bg': '#1c1430',
-        '--select-focus-color': 'rgba(176, 124, 200, 0.42)',
-        '--tab-btn-active': '#2e2045',
-        '--settings-bg': 'linear-gradient(135deg, #18102a, #2e2045)',
-        '--wb-bg': 'linear-gradient(135deg, #18102a, #2e2045)',
-        '--btns-bg-color': 'rgba(18, 12, 34, 0.75)',
-        '--dd-color': '#B07CC8',
-    },
-    orange: {
-        '--body-bg': 'linear-gradient(135deg, #1c1510, #3a2a1a)',
-        '--trx-bg': 'linear-gradient(135deg, #1c1510, #3a2a1a)',
-        '--msger-bg': 'linear-gradient(135deg, #1c1510, #3a2a1a)',
-        '--left-msg-bg': '#18120e',
-        '--right-msg-bg': '#302218',
-        '--select-bg': '#221a12',
-        '--select-focus-color': 'rgba(232, 165, 96, 0.45)',
-        '--tab-btn-active': '#3a2a1a',
-        '--settings-bg': 'linear-gradient(135deg, #1c1510, #3a2a1a)',
-        '--wb-bg': 'linear-gradient(135deg, #1c1510, #3a2a1a)',
-        '--btns-bg-color': 'rgba(22, 16, 12, 0.75)',
-        '--dd-color': '#E8A560',
-    },
-    pink: {
-        '--body-bg': 'linear-gradient(135deg, #1c1018, #382030)',
-        '--trx-bg': 'linear-gradient(135deg, #1c1018, #382030)',
-        '--msger-bg': 'linear-gradient(135deg, #1c1018, #382030)',
-        '--left-msg-bg': '#180e14',
-        '--right-msg-bg': '#2e1c28',
-        '--select-bg': '#201420',
-        '--select-focus-color': 'rgba(216, 139, 160, 0.42)',
-        '--tab-btn-active': '#382030',
-        '--settings-bg': 'linear-gradient(135deg, #1c1018, #382030)',
-        '--wb-bg': 'linear-gradient(135deg, #1c1018, #382030)',
-        '--btns-bg-color': 'rgba(22, 12, 18, 0.75)',
-        '--dd-color': '#D88BA0',
-    },
-    yellow: {
-        '--body-bg': 'linear-gradient(135deg, #1a1810, #36321a)',
-        '--trx-bg': 'linear-gradient(135deg, #1a1810, #36321a)',
-        '--msger-bg': 'linear-gradient(135deg, #1a1810, #36321a)',
-        '--left-msg-bg': '#16140e',
-        '--right-msg-bg': '#2c2a18',
-        '--select-bg': '#201e12',
-        '--select-focus-color': 'rgba(212, 184, 92, 0.44)',
-        '--tab-btn-active': '#36321a',
-        '--settings-bg': 'linear-gradient(135deg, #1a1810, #36321a)',
-        '--wb-bg': 'linear-gradient(135deg, #1a1810, #36321a)',
-        '--btns-bg-color': 'rgba(20, 18, 12, 0.75)',
-        '--dd-color': '#D4B85C',
-    },
+    default: { ...OPTRF_CURSOR_THEME },
+    dark: { ...OPTRF_CURSOR_THEME },
+    grey: { ...OPTRF_CURSOR_THEME },
+    green: { ...OPTRF_CURSOR_THEME },
+    blue: { ...OPTRF_CURSOR_THEME },
+    red: { ...OPTRF_CURSOR_THEME },
+    purple: { ...OPTRF_CURSOR_THEME },
+    orange: { ...OPTRF_CURSOR_THEME },
+    pink: { ...OPTRF_CURSOR_THEME },
+    yellow: { ...OPTRF_CURSOR_THEME },
 };
 
 const legacyThemeProperties = [
@@ -7370,10 +7260,7 @@ function syncOPTRFTheme() {
         root.dataset.theme ||
         (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     const computedStyle = getComputedStyle(root);
-    swalBackground =
-        computedStyle.getPropertyValue('--optrf-surface').trim() ||
-        computedStyle.getPropertyValue('--body-bg').trim() ||
-        swalBackground;
+    swalBackground = '#181818';
 
     document.querySelectorAll('[data-thinking-orb]').forEach((orb) => {
         orb.dataset.orbTheme = resolvedTheme;

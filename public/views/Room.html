@@ -221,16 +221,16 @@
                     <span id="initErrorMessage" class="show-error"></span>
                 </div>
                 <div class="initComands">
-                    <button id="initVideoAudioRefreshButton" class="fas fa-rotate"></button>
-                    <button id="initAudioVideoButton" class="fas fa-eye"></button>
-                    <button id="initVideoButton" class="fas fa-video"></button>
-                    <button id="initAudioButton" class="fas fa-microphone"></button>
-                    <button id="initStartScreenButton" class="fas fa-desktop hidden"></button>
-                    <button id="initStopScreenButton" class="fas fa-stop-circle orange hidden"></button>
-                    <button id="initVideoMirrorButton" class="fas fa-arrow-right-arrow-left"></button>
-                    <button id="initVirtualBackgroundButton" class="fa-solid fa-image hidden"></button>
-                    <button id="initUsernameEmojiButton" class="fas fa-smile"></button>
-                    <button id="initExitButton" class="fas fa-sign-out-alt red"></button>
+                    <button id="initVideoAudioRefreshButton" class="fas fa-rotate hidden" hidden></button>
+                    <button id="initAudioVideoButton" class="fas fa-eye hidden" hidden></button>
+                    <button id="initVideoButton" class="fas fa-video hidden" hidden></button>
+                    <button id="initAudioButton" class="fas fa-microphone hidden" hidden></button>
+                    <button id="initStartScreenButton" class="fas fa-desktop hidden" hidden></button>
+                    <button id="initStopScreenButton" class="fas fa-stop-circle orange hidden" hidden></button>
+                    <button id="initVideoMirrorButton" class="fas fa-arrow-right-arrow-left hidden" hidden></button>
+                    <button id="initVirtualBackgroundButton" class="fa-solid fa-image hidden" hidden></button>
+                    <button id="initUsernameEmojiButton" class="fas fa-smile hidden" hidden></button>
+                    <button id="initExitButton" class="fas fa-sign-out-alt red hidden" hidden></button>
                     <select id="initVideoSelect" class="form-select text-light bg-dark"></select>
                     <select id="initMicrophoneSelect" class="form-select text-light bg-dark"></select>
                     <select id="initSpeakerSelect" class="form-select text-light bg-dark"></select>
@@ -2571,15 +2571,10 @@
         </template>
 
         <template id="popupShareRoomTemplate">
-            <div id="qrRoomContainer">
+            <!-- Share dialog content removed — title + Copy / Close buttons only -->
+            <div id="qrRoomContainer" class="hidden" hidden>
                 <canvas id="qrRoom"></canvas>
             </div>
-            <br />
-            <p class="qr-room-copy qr-room-copy--accent">Войти с мобильного устройства</p>
-            <p class="qr-room-copy qr-room-copy--body">
-                Приложение не требуется: отсканируйте QR-код камерой телефона или отправьте участнику эту ссылку:
-            </p>
-            <p class="qr-room-copy qr-room-copy--accent" data-template-text="roomUrl"></p>
         </template>
 
         <template id="popupStickyNoteTemplate">

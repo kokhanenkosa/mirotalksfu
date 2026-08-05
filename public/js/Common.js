@@ -18,10 +18,9 @@ if (typeof filterXSS === 'undefined') {
 // ####################################################################
 
 function makeRoomName() {
+    if (window.RoomNameGen?.DEFAULT) return window.RoomNameGen.DEFAULT;
     if (window.RoomNameGen?.generate) return window.RoomNameGen.generate();
-    const d = new Date();
-    const p = (n) => String(n).padStart(2, '0');
-    return `hookah-${p(d.getDate())}-${p(d.getMonth() + 1)}-${d.getFullYear()}-${p(d.getHours())}-${p(d.getMinutes())}`;
+    return 'study room';
 }
 
 /** Safe room id for URLs/proxies: no spaces/colons (colon caused Coolify/Traefik 502 quirks). */

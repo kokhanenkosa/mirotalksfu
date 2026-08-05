@@ -2,23 +2,23 @@
 @import url('./fonts.css');
 
 :root {
-    --optrf-blue: #ffffff;
-    --optrf-blue-hover: #e8e8e8;
-    --optrf-blue-logo: #ffffff;
-    --optrf-dark: #ffffff;
-    --optrf-dark-2: #c8c8c8;
-    --optrf-gray: #2a2a2a;
-    --optrf-muted: #555555;
-    --optrf-border: #3a3a3a;
-    --optrf-bg: #1a1a1a;
-    --optrf-surface: #222222;
-    --optrf-radius: 16px;
-    --optrf-font: 'NeutralFace', 'Segoe UI', system-ui, sans-serif;
+    --optrf-blue: #cccccc;
+    --optrf-blue-hover: #e4e4e4;
+    --optrf-blue-logo: #cccccc;
+    --optrf-dark: #cccccc;
+    --optrf-dark-2: #9d9d9d;
+    --optrf-gray: #252526;
+    --optrf-muted: #6e6e6e;
+    --optrf-border: #3c3c3c;
+    --optrf-bg: #181818;
+    --optrf-surface: #1e1e1e;
+    --optrf-radius: 6px;
+    --optrf-font: var(--optrf-font-ui, 'Inter', 'Segoe UI', system-ui, sans-serif);
 }
 
 html,
 body {
-    background: var(--optrf-bg) !important;
+    background: #181818 !important;
     color: var(--optrf-dark) !important;
     font-family: var(--optrf-font) !important;
 }
@@ -153,40 +153,40 @@ body {
 
 .button-primary,
 .button.button-primary {
-    background: #ffffff !important;
+    background: transparent !important;
     background-image: none !important;
-    border: none !important;
-    border-radius: 999px !important;
-    color: #000000 !important;
-    font-weight: 700 !important;
+    border: 1px solid #5a5a5a !important;
+    border-radius: 6px !important;
+    color: #e4e4e4 !important;
+    font-weight: 500 !important;
     box-shadow: none !important;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 .button-primary:hover,
 .button.button-primary:hover {
-    background: #e8e8e8 !important;
+    background: #252526 !important;
     background-image: none !important;
-    color: #000000 !important;
+    color: #e4e4e4 !important;
 }
 
 .button-secondary,
 .button.button-secondary {
-    background: #2a2a2a !important;
+    background: transparent !important;
     background-image: none !important;
-    border: 1px solid #3a3a3a !important;
-    color: #c8c8c8 !important;
-    border-radius: 999px !important;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+    border: 1px solid #3c3c3c !important;
+    color: #9d9d9d !important;
+    border-radius: 6px !important;
+    text-transform: none;
+    letter-spacing: 0;
 }
 
 .button-secondary:hover,
 .button.button-secondary:hover {
-    border-color: #ffffff !important;
-    color: #ffffff !important;
-    background: #333333 !important;
+    border-color: #5a5a5a !important;
+    color: #e4e4e4 !important;
+    background: #252526 !important;
 }
 
 .gen-room-btn {

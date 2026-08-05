@@ -1,13 +1,38 @@
-/* OPTRF Academy — монохромные акценты комнаты */
+/* OPTRF Cursor room tokens — override to recolor any block/border/text */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
 :root {
-    --optrf-blue: #ffffff;
-    --optrf-blue-hover: #e8e8e8;
-    --color-accent: #ffffff;
-    --color-accent-strong: #e8e8e8;
-    --color-accent-soft: rgba(255, 255, 255, 0.12);
-    --color-focus: rgba(255, 255, 255, 0.55);
-    --select-focus-color: rgba(255, 255, 255, 0.4);
-    --videoBar-active: 1px solid rgba(255, 255, 255, 0.35);
+    --optrf-room-bg: #181818;
+    --optrf-room-fg: #cccccc;
+    --optrf-room-fg-bright: #e4e4e4;
+    --optrf-room-muted: #6e6e6e;
+    --optrf-room-border: #3c3c3c;
+    --optrf-room-border-strong: #5a5a5a;
+    --optrf-room-surface: #1e1e1e;
+    --optrf-room-surface-2: #252526;
+    --optrf-room-radius: 6px;
+    --optrf-room-font: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --optrf-room-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+
+    --optrf-blue: var(--optrf-room-fg-bright);
+    --optrf-blue-hover: var(--optrf-room-fg);
+    --color-accent: var(--optrf-room-fg-bright);
+    --color-accent-strong: var(--optrf-room-fg);
+    --color-accent-soft: rgba(255, 255, 255, 0.06);
+    --color-focus: rgba(255, 255, 255, 0.25);
+    --select-focus-color: rgba(255, 255, 255, 0.2);
+    --videoBar-active: 1px solid var(--optrf-room-border-strong);
+    --body-bg: var(--optrf-room-bg) !important;
+}
+
+html,
+body,
+#bodyApp,
+.VideoGrid,
+#videoMediaContainer {
+    background: var(--optrf-room-bg) !important;
+    font-family: var(--optrf-room-font) !important;
+    color: var(--optrf-room-fg);
 }
 
 .spinner-logo {
@@ -16,33 +41,146 @@
     object-fit: contain !important;
 }
 
-.swal2-confirm,
-button.swal2-confirm {
-    background: #ffffff !important;
-    color: #000000 !important;
-    border-radius: 999px !important;
-    font-family: 'NeutralFace', 'Segoe UI', system-ui, sans-serif !important;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
+/* Init modal: hide icon toolbar, keep device selects + preview */
+.initComands > button {
+    display: none !important;
 }
 
-.swal2-confirm:hover,
-button.swal2-confirm:hover {
-    background: #e8e8e8 !important;
-    color: #000000 !important;
+.initComands {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100%;
+    margin-top: 20px;
 }
 
-.swal2-popup {
-    background: #1a1a1a !important;
-    color: #ffffff !important;
-    border: 1px solid #3a3a3a !important;
-    border-radius: 18px !important;
-    font-family: 'NeutralFace', 'Segoe UI', system-ui, sans-serif !important;
+.init-user {
+    gap: 20px !important;
+}
+
+.init-modal-size {
+    width: min(520px, 94vw) !important;
+    padding: 28px 24px !important;
+}
+
+.init-user select,
+.init-user .form-select {
+    width: 100% !important;
+    margin: 0 !important;
+    border: 1px solid var(--optrf-room-border) !important;
+    border-radius: var(--optrf-room-radius) !important;
+    background: var(--optrf-room-surface) !important;
+    color: var(--optrf-room-fg) !important;
+    font-family: var(--optrf-room-mono) !important;
+    font-size: 12px !important;
+}
+
+.init-video-container {
+    border: 1px solid var(--optrf-room-border) !important;
+    border-radius: var(--optrf-room-radius) !important;
+    background: var(--optrf-room-bg) !important;
+    margin-bottom: 8px;
+}
+
+/* SweetAlert — Cursor ghost buttons */
+.swal2-popup,
+.optrf-share-popup {
+    background: var(--optrf-room-bg) !important;
+    color: var(--optrf-room-fg) !important;
+    border: 1px solid var(--optrf-room-border) !important;
+    border-radius: var(--optrf-room-radius) !important;
+    font-family: var(--optrf-room-font) !important;
+    box-shadow: none !important;
 }
 
 .swal2-title,
+.optrf-swal-title,
 .swal2-html-container {
-    color: #ffffff !important;
+    color: var(--optrf-room-fg-bright) !important;
+    font-family: var(--optrf-room-font) !important;
+    font-weight: 500 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+}
+
+.swal2-actions,
+.optrf-swal-actions {
+    gap: 12px !important;
+    margin-top: 24px !important;
+}
+
+.swal2-confirm,
+button.swal2-confirm,
+.optrf-swal-btn {
+    background: transparent !important;
+    color: var(--optrf-room-fg-bright) !important;
+    border: 1px solid var(--optrf-room-border-strong) !important;
+    border-radius: var(--optrf-room-radius) !important;
+    font-family: var(--optrf-room-font) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    box-shadow: none !important;
+    padding: 10px 18px !important;
+}
+
+.swal2-confirm:hover,
+button.swal2-confirm:hover,
+.optrf-swal-btn:hover {
+    background: var(--optrf-room-surface-2) !important;
+    color: var(--optrf-room-fg-bright) !important;
+}
+
+.swal2-cancel,
+button.swal2-cancel,
+.optrf-swal-btn--ghost {
+    background: transparent !important;
+    color: var(--optrf-room-fg) !important;
+    border: 1px solid var(--optrf-room-fg-bright) !important;
+    border-radius: var(--optrf-room-radius) !important;
+    font-family: var(--optrf-room-font) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    text-transform: none !important;
+    box-shadow: none !important;
+    padding: 10px 18px !important;
+}
+
+.swal2-cancel:hover,
+button.swal2-cancel:hover,
+.optrf-swal-btn--ghost:hover {
+    background: transparent !important;
+    color: var(--optrf-room-fg-bright) !important;
+}
+
+.swal2-deny,
+button.swal2-deny {
+    display: none !important;
+}
+
+#qrRoomContainer,
+#qrRoomPopupContainer,
+.qr-room-copy {
+    display: none !important;
+}
+
+.swal2-input,
+.optrf-swal-input,
+#usernameInput {
+    background: var(--optrf-room-surface) !important;
+    border: 1px solid var(--optrf-room-border) !important;
+    border-radius: var(--optrf-room-radius) !important;
+    color: var(--optrf-room-fg-bright) !important;
+    font-family: var(--optrf-room-mono) !important;
+    font-size: 13px !important;
+    box-shadow: none !important;
+    margin: 16px 0 8px !important;
+}
+
+.swal2-validation-message {
+    background: var(--optrf-room-surface-2) !important;
+    color: var(--optrf-room-fg) !important;
 }
 
 /* Legacy Room palette remains in the DOM for compatibility with Room.js only. */
@@ -1277,35 +1415,32 @@ body.optrf-compact-ui #mySettings .tab {
     }
 }
 
-/* Academy room chrome — monochrome dock / panels */
-body {
-    font-family: 'NeutralFace', 'Segoe UI', system-ui, sans-serif;
-}
-
+/* Cursor room chrome */
 #bottomButtons {
-    background: rgba(26, 26, 26, 0.92) !important;
-    border: 1px solid #3a3a3a !important;
-    border-radius: 999px !important;
+    background: rgba(24, 24, 24, 0.94) !important;
+    border: 1px solid var(--optrf-room-border, #3c3c3c) !important;
+    border-radius: var(--optrf-room-radius, 6px) !important;
     backdrop-filter: blur(12px);
 }
 
 #bottomButtons button {
     background: transparent !important;
-    color: #ffffff !important;
-    border-radius: 999px !important;
+    color: var(--optrf-room-fg, #cccccc) !important;
+    border-radius: var(--optrf-room-radius, 6px) !important;
 }
 
 #bottomButtons button:hover,
 #bottomButtons button.active {
-    background: #ffffff !important;
-    color: #000000 !important;
+    background: var(--optrf-room-surface-2, #252526) !important;
+    color: var(--optrf-room-fg-bright, #e4e4e4) !important;
 }
 
 #mySettings,
 .chat-panel,
 #chatModule,
 .rc-panel {
-    background: #1a1a1a !important;
-    border-color: #3a3a3a !important;
-    color: #ffffff !important;
+    background: var(--optrf-room-surface, #1e1e1e) !important;
+    border-color: var(--optrf-room-border, #3c3c3c) !important;
+    color: var(--optrf-room-fg, #cccccc) !important;
+    font-family: var(--optrf-room-font) !important;
 }

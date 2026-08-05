@@ -50,9 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const generateRoomId = () => {
-        const fromGen = window.RoomNameGen?.generate?.();
+        const fromGen = window.RoomNameGen?.DEFAULT || window.RoomNameGen?.generate?.();
         if (fromGen) return String(fromGen).replace(/[:\s]+/g, '-');
-        return uuidv4();
+        return 'study-room';
     };
 
     // —— Defaults (as on the annotated screenshot) ——

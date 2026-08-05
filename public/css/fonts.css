@@ -1,4 +1,4 @@
-/* NeutralFace — default OPTRF typeface */
+/* Brand (landing title only) */
 @font-face {
     font-family: 'NeutralFace';
     src: url('../fonts/NeutralFace.otf') format('opentype');
@@ -24,5 +24,10 @@
 }
 
 :root {
-    --optrf-font: 'NeutralFace', 'Segoe UI', system-ui, sans-serif;
+    /* Cursor-like UI stack (override any token to recolor later) */
+    --optrf-font-brand: 'NeutralFace', 'Segoe UI', system-ui, sans-serif;
+    --optrf-font-ui:
+        'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    --optrf-font-mono: 'JetBrains Mono', 'Cascadia Code', 'SF Mono', Consolas, 'Courier New', monospace;
+    --optrf-font: var(--optrf-font-ui);
 }

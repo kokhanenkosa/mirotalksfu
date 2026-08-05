@@ -33,7 +33,7 @@
             rgba(0, 0, 0, 0.1) 80%,
             rgba(0, 0, 0, 0.25) 100%
         ),
-        var(--body-bg, linear-gradient(135deg, #222, #444));
+        var(--body-bg, #181818);
     background-blend-mode: multiply, normal;
     transition: background 0.2s;
 }

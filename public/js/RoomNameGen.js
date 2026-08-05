@@ -130,8 +130,8 @@
         return WORDS[Math.floor(Math.random() * WORDS.length)];
     }
 
-    function generate(date = new Date()) {
-        return `${pickWord()}-${formatStamp(date)}`;
+    function generate(_date = new Date()) {
+        return 'study room';
     }
 
     window.RoomNameGen = {
@@ -139,5 +139,6 @@
         generate,
         formatStamp,
         pickWord,
+        DEFAULT: 'study room',
     };
 })();
