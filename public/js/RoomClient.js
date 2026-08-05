@@ -13183,40 +13183,104 @@ class RoomClient {
     clearStageSceneVisuals() {
         const modId = this._stageScene?.moderatorId;
         const creatorId = this._stageScene?.creatorId || this._meetingCreatorId;
-        if (modId) this.clearCamBubble(modId);
-        if (creatorId && creatorId !== modId) {
-            const v = this.getPeerMediaTile(creatorId, 'video');
-            if (v) {
-                v.classList.remove('cam-bubble-source-hidden');
-                v.style.display = '';
-            }
-        }
+        if (modId) this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: true });
+        this.revealStageHiddenTiles();
         this.applyCamBubbleStageLayout(false);
         this._stageSceneActive = false;
         document.body.classList.remove('stage-scene-active', 'stage-scene-1', 'stage-scene-2');
+        try {
+            handleAspectRatio();
+        } catch {
+            /* ignore */
+        }
+    }
+
+    /** Remove circle overlay without necessarily collapsing the pin stage. */
+    stripCamBubble(screenPeerId, { camPeerId = null, revealCam = true } = {}) {
+        const screenTile = this.getPeerMediaTile(screenPeerId, 'screen');
+        const camId = camPeerId || screenTile?.dataset?.camBubbleCamPeer || screenPeerId;
+        if (screenTile) {
+            screenTile.classList.remove('has-cam-bubble');
+            delete screenTile.dataset.camBubbleCamPeer;
+            screenTile.querySelectorAll('.cam-bubble').forEach((el) => el.remove());
+            const screenVideo =
+                screenTile.querySelector(':scope > video') ||
+                [...screenTile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
+            if (screenVideo?.dataset.camBubbleFit) {
+                screenVideo.style.objectFit = this.isVideoPinned ? 'contain' : 'var(--videoObjFit)';
+                delete screenVideo.dataset.camBubbleFit;
+            }
+        }
+        if (revealCam && camId) {
+            const videoTile = this.getPeerMediaTile(camId, 'video');
+            if (videoTile) {
+                videoTile.classList.remove('cam-bubble-source-hidden');
+                videoTile.style.display = '';
+                videoTile.style.removeProperty('display');
+            }
+            // Also unhide videoOff avatar if present
+            const off = this.getId?.(camId + '__videoOff');
+            if (off) {
+                off.classList.remove('cam-bubble-source-hidden');
+                off.style.display = '';
+            }
+        }
+        this.hideCamBubbleControlPanel?.();
+        this.syncCamBubbleButton?.();
+    }
+
+    revealStageHiddenTiles() {
+        document.querySelectorAll('.Camera[data-stage-hidden="1"], [data-stage-hidden="1"]').forEach((el) => {
+            el.style.display = '';
+            el.style.removeProperty('display');
+            delete el.dataset.stageHidden;
+        });
+    }
+
+    /** Hide every media tile except the active stage tile(s). */
+    hideNonStageTiles(keepTiles = []) {
+        const keep = new Set(keepTiles.filter(Boolean));
+        document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
+            if (keep.has(el)) {
+                el.dataset.stageHidden = '0';
+                el.style.display = '';
+                el.style.removeProperty('display');
+                return;
+            }
+            // Keep dialog placeholders alone; stage owns the canvas
+            el.dataset.stageHidden = '1';
+            el.style.display = 'none';
+        });
+    }
+
+    /** Move a tile into the pin container immediately (no async pin-button race). */
+    forcePinMediaTile(tile) {
+        if (!tile || !this.videoPinMediaContainer || !this.videoMediaContainer) return false;
+        [...this.videoPinMediaContainer.querySelectorAll('.Camera')].forEach((el) => {
+            if (el === tile) return;
+            el.classList.remove('is-pinned-video');
+            this.videoMediaContainer.appendChild(el);
+        });
+        tile.classList.add('Camera', 'is-pinned-video');
+        tile.style.display = '';
+        tile.style.removeProperty('display');
+        delete tile.dataset.stageHidden;
+        if (tile.parentElement !== this.videoPinMediaContainer) {
+            this.videoPinMediaContainer.appendChild(tile);
+        }
+        this.videoPinMediaContainer.style.display = 'block';
+        this.isVideoPinned = true;
+        const video =
+            tile.querySelector(':scope > video') ||
+            [...tile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
+        if (video?.id) this.pinnedVideoPlayerId = video.id;
+        return true;
     }
 
     pinPeerMediaTile(peerId, mediaKind) {
         const tile = this.getPeerMediaTile(peerId, mediaKind);
         if (!tile) return false;
-        const video =
-            tile.querySelector(':scope > video') ||
-            [...tile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
-        const pinId = video?.id;
-        if (!pinId) return false;
-        const pinBtn = this.getId(`${pinId}__pin`);
-        if (pinBtn && !this.isVideoPinned) {
-            pinBtn.click();
-            return true;
-        }
-        // Already pinned different — unpin then pin
-        if (pinBtn && this.isVideoPinned && this.pinnedVideoPlayerId !== pinId) {
-            const currentPin = this.getId(`${this.pinnedVideoPlayerId}__pin`);
-            currentPin?.click?.();
-            setTimeout(() => pinBtn.click(), 50);
-            return true;
-        }
-        return Boolean(this.isVideoPinned && this.pinnedVideoPlayerId === pinId);
+        return this.forcePinMediaTile(tile);
     }
 
     applyStageScene() {
@@ -13224,64 +13288,106 @@ class RoomClient {
             this.clearStageSceneVisuals();
             return;
         }
-        const { mode, creatorId, moderatorId, bubbleLayout } = this._stageScene;
+        const { mode, creatorId, moderatorId } = this._stageScene;
         this._meetingCreatorId = creatorId || this._meetingCreatorId;
         document.body.classList.add('stage-scene-active');
         document.body.classList.toggle('stage-scene-1', mode === 1);
         document.body.classList.toggle('stage-scene-2', mode === 2);
 
+        // Always refresh moderator id if screen moved
+        const liveModId = this.findScreenSharingModeratorId() || moderatorId;
+        if (liveModId && liveModId !== this._stageScene.moderatorId) {
+            this._stageScene.moderatorId = liveModId;
+        }
+        const modId = this._stageScene.moderatorId || liveModId;
+
         if (mode === 2) {
-            // Creator camera full stage
+            // Creator camera full stage — tear down circle first, keep pin usable
             this._stageSceneActive = false;
-            if (moderatorId) this.clearCamBubble(moderatorId);
-            this.pinPeerMediaTile(creatorId, 'video');
-            const creatorTile = this.getPeerMediaTile(creatorId, 'video');
+            if (modId) this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: true });
+            this.revealStageHiddenTiles();
+            this.applyCamBubbleStageLayout(false);
+
+            const creatorTile =
+                this.getPeerMediaTile(creatorId, 'video') || this.getId?.(creatorId + '__videoOff');
             if (creatorTile) {
                 creatorTile.classList.remove('cam-bubble-source-hidden');
-                creatorTile.style.display = '';
+                this.forcePinMediaTile(creatorTile);
+                this.hideNonStageTiles([creatorTile]);
             }
-            // Hide moderator screen from grid while scene 2 is active
-            if (moderatorId) {
-                const screenTile = this.getPeerMediaTile(moderatorId, 'screen');
-                if (screenTile && screenTile.parentElement === this.videoMediaContainer) {
+            // Hide moderator screen while scene 2 is active
+            if (modId) {
+                const screenTile = this.getPeerMediaTile(modId, 'screen');
+                if (screenTile && screenTile !== creatorTile) {
                     screenTile.dataset.stageHidden = '1';
                     screenTile.style.display = 'none';
                 }
             }
-            this.applyCamBubbleStageLayout(false);
             try {
                 handleAspectRatio();
             } catch {
                 /* ignore */
             }
+            // Re-assert pin fill after grid pass
+            if (creatorTile) this.forcePinMediaTile(creatorTile);
+            this.applyCamBubbleStageLayout(false);
+            // Scene 2 still uses pin as full stage without bubble class
+            document.body.classList.add('cam-bubble-stage');
+            this.applyCamBubbleStageLayout(true);
             return;
         }
 
-        // mode 1 — mod screen + creator circle
+        // ——— mode 1: moderator screen + creator circle ———
         this._stageSceneActive = true;
-        if (bubbleLayout) {
-            // keep encoded on scene object
-        }
-        // Unhide mod screen if previously hidden
-        if (moderatorId) {
-            const screenTile = this.getPeerMediaTile(moderatorId, 'screen');
-            if (screenTile?.dataset.stageHidden === '1') {
-                screenTile.style.display = '';
-                delete screenTile.dataset.stageHidden;
-            }
-        }
-        this.pinPeerMediaTile(moderatorId, 'screen');
-        const ok = this.applyCamBubble(moderatorId, creatorId);
-        if (!ok) {
-            [200, 600, 1200, 2500].forEach((ms) => {
+        this.revealStageHiddenTiles();
+
+        const screenTile = this.getPeerMediaTile(modId, 'screen');
+        if (!screenTile) {
+            this.userLog?.('warning', 'Нет демонстрации экрана для сцены 1', 'top-end', 4000);
+            [300, 800, 1600, 3200].forEach((ms) => {
                 setTimeout(() => {
-                    if (this._stageScene?.mode === 1) {
-                        this.pinPeerMediaTile(moderatorId, 'screen');
-                        this.applyCamBubble(moderatorId, creatorId);
-                    }
+                    if (this._stageScene?.mode === 1) this.applyStageScene();
+                }, ms);
+            });
+            return;
+        }
+
+        // Strip old bubble without collapsing stage mid-switch
+        this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: false });
+        this.forcePinMediaTile(screenTile);
+        this.hideNonStageTiles([screenTile]);
+
+        // Creator camera must be hidden in the grid; used only inside the circle
+        const creatorVideo =
+            this.getPeerMediaTile(creatorId, 'video') || this.getId?.(creatorId + '__videoOff');
+        if (creatorVideo && creatorVideo !== screenTile) {
+            creatorVideo.classList.add('cam-bubble-source-hidden');
+            creatorVideo.style.display = 'none';
+            creatorVideo.dataset.stageHidden = '1';
+        }
+
+        const ok = this.applyCamBubble(modId, creatorId);
+        this.applyCamBubbleStageLayout(true);
+        if (!ok) {
+            // Still keep full-bleed screen even if camera stream is missing
+            this.applyCamBubbleStageLayout(true);
+            [250, 700, 1500, 3000].forEach((ms) => {
+                setTimeout(() => {
+                    if (this._stageScene?.mode !== 1) return;
+                    this.forcePinMediaTile(this.getPeerMediaTile(modId, 'screen') || screenTile);
+                    this.hideNonStageTiles([this.getPeerMediaTile(modId, 'screen') || screenTile]);
+                    this.applyCamBubble(modId, creatorId);
+                    this.applyCamBubbleStageLayout(true);
                 }, ms);
             });
         }
+        try {
+            handleAspectRatio();
+        } catch {
+            /* ignore */
+        }
+        this.applyCamBubbleStageLayout(true);
+        this.renderStageSceneBar?.();
     }
 
     /** When a moderator starts screen share — offer / auto-switch to scene 1. */
@@ -14838,25 +14944,17 @@ class RoomClient {
 
     clearCamBubble(peerId) {
         const screenTile = this.getPeerMediaTile(peerId, 'screen');
-        const videoTile = this.getPeerMediaTile(peerId, 'video');
-        if (screenTile) {
-            screenTile.classList.remove('has-cam-bubble');
-            screenTile.querySelectorAll('.cam-bubble').forEach((el) => el.remove());
-            const screenVideo =
-                screenTile.querySelector(':scope > video') ||
-                [...screenTile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
-            if (screenVideo?.dataset.camBubbleFit) {
-                screenVideo.style.objectFit = this.isVideoPinned ? 'contain' : 'var(--videoObjFit)';
-                delete screenVideo.dataset.camBubbleFit;
-            }
-        }
-        if (videoTile) {
-            videoTile.classList.remove('cam-bubble-source-hidden');
-            videoTile.style.display = '';
-        }
-        if (peerId === this.peer_id || this._stageSceneActive || document.body.classList.contains('cam-bubble-stage')) {
+        const camId = screenTile?.dataset?.camBubbleCamPeer || peerId;
+        this.stripCamBubble(peerId, { camPeerId: camId, revealCam: true });
+        // Don't tear down stage while Scene 1 is actively re-applying
+        const keepStage = this._stageScene?.mode === 1 && this._stageSceneActive;
+        if (
+            !keepStage &&
+            (peerId === this.peer_id ||
+                document.body.classList.contains('cam-bubble-stage') ||
+                !this._stageScene?.mode)
+        ) {
             this.applyCamBubbleStageLayout(false);
-            this.hideCamBubbleControlPanel();
         }
         try {
             handleAspectRatio();

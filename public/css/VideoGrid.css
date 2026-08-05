@@ -493,7 +493,8 @@
 }
 
 /* Full-bleed pin stage while cam-bubble / scene 1 is active — prevent grid shrink */
-body.cam-bubble-stage #videoPinMediaContainer {
+body.cam-bubble-stage #videoPinMediaContainer,
+body.stage-scene-active #videoPinMediaContainer {
     display: block !important;
     left: 0 !important;
     overflow: hidden !important;
@@ -502,7 +503,10 @@ body.cam-bubble-stage #videoPinMediaContainer {
 
 body.cam-bubble-stage #videoPinMediaContainer .Camera,
 body.cam-bubble-stage #videoPinMediaContainer .has-cam-bubble,
-body.cam-bubble-stage #videoPinMediaContainer .is-pinned-video {
+body.cam-bubble-stage #videoPinMediaContainer .is-pinned-video,
+body.stage-scene-active #videoPinMediaContainer .Camera,
+body.stage-scene-active #videoPinMediaContainer .has-cam-bubble,
+body.stage-scene-active #videoPinMediaContainer .is-pinned-video {
     width: 100% !important;
     height: 100% !important;
     margin: 0 !important;
@@ -515,12 +519,23 @@ body.cam-bubble-stage #videoPinMediaContainer .is-pinned-video {
 }
 
 body.cam-bubble-stage #videoPinMediaContainer .has-cam-bubble > video,
-body.cam-bubble-stage #videoPinMediaContainer .is-pinned-video > video {
+body.cam-bubble-stage #videoPinMediaContainer .is-pinned-video > video,
+body.stage-scene-active #videoPinMediaContainer .has-cam-bubble > video,
+body.stage-scene-active #videoPinMediaContainer .is-pinned-video > video {
     position: absolute !important;
     inset: 0 !important;
     width: 100% !important;
     height: 100% !important;
     object-fit: contain !important;
+}
+
+body.stage-scene-active #videoMediaContainer.cam-bubble-stage-hidden,
+body.cam-bubble-stage #videoMediaContainer.cam-bubble-stage-hidden {
+    display: none !important;
+}
+
+body.stage-scene-active .Camera[data-stage-hidden='1'] {
+    display: none !important;
 }
 
 .Camera.cam-bubble-source-hidden,

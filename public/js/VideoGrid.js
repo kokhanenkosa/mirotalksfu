@@ -64,7 +64,10 @@ function resizeVideoMedia() {
     }
 
     // Cam-bubble / stage scene: pinned screen must stay full-bleed — never shrink via grid math.
-    if (document.body.classList.contains('cam-bubble-stage')) {
+    if (
+        document.body.classList.contains('cam-bubble-stage') ||
+        document.body.classList.contains('stage-scene-active')
+    ) {
         document.querySelectorAll('#videoPinMediaContainer .Camera, #videoPinMediaContainer .has-cam-bubble').forEach((el) => {
             el.style.setProperty('width', '100%', 'important');
             el.style.setProperty('height', '100%', 'important');
