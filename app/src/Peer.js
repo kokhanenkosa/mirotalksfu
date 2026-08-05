@@ -339,11 +339,14 @@ module.exports = class Peer {
 
         const { id, type, kind, rtpParameters, producerPaused } = consumer;
 
-        if (['simulcast', 'svc'].includes(type)) {
-            // simulcast - L1T3/L2T3/L3T3 | svc - L3T3
-            const { scalabilityMode } = rtpParameters.encodings[0];
-            const spatialLayer = parseInt(scalabilityMode.substring(1, 2)); // 1/2/3
-            const temporalLayer = parseInt(scalabilityMode.substring(3, 4)); // 1/2/3
+        if (['simulcast', 'svc'].includes(type) && kind === 'video') {
+            // Start at mid layer; client adapts via setConsumerPreferredLayers by visible tile count.
+            // mediasoup spatial/temporal layers are 0-based (0=low … 2=high for L3).
+            const { scalabilityMode } = rtpParameters.encodings?.[0] || {};
+            const maxSpatial = Math.max(0, (parseInt(String(scalabilityMode || 'L3').substring(1, 2), 10) || 3) - 1);
+            const maxTemporal = Math.max(0, (parseInt(String(scalabilityMode || 'T3').substring(3, 4), 10) || 3) - 1);
+            const spatialLayer = Math.min(1, maxSpatial); // mid by default
+            const temporalLayer = maxTemporal;
 
             try {
                 await consumer.setPreferredLayers({
@@ -354,6 +357,8 @@ module.exports = class Peer {
                     scalabilityMode,
                     spatialLayer,
                     temporalLayer,
+                    maxSpatial,
+                    maxTemporal,
                 });
             } catch (error) {
                 log.error('Failed to set preferred layers', {

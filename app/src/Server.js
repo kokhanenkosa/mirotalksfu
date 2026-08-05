@@ -3611,6 +3611,50 @@ async function startServer() {
             }
         });
 
+        // Adaptive quality: client picks simulcast/SVC spatial+temporal layers per consumer
+        socket.on('setConsumerPreferredLayers', async (dataObject, callback) => {
+            const reply = typeof callback === 'function' ? callback : () => {};
+            try {
+                if (!roomExists(socket)) {
+                    return reply({ error: 'Room not found' });
+                }
+                const peer = getPeer(socket);
+                if (!peer) {
+                    return reply({ error: 'Peer not found' });
+                }
+                if (isPeerInLobby(peer)) {
+                    return reply({ error: 'In lobby' });
+                }
+                const data = checkXSS(dataObject || {});
+                const consumer_id = data.consumer_id;
+                const spatialLayer = Number(data.spatialLayer);
+                const temporalLayer = Number(data.temporalLayer);
+                if (!consumer_id || Number.isNaN(spatialLayer) || Number.isNaN(temporalLayer)) {
+                    return reply({ error: 'invalid layers' });
+                }
+                const consumer = peer.getConsumer(consumer_id);
+                if (!consumer) {
+                    return reply({ error: `consumer ${consumer_id} not found` });
+                }
+                if (!['simulcast', 'svc'].includes(consumer.type)) {
+                    return reply({ ok: true, skipped: true, type: consumer.type });
+                }
+                const s = Math.max(0, Math.min(2, Math.floor(spatialLayer)));
+                const t = Math.max(0, Math.min(2, Math.floor(temporalLayer)));
+                await consumer.setPreferredLayers({ spatialLayer: s, temporalLayer: t });
+                log.debug('Consumer preferred layers', {
+                    consumer_id,
+                    spatialLayer: s,
+                    temporalLayer: t,
+                    peer_id: socket.id,
+                });
+                reply({ ok: true, spatialLayer: s, temporalLayer: t });
+            } catch (error) {
+                log.warn('setConsumerPreferredLayers failed', error?.message || error);
+                reply({ error: error?.message || 'setConsumerPreferredLayers failed' });
+            }
+        });
+
         socket.on('getProducers', () => {
             if (!roomExists(socket)) return;
 

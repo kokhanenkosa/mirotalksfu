@@ -2487,7 +2487,7 @@ class RoomClient {
                     params.encodings = encodings;
                     params.codecs = codec;
                     params.codecOptions = {
-                        videoGoogleStartBitrate: 1000,
+                        videoGoogleStartBitrate: 800,
                     };
                 }
             }
@@ -3077,31 +3077,32 @@ class RoomClient {
                 console.log('WEBCAM ENCODING: VP9 or AV1 with SVC');
                 encodings = [
                     {
-                        maxBitrate: 5000000,
+                        maxBitrate: 2500000,
                         scalabilityMode: this.webcamScalabilityMode || 'L3T3_KEY',
                     },
                 ];
             } else {
+                // Leaner ladder: high ~2.5Mbps, mid ~700k (/2), low ~300k (/3–4)
                 console.log('WEBCAM ENCODING: VP8 or H264 with simulcast');
                 encodings = [
                     {
                         scaleResolutionDownBy: 1,
-                        maxBitrate: 5000000,
-                        scalabilityMode: this.webcamScalabilityMode || 'L1T3',
+                        maxBitrate: 2500000,
+                        scalabilityMode: 'L1T3',
                     },
                 ];
                 if (this.numSimulcastStreamsWebcam > 1) {
                     encodings.unshift({
                         scaleResolutionDownBy: 2,
-                        maxBitrate: 1000000,
-                        scalabilityMode: this.webcamScalabilityMode || 'L1T3',
+                        maxBitrate: 700000,
+                        scalabilityMode: 'L1T3',
                     });
                 }
                 if (this.numSimulcastStreamsWebcam > 2) {
                     encodings.unshift({
                         scaleResolutionDownBy: 4,
-                        maxBitrate: 500000,
-                        scalabilityMode: this.webcamScalabilityMode || 'L1T3',
+                        maxBitrate: 300000,
+                        scalabilityMode: 'L1T3',
                     });
                 }
             }
@@ -3520,6 +3521,7 @@ class RoomClient {
                 console.log('[addProducer] Video-element-count', this.videoMediaContainer.childElementCount);
                 this.refreshCamBubble(this.peer_id);
                 this.refreshDialogSplitIfNeeded(this.peer_id);
+                this.scheduleAdaptiveVideoQuality(250);
                 break;
             case mediaType.audio:
                 elem = document.createElement('audio');
@@ -3799,6 +3801,10 @@ class RoomClient {
                 console.log('Consumer resumed', response);
             } catch (error) {
                 console.error('Error resuming consumer', error);
+            }
+
+            if (kind === 'video') {
+                this.scheduleAdaptiveVideoQuality();
             }
 
             if (kind === 'video' && isParticipantsListOpen) {
@@ -4318,10 +4324,158 @@ class RoomClient {
         return elem;
     }
 
+    // ####################################################
+    // ADAPTIVE VIDEO QUALITY (visible tiles → simulcast layer)
+    // 1 tile → high, 2 → mid (~1/2), 3+ → low (~1/3–1/4)
+    // ####################################################
+
+    countVisibleVideoTiles() {
+        let n = 0;
+        document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
+            if (el.dataset?.stageHidden === '1' || el.dataset?.dialogHidden === '1') return;
+            if (el.classList.contains('cam-bubble-source-hidden')) return;
+            if (el.classList.contains('dialog-split-placeholder')) return;
+            if (el.style.display === 'none') return;
+            const cs = getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return;
+            // Count tiles that actually have a video (or avatar slot in dialog)
+            const hasVideo = !!el.querySelector('video');
+            const isVideoOff = (el.id || '').endsWith('__videoOff');
+            if (!hasVideo && !isVideoOff) return;
+            // Screen share counts as one "heavy" tile
+            n += 1;
+        });
+        // Creator circle on screen still means 2 visual people, but decode is 1 screen + 1 cam stream
+        if (document.querySelector('#videoPinMediaContainer .has-cam-bubble .cam-bubble video')) {
+            n += 1;
+        }
+        return Math.max(1, n);
+    }
+
+    layersForVisibleCount(count, { isScreen = false, isPinned = false } = {}) {
+        // Screen / pinned spotlight stays high quality
+        if (isScreen || isPinned) {
+            return { spatialLayer: 2, temporalLayer: 2 };
+        }
+        const n = Math.max(1, Number(count) || 1);
+        if (n <= 1) return { spatialLayer: 2, temporalLayer: 2 }; // full
+        if (n === 2) return { spatialLayer: 1, temporalLayer: 2 }; // ~1/2
+        if (n === 3) return { spatialLayer: 0, temporalLayer: 2 }; // ~1/3–1/4
+        if (n <= 5) return { spatialLayer: 0, temporalLayer: 1 };
+        return { spatialLayer: 0, temporalLayer: 0 };
+    }
+
+    scheduleAdaptiveVideoQuality(delayMs = 200) {
+        clearTimeout(this._adaptiveVideoQualityTimer);
+        this._adaptiveVideoQualityTimer = setTimeout(() => {
+            this.applyAdaptiveVideoQuality().catch((err) => console.warn('adaptive video quality', err));
+        }, delayMs);
+    }
+
+    async applyAdaptiveVideoQuality() {
+        if (!this.socket || !this.consumers?.size) {
+            this.adaptLocalVideoCapture?.();
+            return;
+        }
+        const visible = this.countVisibleVideoTiles();
+        const pinnedId = this.pinnedVideoPlayerId || null;
+
+        const jobs = [];
+        for (const [consumerId, consumer] of this.consumers.entries()) {
+            if (consumer.kind !== 'video') continue;
+            const tile = this.getId(consumerId + '__video');
+            const mediaKind = tile?.dataset?.mediaKind || '';
+            const isScreen = mediaKind === 'screen';
+            const isPinned = Boolean(
+                pinnedId &&
+                    (consumerId === pinnedId ||
+                        tile?.classList?.contains('is-pinned-video') ||
+                        tile?.parentElement?.id === 'videoPinMediaContainer')
+            );
+            // Hidden tiles: request lowest layer (still subscribed but cheap)
+            const hidden =
+                tile?.dataset?.stageHidden === '1' ||
+                tile?.dataset?.dialogHidden === '1' ||
+                tile?.classList?.contains('cam-bubble-source-hidden') ||
+                tile?.style?.display === 'none';
+
+            const layers = hidden
+                ? { spatialLayer: 0, temporalLayer: 0 }
+                : this.layersForVisibleCount(visible, { isScreen, isPinned });
+
+            const key = `${layers.spatialLayer}:${layers.temporalLayer}`;
+            if (this._consumerLayerCache?.get(consumerId) === key) continue;
+            if (!this._consumerLayerCache) this._consumerLayerCache = new Map();
+            this._consumerLayerCache.set(consumerId, key);
+
+            jobs.push(
+                this.socket
+                    .request('setConsumerPreferredLayers', {
+                        consumer_id: consumerId,
+                        spatialLayer: layers.spatialLayer,
+                        temporalLayer: layers.temporalLayer,
+                    })
+                    .catch((err) => {
+                        this._consumerLayerCache?.delete(consumerId);
+                        console.warn('setConsumerPreferredLayers', consumerId, err);
+                    })
+            );
+        }
+        if (jobs.length) {
+            await Promise.allSettled(jobs);
+            console.log('[adaptiveQuality] visible=', visible, 'updated=', jobs.length);
+        }
+        this.adaptLocalVideoCapture(visible);
+    }
+
+    /** Reduce own webcam capture when many people show video (saves uplink + encode CPU). */
+    async adaptLocalVideoCapture(visibleCount = null) {
+        try {
+            if (!this.producerLabel?.has?.(mediaType.video)) return;
+            const producer = this.producers?.get?.(this.producerLabel.get(mediaType.video));
+            const track = producer?.track;
+            if (!track || track.readyState !== 'live') return;
+
+            const n = visibleCount ?? this.countVisibleVideoTiles();
+            let width = 1280;
+            let height = 720;
+            let frameRate = 30;
+            if (n >= 5) {
+                width = 480;
+                height = 270;
+                frameRate = 12;
+            } else if (n >= 4) {
+                width = 640;
+                height = 360;
+                frameRate = 15;
+            } else if (n >= 3) {
+                width = 854;
+                height = 480;
+                frameRate = 20;
+            } else if (n >= 2) {
+                width = 960;
+                height = 540;
+                frameRate = 24;
+            }
+            const key = `${width}x${height}@${frameRate}`;
+            if (this._localCaptureQualityKey === key) return;
+            this._localCaptureQualityKey = key;
+            await track.applyConstraints({
+                width: { ideal: width },
+                height: { ideal: height },
+                frameRate: { ideal: frameRate, max: frameRate },
+            });
+            console.log('[adaptiveQuality] local capture', key);
+        } catch (err) {
+            console.warn('adaptLocalVideoCapture', err?.message || err);
+        }
+    }
+
     removeConsumer(consumer_id, consumer_kind) {
         if (!this.consumers.get(consumer_id)) return;
 
         console.log('Remove consumer', { consumer_id: consumer_id, consumer_kind: consumer_kind });
+        this._consumerLayerCache?.delete(consumer_id);
 
         const elem = this.getId(consumer_id);
         if (elem) {
@@ -4396,6 +4550,7 @@ class RoomClient {
         this.consumers.get(consumer_id).close();
         this.consumers.delete(consumer_id);
         this.sound('left');
+        if (consumer_kind === 'video') this.scheduleAdaptiveVideoQuality(120);
     }
 
     // ####################################################
@@ -12694,6 +12849,7 @@ class RoomClient {
                 this.applyStageScene();
                 if (this.isLocalDialogParticipant()) this.renderDialogControlsBar?.();
                 else this.hideDialogControlsBar?.();
+                this.scheduleAdaptiveVideoQuality(250);
             } finally {
                 this._applyingDialogSplit = false;
             }
@@ -12968,6 +13124,7 @@ class RoomClient {
 
         // Presenter self-view orientation rule after dialog layout
         this.refreshLocalCameraMirror();
+        this.scheduleAdaptiveVideoQuality(250);
     }
 
     ensureDialogFilmstrip(filmWraps = []) {
@@ -13241,6 +13398,7 @@ class RoomClient {
 
         reapply();
         [50, 150, 400, 900].forEach((ms) => setTimeout(reapply, ms));
+        this.scheduleAdaptiveVideoQuality(300);
     }
 
     // ####################################################
@@ -13465,6 +13623,7 @@ class RoomClient {
             [...tile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
         if (video?.id) this.pinnedVideoPlayerId = video.id;
         if (tile.dataset?.mediaKind === 'screen') this.ensureScreenVideoPlaying(tile);
+        this.scheduleAdaptiveVideoQuality(200);
         return true;
     }
 
@@ -13739,6 +13898,7 @@ class RoomClient {
                 this.ensureScreenVideoPlaying(this.getPeerMediaTile(modId, 'screen') || screenTile);
             }, ms);
         });
+        this.scheduleAdaptiveVideoQuality(250);
     }
 
     /** When a moderator starts screen share — offer / auto-switch to scene 1. */
