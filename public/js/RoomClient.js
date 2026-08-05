@@ -12448,6 +12448,13 @@ class RoomClient {
         return host;
     }
 
+    /** Presenter or invited dialog guest — everyone else is a stage spectator during dialog. */
+    isLocalDialogParticipant() {
+        if (isPresenter) return true;
+        if (this.peer_id && this.peer_id === this._dialogPresenterId) return true;
+        return Boolean(this.peer_id && (this._dialogGuestIds || []).includes(this.peer_id));
+    }
+
     /** Resolve display name for dialog controls (never bare "Гость" when a real name exists). */
     getPeerDisplayName(peerId) {
         if (!peerId) return 'Гость';
@@ -12678,13 +12685,16 @@ class RoomClient {
 
         // Co-lecturer stage (mod screen + creator circle) must survive dialog
         if (this._stageScene?.mode) {
-            document.body.classList.add('dialog-split-active', 'dialog-with-stage');
+            const participant = this.isLocalDialogParticipant();
+            document.body.classList.add('dialog-split-active');
+            document.body.classList.toggle('dialog-with-stage', participant);
             document.body.classList.remove('dialog-split-mobile');
             const isMobileSplit = !!(this.isMobileDevice || window.innerWidth <= 768);
-            document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
+            if (participant) document.body.classList.toggle('dialog-split-mobile', isMobileSplit);
             try {
                 this.applyStageScene();
-                this.renderDialogControlsBar?.();
+                if (participant) this.renderDialogControlsBar?.();
+                else this.hideDialogControlsBar?.();
             } finally {
                 this._applyingDialogSplit = false;
             }
@@ -13105,41 +13115,7 @@ class RoomClient {
         if (restoreStage) {
             // Keep co-lecturer stage (mod screen + creator circle) after dialog ends
             this.hideDialogControlsBar?.();
-            // Drop guest-strip geometry (set with !important) so pin can fill again
-            const clearGeom = (el) => {
-                if (!el?.style) return;
-                [
-                    'top',
-                    'left',
-                    'right',
-                    'bottom',
-                    'width',
-                    'height',
-                    'overflow',
-                    'display',
-                    'flex-direction',
-                    'flex-wrap',
-                    'gap',
-                    'padding',
-                    'grid-template-columns',
-                    'grid-template-rows',
-                    'box-sizing',
-                ].forEach((p) => el.style.removeProperty(p));
-            };
-            clearGeom(this.videoPinMediaContainer);
-            clearGeom(this.videoMediaContainer);
-            this.videoMediaContainer?.classList.remove('cam-bubble-stage-hidden');
-            this.applyStageScene();
-            this.applyCamBubbleStageLayout?.(Boolean(this._stageScene?.mode));
-            this.renderStageSceneBar?.();
-            this.refreshLocalCameraMirror?.();
-            // Re-assert full-bleed after grid/chat layout settles
-            [50, 200, 500].forEach((ms) => {
-                setTimeout(() => {
-                    if (!this._stageScene?.mode || this._dialogSplitActive) return;
-                    this.applyStageScene();
-                }, ms);
-            });
+            this.restoreStageSceneAfterDialog();
             return;
         }
 
@@ -13185,6 +13161,14 @@ class RoomClient {
         }
         if (!peer_id || peer_id === this.peer_id) return;
 
+        // Scene 1 cam-bubble panel (z-index 1200+) sits above default Swal (1060) — close it first
+        try {
+            this.setCamBubblePanelOpen?.(false);
+            this.hideCamBubbleControlPanel?.();
+        } catch {
+            /* ignore */
+        }
+
         Swal.fire({
             background: swalBackground,
             position: 'center',
@@ -13194,6 +13178,9 @@ class RoomClient {
             showDenyButton: true,
             confirmButtonText: 'Да',
             denyButtonText: 'Нет',
+            heightAuto: false,
+            allowOutsideClick: false,
+            customClass: { container: 'optrf-swal-above-stage' },
             showClass: { popup: 'animate__animated animate__fadeInDown' },
             hideClass: { popup: 'animate__animated animate__fadeOutUp' },
         }).then((result) => {
@@ -13205,6 +13192,56 @@ class RoomClient {
             });
             this.userLog('success', 'Запрос на назначение модератора отправлен', 'top-end', 3000);
         });
+    }
+
+    /** Hard restore of mod screen + creator circle after dialog teardown (fixes black stage). */
+    restoreStageSceneAfterDialog() {
+        const clearGeom = (el) => {
+            if (!el?.style) return;
+            [
+                'top',
+                'left',
+                'right',
+                'bottom',
+                'width',
+                'height',
+                'overflow',
+                'display',
+                'flex-direction',
+                'flex-wrap',
+                'gap',
+                'padding',
+                'grid-template-columns',
+                'grid-template-rows',
+                'box-sizing',
+            ].forEach((p) => el.style.removeProperty(p));
+        };
+        clearGeom(this.videoPinMediaContainer);
+        clearGeom(this.videoMediaContainer);
+        this.videoMediaContainer?.style?.removeProperty('display');
+        this.videoMediaContainer?.classList.remove('cam-bubble-stage-hidden');
+        document.body.classList.remove('dialog-with-stage', 'dialog-split-active', 'dialog-split-mobile');
+
+        const reapply = () => {
+            if (!this._stageScene?.mode || this._dialogSplitActive) return;
+            const modId = this._stageScene.moderatorId || this.findScreenSharingModeratorId();
+            const creatorId = this._stageScene.creatorId || this._meetingCreatorId;
+            if (modId) {
+                // Clean bubble then rebuild so screen video is reattached/playing
+                this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: false });
+            }
+            this.applyStageScene();
+            if (this._stageScene.mode === 1 && !this._dialogSplitActive) {
+                this.applyCamBubbleStageLayout(true);
+            }
+            const screenTile = modId ? this.getPeerMediaTile(modId, 'screen') : null;
+            this.ensureScreenVideoPlaying(screenTile);
+            this.renderStageSceneBar?.();
+            this.refreshLocalCameraMirror?.();
+        };
+
+        reapply();
+        [50, 150, 400, 900].forEach((ms) => setTimeout(reapply, ms));
     }
 
     // ####################################################
@@ -13605,10 +13642,16 @@ class RoomClient {
             this._stageScene.moderatorId = liveModId;
         }
         const modId = this._stageScene.moderatorId || liveModId;
-        const dialogGuests = this._dialogSplitActive ? [...(this._dialogGuestIds || [])] : [];
+        // Only dialog participants see guest strip; spectators keep full mod screen + circle
+        const dialogParticipant = this._dialogSplitActive && this.isLocalDialogParticipant();
+        const dialogGuests = dialogParticipant ? [...(this._dialogGuestIds || [])] : [];
         const guestKeep = dialogGuests
             .map((id) => this.getCameraWrapByPeerId(id) || this.getId(id + '__videoOff') || this.ensureDialogPlaceholder(id))
             .filter(Boolean);
+        const layoutStage = () => {
+            if (dialogParticipant) this.layoutDialogGuestsBesideStage(dialogGuests);
+            else this.applyCamBubbleStageLayout(true);
+        };
 
         if (mode === 2) {
             this._stageSceneActive = false;
@@ -13630,13 +13673,9 @@ class RoomClient {
                 }
             }
             document.body.classList.add('cam-bubble-stage');
-            if (this._dialogSplitActive) {
-                this.layoutDialogGuestsBesideStage(dialogGuests);
-            } else {
-                this.applyCamBubbleStageLayout(true);
-            }
+            layoutStage();
             this.renderStageSceneBar?.();
-            if (this._dialogSplitActive) this.renderDialogControlsBar?.();
+            if (dialogParticipant) this.renderDialogControlsBar?.();
             if (isPresenter && this._handRaiseAlerts?.size) this.renderHandRaiseAlerts();
             return;
         }
@@ -13648,9 +13687,8 @@ class RoomClient {
         const screenTile = this.getPeerMediaTile(modId, 'screen');
         if (!screenTile) {
             this.userLog?.('warning', 'Нет демонстрации экрана для сцены 1', 'top-end', 4000);
-            if (this._dialogSplitActive) {
-                this.layoutDialogGuestsBesideStage(dialogGuests);
-            }
+            if (dialogParticipant) this.layoutDialogGuestsBesideStage(dialogGuests);
+            else this.applyCamBubbleStageLayout(true);
             [300, 800, 1600, 3200].forEach((ms) => {
                 setTimeout(() => {
                     if (this._stageScene?.mode === 1) this.applyStageScene();
@@ -13672,11 +13710,7 @@ class RoomClient {
         }
 
         const ok = this.applyCamBubble(modId, creatorId);
-        if (this._dialogSplitActive) {
-            this.layoutDialogGuestsBesideStage(dialogGuests);
-        } else {
-            this.applyCamBubbleStageLayout(true);
-        }
+        layoutStage();
         if (!ok) {
             [250, 700, 1500, 3000].forEach((ms) => {
                 setTimeout(() => {
@@ -13684,13 +13718,13 @@ class RoomClient {
                     const st = this.getPeerMediaTile(modId, 'screen') || screenTile;
                     this.forcePinMediaTile(st);
                     this.applyCamBubble(modId, creatorId);
-                    if (this._dialogSplitActive) this.layoutDialogGuestsBesideStage(dialogGuests);
-                    else this.applyCamBubbleStageLayout(true);
+                    layoutStage();
+                    this.ensureScreenVideoPlaying(st);
                 }, ms);
             });
         }
         this.renderStageSceneBar?.();
-        if (this._dialogSplitActive) this.renderDialogControlsBar?.();
+        if (dialogParticipant) this.renderDialogControlsBar?.();
         // Re-attach hand-raise banners if they were inside a now-hidden tile
         if (isPresenter && this._handRaiseAlerts?.size) this.renderHandRaiseAlerts();
         this.ensureScreenVideoPlaying(screenTile);
@@ -15194,8 +15228,8 @@ class RoomClient {
 
     applyCamBubbleStageLayout(active) {
         if (!this.videoPinMediaContainer || !this.videoMediaContainer) return;
-        // Dialog + co-lecturer stage: keep guest strip visible beside pin
-        if (active && this._dialogSplitActive && this._stageScene?.mode) {
+        // Dialog + co-lecturer stage: guest strip only for dialog participants
+        if (active && this._dialogSplitActive && this._stageScene?.mode && this.isLocalDialogParticipant()) {
             this.layoutDialogGuestsBesideStage(this._dialogGuestIds || []);
             return;
         }
@@ -16218,7 +16252,11 @@ class RoomClient {
                 this.videoPinMediaContainer.style.display = 'block';
                 this.isVideoPinned = true;
             }
-            if (this._dialogSplitActive && this._stageScene?.mode) {
+            if (
+                this._dialogSplitActive &&
+                this._stageScene?.mode &&
+                this.isLocalDialogParticipant()
+            ) {
                 this.layoutDialogGuestsBesideStage(this._dialogGuestIds || []);
             } else {
                 this.applyCamBubbleStageLayout(true);
@@ -16232,12 +16270,17 @@ class RoomClient {
         }
         // Re-assert full-bleed after aspect-ratio/grid pass
         if (shouldStage || document.body.classList.contains('cam-bubble-stage')) {
-            if (this._dialogSplitActive && this._stageScene?.mode) {
+            if (
+                this._dialogSplitActive &&
+                this._stageScene?.mode &&
+                this.isLocalDialogParticipant()
+            ) {
                 this.layoutDialogGuestsBesideStage(this._dialogGuestIds || []);
             } else {
                 this.applyCamBubbleStageLayout(true);
             }
         }
+        this.ensureScreenVideoPlaying(screenTile);
         this.syncCamBubbleButton();
         return true;
     }

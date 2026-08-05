@@ -326,6 +326,17 @@ body.dialog-with-stage .stage-scene-bar {
     z-index: 47;
 }
 
+/* Swal must sit above cam-bubble panel (1200) / edit btn (1400) in scene 1 */
+.swal2-container,
+.swal2-container.optrf-swal-above-stage {
+    z-index: 20000 !important;
+}
+
+body.stage-scene-active #chatRoom,
+body.cam-bubble-stage #chatRoom {
+    z-index: 50 !important;
+}
+
 /* Stage scene switcher (creator + moderators) */
 .stage-scene-bar {
     position: fixed;
