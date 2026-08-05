@@ -16,7 +16,7 @@ const isRulesActive = true;
 let BUTTONS = {
     popup: {
         shareRoomPopup: true,
-        shareRoomQrOnHover: true,
+        shareRoomQrOnHover: false,
     },
     main: {
         shareButton: true, // for quest, presenter default true
