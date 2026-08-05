@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+@import url('./fonts.css');
 
 /*--------------------------------------------------------------
 # Keyframes
@@ -351,7 +351,7 @@ body {
 #loadingDiv h1 {
     padding: 10px;
     font-size: 60px;
-    font-family: 'Montserrat';
+    font-family: var(--optrf-font);
     border-radius: 14px;
 }
 #loadingDiv pre,
@@ -359,7 +359,7 @@ body {
     padding: 10px;
     margin: 0 auto;
     max-width: min(90vw, 60ch);
-    font-family: 'Montserrat';
+    font-family: var(--optrf-font);
     font-size: var(--font-base, 15px);
     line-height: var(--lh-base, 1.5);
     color: var(--fg-2, rgba(255, 255, 255, 0.78));
@@ -2455,7 +2455,7 @@ body {
     transform: translate(-50%, -50%);
     --rgb-background: var(--body-bg);
     --color-border-over: var(--body-bg);
-    --font-family: 'Montserrat';
+    --font-family: var(--optrf-font);
 }
 
 .room-emoji-header {
@@ -4826,7 +4826,7 @@ hr {
     -webkit-backdrop-filter: blur(12px);
     box-shadow: var(--box-shadow);
     animation: breakoutSlideDown 0.4s ease-out;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
 }
 
 @keyframes breakoutSlideDown {
@@ -4907,7 +4907,7 @@ hr {
     color: #fff;
     font-size: 12px;
     font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -4933,7 +4933,7 @@ hr {
     color: #fff;
     font-size: 12px;
     font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -4967,7 +4967,7 @@ hr {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: var(--box-shadow);
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     overflow: hidden;
 }
 
@@ -5041,7 +5041,7 @@ hr {
 .breakout-header-action-btn span {
     font-size: 12px;
     font-weight: 500;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
 }
 
 @media (max-width: 640px) {
@@ -5100,7 +5100,7 @@ hr {
     color: #fff;
     font-size: 12px;
     font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -5210,7 +5210,7 @@ hr {
     color: #fff;
     font-size: 12px;
     font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     padding: 2px 6px;
     width: 100px;
     outline: none;
@@ -5259,7 +5259,7 @@ hr {
     color: #fff;
     font-size: 10px;
     font-weight: 500;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     padding: 2px 6px;
     width: 70px;
     outline: none;
@@ -5371,7 +5371,7 @@ hr {
     background: var(--select-bg);
     color: #fff;
     font-size: 12px;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     outline: none;
     transition: border-color 0.2s;
     min-width: 0;
@@ -5426,7 +5426,7 @@ hr {
     color: #ff5252;
     font-size: 11px;
     font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -5458,7 +5458,7 @@ hr {
     color: #fff;
     font-size: 10px;
     font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -5482,7 +5482,7 @@ hr {
     color: #ff5252;
     font-size: 10px;
     font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -5505,7 +5505,7 @@ hr {
     color: #66beff;
     font-size: 10px;
     font-weight: 600;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -5524,7 +5524,7 @@ hr {
     background: var(--select-bg);
     color: #fff;
     font-size: 12px;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     outline: none;
     transition: border-color 0.2s;
 }
@@ -5581,7 +5581,7 @@ hr {
     background: var(--select-bg);
     color: #fff;
     font-size: 11px;
-    font-family: 'Montserrat', sans-serif;
+    font-family: var(--optrf-font);
     cursor: pointer;
     min-width: 100px;
     flex-shrink: 0;
@@ -5996,7 +5996,7 @@ hr {
     margin: 0 !important;
     padding: 0.85rem 1rem !important;
     border-radius: 999px !important;
-    font-family: 'Montserrat', sans-serif !important;
+    font-family: var(--optrf-font) !important;
     font-size: 0.92rem !important;
     font-weight: 700 !important;
     letter-spacing: 0.01em;

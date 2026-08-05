@@ -295,7 +295,7 @@ button,
 input,
 select,
 textarea {
-    font-family: 'IBM Plex Sans', sans-serif;
+    font-family: var(--optrf-font);
 }
 a {
     color: #8a94a7;

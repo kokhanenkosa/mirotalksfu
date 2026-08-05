@@ -1,11 +1,13 @@
 /* OPTRF — единая дизайн-система и три режима (system разрешается ThemeInit.js). */
+@import url('./fonts.css');
+
 :root {
     --optrf-accent: #00a8e8;
     --optrf-accent-hover: #0196cf;
     --optrf-accent-soft: rgba(0, 168, 232, 0.14);
     --optrf-success: #16a36a;
     --optrf-danger: #dc3545;
-    --optrf-font: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --optrf-font: 'NeutralFace', 'Segoe UI', system-ui, sans-serif;
     --optrf-radius-sm: 8px;
     --optrf-radius: 12px;
     --optrf-radius-lg: 18px;

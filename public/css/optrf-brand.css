@@ -1,4 +1,6 @@
 /* OPTRF — тема в стиле optrf.store */
+@import url('./fonts.css');
+
 :root {
     --optrf-blue: #00a8e8;
     --optrf-blue-hover: #019ad5;
@@ -11,7 +13,7 @@
     --optrf-bg: #f5f5f5;
     --optrf-surface: #ffffff;
     --optrf-radius: 8px;
-    --optrf-font: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    --optrf-font: 'NeutralFace', 'Segoe UI', system-ui, sans-serif;
 }
 
 html,
