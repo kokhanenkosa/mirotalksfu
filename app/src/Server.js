@@ -5581,6 +5581,8 @@ async function startServer() {
 
             room.removePeer(socket.id);
 
+            pruneDialogOnPeerLeave(room, socket.id);
+
             if (!isObserver) {
                 room.broadCast(socket.id, 'removeMe', removeMeData(room, peer_name, isPresenter));
             }
@@ -5653,6 +5655,8 @@ async function startServer() {
             }
 
             room.removePeer(socket.id);
+
+            pruneDialogOnPeerLeave(room, socket.id);
 
             if (!isObserver) {
                 room.broadCast(socket.id, 'removeMe', removeMeData(room, peer_name, isPresenter));
@@ -5769,6 +5773,45 @@ async function startServer() {
                 return url.protocol === 'http:' || url.protocol === 'https:';
             } catch (_) {
                 return false;
+            }
+        }
+
+        function pruneDialogOnPeerLeave(room, peerSocketId) {
+            try {
+                const dialog = room.getDialog?.();
+                if (!dialog) return;
+                if (dialog.guestIds?.includes(peerSocketId)) {
+                    const guests = dialog.guestIds.filter((id) => id && id !== peerSocketId);
+                    if (guests.length) {
+                        room.setDialog(dialog.presenterId, guests);
+                        room.broadCast(peerSocketId, 'cmd', {
+                            type: 'dialogGuestRemove',
+                            presenterId: dialog.presenterId,
+                            guestIds: guests,
+                            removedGuestId: peerSocketId,
+                            guestId: peerSocketId,
+                            broadcast: true,
+                        });
+                    } else {
+                        room.clearDialog();
+                        room.broadCast(peerSocketId, 'cmd', {
+                            type: 'dialogSplitEnd',
+                            presenterId: dialog.presenterId,
+                            removedGuestId: peerSocketId,
+                            broadcast: true,
+                        });
+                    }
+                } else if (dialog.presenterId === peerSocketId) {
+                    room.clearDialog();
+                    room.broadCast(peerSocketId, 'cmd', {
+                        type: 'dialogSplitEnd',
+                        presenterId: peerSocketId,
+                        removedGuestId: peerSocketId,
+                        broadcast: true,
+                    });
+                }
+            } catch (err) {
+                log.warn('Dialog prune on peer leave failed', err?.message || err);
             }
         }
 

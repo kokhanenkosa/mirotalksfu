@@ -660,6 +660,19 @@ body.dialog-with-stage #videoMediaContainer.cam-bubble-stage-hidden {
     display: flex !important;
 }
 
+/* Scene 2 solo: only creator camera in pin — hide media grid */
+body.stage-scene-2:not(.dialog-split-active):not(.dialog-with-stage) #videoMediaContainer,
+body.stage-scene-2:not(.dialog-split-active):not(.dialog-with-stage) #videoMediaContainer.cam-bubble-stage-hidden {
+    display: none !important;
+}
+
+body.stage-scene-2 #videoPinMediaContainer .Camera[data-media-kind='screen'],
+body.stage-scene-2 #videoMediaContainer .Camera[data-media-kind='screen'] {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 body.dialog-with-stage .stage-scene-bar {
     /* Keep scene switcher above dialog controls */
     z-index: 47;
@@ -1569,12 +1582,11 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         justify-content: center !important;
     }
 
-    /* Guests never see settings gear / hear-only / chat on mobile dock */
+    /* Guests never see settings gear / hear-only on mobile dock — chat stays */
     body.is-guest #settingsSplit,
     body.is-guest #settingsButton,
     body.is-guest #settingsExtraDropdown,
     body.is-guest #settingsExtraToggle,
-    body.is-guest #chatButton,
     body.is-guest #hearOnlyPresenterButton,
     body.is-guest #compactHearOnlyBtn,
     body.is-guest .split-btn#settingsSplit {
@@ -1587,6 +1599,12 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         padding: 0 !important;
         overflow: hidden !important;
         pointer-events: none !important;
+    }
+
+    body.is-guest #chatButton {
+        display: inline-flex !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
     }
 
     body.is-guest #copyRoomLinkButton:not(.hidden) {
@@ -1796,12 +1814,11 @@ body.optrf-portrait-lock {
     overscroll-behavior: none;
 }
 
-/* Guests: no chat / hear-only / settings gear; keep copy-link */
+/* Guests: no hear-only / settings gear; public chat stays available */
 body.is-guest #settingsSplit,
 body.is-guest #settingsButton,
 body.is-guest #settingsExtraDropdown,
 body.is-guest #settingsExtraToggle,
-body.is-guest #chatButton,
 body.is-guest #hearOnlyPresenterButton,
 body.is-guest #compactHearOnlyBtn {
     display: none !important;
@@ -1809,6 +1826,17 @@ body.is-guest #compactHearOnlyBtn {
 
 body.is-guest #copyRoomLinkButton {
     display: inline-flex !important;
+}
+
+body.is-guest #chatButton,
+html[data-peer-role='guest'] #chatButton {
+    display: inline-flex !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    width: auto !important;
+    min-width: unset !important;
+    max-width: none !important;
+    height: auto !important;
 }
 
 body.is-guest #copyRoomLinkButton.hidden {
@@ -1910,7 +1938,6 @@ html[data-peer-role='guest'] #settingsButton,
 html[data-peer-role='guest'] #settingsExtraDropdown,
 html[data-peer-role='guest'] #settingsExtraToggle,
 html[data-peer-role='guest'] #settingsExtraMenu,
-html[data-peer-role='guest'] #chatButton,
 html[data-peer-role='guest'] #hearOnlyPresenterButton,
 html[data-peer-role='guest'] #compactHearOnlyBtn,
 html[data-peer-role='guest'] #participantsButton,

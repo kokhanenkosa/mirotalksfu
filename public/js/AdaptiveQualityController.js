@@ -466,6 +466,7 @@
             await this._adaptProducerCeilings({ reason });
             try {
                 host.ensureLocalCamPlaying?.();
+                host.ensureCamBubblesPlaying?.();
             } catch {
                 /* ignore */
             }
@@ -513,7 +514,17 @@
             const mediaKind = tile?.dataset?.mediaKind || consumer?.appData?.mediaType || '';
             const peerId = tile?.dataset?.peerId || '';
             const isScreen = mediaKind === 'screen';
-            const isBubbleSource = !!tile?.classList?.contains('cam-bubble-source-hidden');
+            const bubbleEl = peerId
+                ? document.querySelector(
+                      `.cam-bubble[data-cam-peer-id="${CSS.escape?.(peerId) || peerId}"]`
+                  )
+                : null;
+            const isBubbleSource =
+                !!tile?.classList?.contains('cam-bubble-source-hidden') ||
+                !!bubbleEl ||
+                (peerId &&
+                    host._stageScene?.mode === 1 &&
+                    peerId === host._stageScene?.creatorId);
             const isPinned = Boolean(
                 tile?.classList?.contains('is-pinned-video') ||
                     tile?.parentElement?.id === 'videoPinMediaContainer' ||
@@ -542,7 +553,12 @@
             let reason = 'visible_cam';
             let pause = false;
 
-            if (hidden && !isBubbleSource && !isScreen && !isPinned) {
+            // Cam-bubble source must never be paused (shared MediaStreamTrack feeds the circle)
+            if (isBubbleSource) {
+                priority = 'high';
+                reason = 'cam_bubble';
+                pause = false;
+            } else if (hidden && !isScreen && !isPinned) {
                 pause = true;
                 priority = 'low';
                 reason =
@@ -554,15 +570,12 @@
             } else if (isScreen) {
                 priority = 'critical';
                 reason = isPinned ? 'screen_pinned' : 'screen';
-            } else if (isPinned && !isBubbleSource) {
+            } else if (isPinned) {
                 priority = 'critical';
                 reason = 'pinned';
             } else if (isCreator || isDialogPresenter) {
                 priority = 'high';
                 reason = isCreator ? 'creator' : 'dialog_presenter';
-            } else if (isBubbleSource) {
-                priority = 'high';
-                reason = 'cam_bubble';
             } else if (isDialogGuest) {
                 priority = 'medium';
                 reason = 'dialog_guest';

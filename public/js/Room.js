@@ -1994,11 +1994,10 @@ function roomIsReady() {
         hide(startRecButton);
         hide(tabRecordingBtn);
     }
-    if (isPresenter) {
-        BUTTONS.main.chatButton && show(chatButton);
-    } else {
-        hide(chatButton);
-        elemDisplay('chatButton', false);
+    // Public chat: available to guests and presenters
+    if (BUTTONS.main.chatButton) {
+        show(chatButton);
+        elemDisplay('chatButton', true);
     }
     // Participants list: presenter/moderator only
     if (BUTTONS.main.participantsButton && isPresenter) {

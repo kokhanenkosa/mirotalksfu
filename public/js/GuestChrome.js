@@ -26,7 +26,7 @@ function enforceGuestChrome(forceGuest) {
         'settingsExtraDropdown',
         'settingsExtraToggle',
         'settingsExtraMenu',
-        'chatButton',
+        // Public chat stays available for guests
         'hearOnlyPresenterButton',
         'compactHearOnlyBtn',
         'participantsButton',
@@ -51,9 +51,16 @@ function enforceGuestChrome(forceGuest) {
         });
         if (typeof BUTTONS !== 'undefined') {
             BUTTONS.main.settingsButton = false;
-            BUTTONS.main.chatButton = false;
+            BUTTONS.main.chatButton = true;
             BUTTONS.main.participantsButton = false;
             BUTTONS.main.exitButton = false;
+        }
+        // Ensure public chat button is visible for guests
+        const chatBtn = document.getElementById('chatButton');
+        if (chatBtn) {
+            chatBtn.classList.remove('hidden');
+            chatBtn.style.removeProperty('display');
+            chatBtn.removeAttribute('data-guest-hidden');
         }
     } else {
         hideIds.forEach((id) => {

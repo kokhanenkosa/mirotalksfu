@@ -1491,6 +1491,12 @@ class RoomClient {
         console.log('SocketOn Remove me:', data);
         this.removeVideoOff(data.peer_id);
         this.lobbyRemoveMe(data.peer_id);
+        // Prune dialog ghost tiles when peer fully disconnects (tab close)
+        try {
+            if (data?.peer_id) this.pruneDialogGuestOnPeerGone(data.peer_id);
+        } catch {
+            /* ignore */
+        }
         participantsCount = data.peer_counts;
         if (!isBroadcastingEnabled) adaptAspectRatio(participantsCount);
         if (isParticipantsListOpen) getRoomParticipants();
@@ -1511,17 +1517,79 @@ class RoomClient {
             adaptAspectRatio(participantsCount);
         }
         if (isBreakoutPanelOpen) refreshBreakoutPanel();
-        // Keep dialog tiles intact when someone joins/leaves mid-dialog
+        // Keep dialog tiles intact — but drop peers no longer in the room
         if (this._dialogSplitActive && this._dialogPresenterId) {
+            this.pruneMissingDialogGuests();
             [100, 400, 1200].forEach((ms) => {
                 setTimeout(() => {
                     if (this._dialogSplitActive) {
+                        this.pruneMissingDialogGuests();
                         this.applyDialogSplitLayout(this._dialogPresenterId, this._dialogGuestIds);
                     }
                 }, ms);
             });
         }
     };
+
+    /** Drop dialog guests who left the room (tab close / disconnect). */
+    pruneDialogGuestOnPeerGone(peerId) {
+        if (!peerId || !this._dialogSplitActive) return false;
+        const guests = this._dialogGuestIds || [];
+        if (!guests.includes(peerId) && this._dialogPresenterId !== peerId) return false;
+
+        if (this._dialogPresenterId === peerId) {
+            guests.forEach((id) => {
+                this.removeDialogPlaceholder(id);
+                this.collapseDialogPeerTile?.(id);
+            });
+            this.exitDialogSplitLayout();
+            this.hideDialogControlsBar?.();
+            return true;
+        }
+
+        const next = guests.filter((id) => id && id !== peerId);
+        this._dialogGuestIds = next;
+        this.removeDialogPlaceholder(peerId);
+        this.collapseDialogPeerTile?.(peerId);
+        this.clearDialogGridClasses();
+
+        if (!next.length) {
+            this.exitDialogSplitLayout();
+            this.hideDialogControlsBar?.();
+            return true;
+        }
+
+        this.applyDialogSplitLayout(this._dialogPresenterId, next);
+        this.renderDialogControlsBar?.();
+        return true;
+    }
+
+    /** Remove any dialog guest ids that are no longer in peers map. */
+    pruneMissingDialogGuests() {
+        if (!this._dialogSplitActive) return;
+        const guests = [...(this._dialogGuestIds || [])];
+        const alive = guests.filter((id) => {
+            if (!id) return false;
+            if (id === this.peer_id) return true;
+            return this.peers?.has?.(id);
+        });
+        if (alive.length === guests.length) {
+            this._dialogGuestIds = alive;
+            return;
+        }
+        guests
+            .filter((id) => !alive.includes(id))
+            .forEach((id) => {
+                this.removeDialogPlaceholder(id);
+                this.collapseDialogPeerTile?.(id);
+            });
+        this._dialogGuestIds = alive;
+        this.clearDialogGridClasses();
+        if (!alive.length) {
+            this.exitDialogSplitLayout();
+            this.hideDialogControlsBar?.();
+        }
+    }
 
     handleNewProducers = async (data) => {
         if (data.length > 0) {
@@ -5161,14 +5229,32 @@ class RoomClient {
                 }
             });
 
-            document
-                .querySelectorAll(
-                    `.cam-bubble[data-cam-peer-id="${this.peer_id}"] video, ` +
-                        `#videoPinMediaContainer .cam-bubble[data-cam-peer-id="${this.peer_id}"] video`
-                )
-                .forEach((v) => {
-                    if (v?.srcObject && v.paused) v.play?.().catch?.(() => {});
-                });
+            this.ensureCamBubblesPlaying();
+        } catch {
+            /* ignore */
+        }
+    }
+
+    /** Heal all cam-bubble videos (local + remote creator) — rebind srcObject if lost. */
+    ensureCamBubblesPlaying() {
+        try {
+            document.querySelectorAll('.cam-bubble').forEach((bubble) => {
+                const camPeerId = bubble.dataset?.camPeerId || '';
+                const v = bubble.querySelector('video');
+                if (!v) return;
+                if (!v.srcObject && camPeerId) {
+                    const source =
+                        this.getPeerMediaTile?.(camPeerId, 'video') ||
+                        document.querySelector(
+                            `.Camera.cam-bubble-source-hidden[data-peer-id="${CSS.escape?.(camPeerId) || camPeerId}"] video, ` +
+                                `.Camera[data-peer-id="${CSS.escape?.(camPeerId) || camPeerId}"] video[name="${CSS.escape?.(camPeerId) || camPeerId}"]`
+                        );
+                    if (source?.srcObject) {
+                        v.srcObject = source.srcObject;
+                    }
+                }
+                if (v.srcObject && v.paused) v.play?.().catch?.(() => {});
+            });
         } catch {
             /* ignore */
         }
@@ -13010,7 +13096,7 @@ class RoomClient {
             el.style.removeProperty('display');
             el.style.visibility = 'visible';
             el.style.opacity = '1';
-            el.classList.remove('cam-bubble-source-hidden');
+            // Do NOT remove cam-bubble-source-hidden — that breaks scene-1 bubble pipeline
             const v = el.querySelector('video');
             try {
                 if (v?.paused) v.play?.().catch?.(() => {});
@@ -13771,6 +13857,11 @@ class RoomClient {
 
     ensureDialogPlaceholder(peerId) {
         if (!peerId) return null;
+        // Never create "waiting" tiles for peers that already left the room
+        if (peerId !== this.peer_id && !this.peers?.has?.(peerId)) {
+            this.removeDialogPlaceholder(peerId);
+            return null;
+        }
         const existing = this.getCameraWrapByPeerId(peerId);
         if (existing && !existing.classList.contains('dialog-split-placeholder')) return existing;
         let slot = this.getId(peerId + '__dialogSlot');
@@ -13778,6 +13869,7 @@ class RoomClient {
             slot = document.createElement('div');
             slot.id = peerId + '__dialogSlot';
             slot.className = 'Camera dialog-split-placeholder';
+            slot.dataset.peerId = peerId;
             slot.innerHTML = `
                 <div class="dialog-waiting">
                     <i class="fas fa-spinner fa-spin"></i>
@@ -13839,10 +13931,17 @@ class RoomClient {
 
     applyDialogSplitLayout(presenterId, guestIdsInput) {
         if (!presenterId) return;
-        const guestIds = (Array.isArray(guestIdsInput) ? guestIdsInput : [guestIdsInput])
+        let guestIds = (Array.isArray(guestIdsInput) ? guestIdsInput : [guestIdsInput])
             .filter(Boolean)
-            .filter((id) => id !== presenterId);
-        if (!guestIds.length) return;
+            .filter((id) => id !== presenterId)
+            // Drop peers that already left (prevents ghost "Ожидание видео..." + broken grid)
+            .filter((id) => id === this.peer_id || this.peers?.has?.(id));
+        if (!guestIds.length) {
+            this._dialogGuestIds = [];
+            this.exitDialogSplitLayout();
+            this.hideDialogControlsBar?.();
+            return;
+        }
 
         this._dialogPresenterId = presenterId;
         this._dialogGuestIds = guestIds;
@@ -14921,7 +15020,6 @@ class RoomClient {
         if (mode === 2) {
             this._stageSceneActive = false;
             if (modId) this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: true });
-            // Don't flash guest tiles: reveal only non-protected
             document.querySelectorAll('.Camera[data-stage-hidden="1"], [data-stage-hidden="1"]').forEach((el) => {
                 if (el.dataset?.stageProtected === '1') return;
                 el.style.display = '';
@@ -14931,23 +15029,69 @@ class RoomClient {
 
             const creatorTile =
                 this.getPeerMediaTile(creatorId, 'video') || this.getId?.(creatorId + '__videoOff');
-            if (creatorTile) {
-                creatorTile.classList.remove('cam-bubble-source-hidden');
-                this.forcePinMediaTile(creatorTile);
-                this.hideNonStageTiles([creatorTile, ...guestKeep], dialogGuests);
-            }
+
+            // Always hide moderator/screen tiles in scene 2 — only creator camera
+            document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
+                const kind = el.dataset?.mediaKind || '';
+                if (kind === 'screen') {
+                    el.dataset.stageHidden = '1';
+                    el.style.setProperty('display', 'none', 'important');
+                }
+            });
             if (modId) {
                 const screenTile = this.getPeerMediaTile(modId, 'screen');
                 if (screenTile && screenTile !== creatorTile) {
                     screenTile.dataset.stageHidden = '1';
-                    screenTile.style.display = 'none';
+                    screenTile.style.setProperty('display', 'none', 'important');
                 }
             }
-            document.body.classList.add('cam-bubble-stage');
-            layoutStage();
+
+            if (creatorTile) {
+                creatorTile.classList.remove('cam-bubble-source-hidden');
+                creatorTile.dataset.stageHidden = '0';
+                creatorTile.style.removeProperty('display');
+                this.forcePinMediaTile(creatorTile);
+            }
+
+            const aliveGuests = showDialogGuests
+                ? dialogGuests.filter((id) => id === this.peer_id || this.peers?.has?.(id))
+                : [];
+            this._dialogGuestIds = showDialogGuests ? aliveGuests : this._dialogGuestIds;
+
+            if (aliveGuests.length) {
+                // Dialog + scene 2: creator pin + guest strip (no screen, no cam-bubble-stage chrome)
+                document.body.classList.remove('cam-bubble-stage');
+                document.body.classList.add('dialog-with-stage', 'stage-scene-2');
+                this.hideNonStageTiles([creatorTile, ...guestKeep].filter(Boolean), aliveGuests);
+                this.protectDialogPeerTiles(aliveGuests);
+                this.layoutDialogGuestsBesideStage(aliveGuests);
+                // Re-hide any screen that layout may have shown
+                document.querySelectorAll('.Camera[data-media-kind="screen"]').forEach((el) => {
+                    el.style.setProperty('display', 'none', 'important');
+                    el.dataset.stageHidden = '1';
+                });
+                this.ensureCamBubblesPlaying?.();
+            } else {
+                // Solo scene 2: only creator camera full-bleed — no second pane
+                document.body.classList.remove('cam-bubble-stage', 'dialog-with-stage');
+                if (this.videoMediaContainer) {
+                    this.videoMediaContainer.classList.add('cam-bubble-stage-hidden');
+                    this.videoMediaContainer.style.setProperty('display', 'none', 'important');
+                }
+                if (creatorTile) this.hideNonStageTiles([creatorTile], []);
+                if (this.videoPinMediaContainer) {
+                    this.videoPinMediaContainer.style.setProperty('display', 'block', 'important');
+                    this.videoPinMediaContainer.style.setProperty('width', '100%', 'important');
+                    this.videoPinMediaContainer.style.setProperty('height', '100%', 'important');
+                    this.videoPinMediaContainer.style.setProperty('left', '0', 'important');
+                    this.videoPinMediaContainer.style.setProperty('top', '0', 'important');
+                }
+            }
+
             this.renderStageSceneBar?.();
             if (dialogParticipant) this.renderDialogControlsBar?.();
             if (isPresenter && this._handRaiseAlerts?.size) this.renderHandRaiseAlerts();
+            this.scheduleAdaptiveVideoQuality(250, 'layout');
             return;
         }
 
@@ -17591,7 +17735,8 @@ class RoomClient {
         }
         this.ensureScreenVideoPlaying(screenTile);
         this.syncCamBubbleButton();
-        this.scheduleAdaptiveVideoQuality(200);
+        this.ensureCamBubblesPlaying();
+        this.scheduleAdaptiveVideoQuality(200, 'layout');
         this.applyScreenShareViewForPeer(peerId);
         return true;
     }

@@ -145,19 +145,19 @@ function handleRules(isPresenter) {
         BUTTONS.main.participantsButton = false;
         BUTTONS.main.breakoutRoomButton = false;
         BUTTONS.main.settingsButton = false;
-        BUTTONS.main.chatButton = false;
+        BUTTONS.main.chatButton = true; // public chat for guests
         BUTTONS.participantsList.saveInfoButton = false;
         try {
             hide(participantsButton);
             hide(chatShowParticipantsListBtn);
             hide(settingsButton);
-            hide(chatButton);
+            show(chatButton);
             elemDisplay('settingsButton', false);
             elemDisplay('settingsSplit', false);
             elemDisplay('settingsExtraDropdown', false);
             elemDisplay('settingsExtraToggle', false);
             elemDisplay('inviteAllDiscussionButton', false);
-            elemDisplay('chatButton', false);
+            elemDisplay('chatButton', true);
             elemDisplay('hearOnlyPresenterButton', false);
             elemDisplay('compactHearOnlyBtn', false);
             const copyBtn = typeof getId === 'function' ? getId('copyRoomLinkButton') : null;
