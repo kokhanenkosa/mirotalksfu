@@ -40,6 +40,15 @@ class LocalStorage {
             aspect_ratio: 0, // default (adaptive)
             screen_optimization: 1, // default detail (1): For high fidelity (screen sharing with text/graphics) || motion (2): For high frame rate (video playback, game streaming)
             screen_fps: 3, // default 1920x1080 15fps
+            // Preference for getDisplayMedia picker: window | monitor | browser
+            screen_share_surface: 'window',
+            screen_share_scale: 100, // % zoom for shared screen view (moderator)
+            screen_share_crop: '', // encoded "x,y,w,h" or empty
+            // Real-time stream quality — manual profiles only (no auto). Default max.
+            stream_quality_preset: 'max',
+            manual_webcam_mbps: 6,
+            manual_screen_mbps: 7.5,
+            manual_force_high_layers: true,
             broadcasting: false, // default false (one to many a/v streaming)
             lobby: false, // default false
             pitch_bar: true, // volume indicator

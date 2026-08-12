@@ -1743,7 +1743,7 @@ module.exports = {
                     mimeType: 'video/VP8',
                     clockRate: 90000, // Standard video clock rate
                     parameters: {
-                        'x-google-start-bitrate': 1000, // Initial bitrate (kbps)
+                        'x-google-start-bitrate': 3000, // Initial bitrate hint (kbps)
                     },
                 },
 
@@ -1755,7 +1755,7 @@ module.exports = {
                     clockRate: 90000,
                     parameters: {
                         'profile-id': 0, // Baseline profile
-                        'x-google-start-bitrate': 1000,
+                        'x-google-start-bitrate': 3000,
                     },
                 },
 
@@ -1766,7 +1766,7 @@ module.exports = {
                     clockRate: 90000,
                     parameters: {
                         'profile-id': 2, // Advanced profile
-                        'x-google-start-bitrate': 1000,
+                        'x-google-start-bitrate': 3000,
                     },
                 },
 
@@ -1779,7 +1779,7 @@ module.exports = {
                         'packetization-mode': 1, // Required for WebRTC
                         'profile-level-id': '42e01f', // Baseline 3.1
                         'level-asymmetry-allowed': 1, // Allows different levels
-                        'x-google-start-bitrate': 1000,
+                        'x-google-start-bitrate': 3000,
                     },
                 },
 
@@ -1792,7 +1792,7 @@ module.exports = {
                         'packetization-mode': 1,
                         'profile-level-id': '4d0032', // Main 4.0
                         'level-asymmetry-allowed': 1,
-                        'x-google-start-bitrate': 1000,
+                        'x-google-start-bitrate': 3000,
                     },
                 },
             ],
@@ -1915,10 +1915,11 @@ module.exports = {
              * - These values should be tuned based on Node resources
              * - Consider network plugin overhead (Calico, Cilium etc.)
              */
-            // Лекторий / screen share: 3 Mbps слишком мало для читаемого Full HD текста.
-            initialAvailableOutgoingBitrate: 6000000, // 6 Mbps initial bitrate
-            minimumAvailableOutgoingBitrate: 1500000, // 1.5 Mbps minimum guaranteed
-            maxIncomingBitrate: 8000000, // 8 Mbps max per producer (screen + cam)
+            // OPTRF: не лимитировать без нужды — realtime + высокое качество.
+            // Browser CC + ручные потолки модератора задают фактическое качество.
+            initialAvailableOutgoingBitrate: 12000000, // 12 Mbps initial BWE
+            minimumAvailableOutgoingBitrate: 3000000, // 3 Mbps minimum
+            maxIncomingBitrate: 20000000, // 20 Mbps max per producer transport (cam + screen)
 
             /**
              * Data Channel Settings (mediasoup 3.20.0+)

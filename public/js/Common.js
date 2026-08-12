@@ -99,15 +99,27 @@ if (roomName) {
         'Только латиница, цифры и символы - _ . (без двоеточия и пробелов)'
     );
 
+    let roomNameIsGenerated = false;
     if (window.sessionStorage.roomID) {
         roomName.value = stripCyrillic(window.sessionStorage.roomID);
         window.sessionStorage.roomID = false;
         joinRoom();
     } else {
         shuffleText(roomName, txt);
+        roomNameIsGenerated = true;
     }
 
+    // First focus/click clears the generated default so user types into an empty field
+    const clearGeneratedRoomName = () => {
+        if (!roomNameIsGenerated) return;
+        roomNameIsGenerated = false;
+        roomName.value = '';
+    };
+    roomName.addEventListener('focus', clearGeneratedRoomName);
+    roomName.addEventListener('pointerdown', clearGeneratedRoomName);
+
     roomName.addEventListener('input', () => {
+        roomNameIsGenerated = false;
         const cleaned = stripCyrillic(roomName.value);
         if (cleaned !== roomName.value) {
             const pos = roomName.selectionStart;
@@ -241,7 +253,11 @@ function joinRoom() {
     const type = getSelectedRoomType();
     const lectorium = type === 'lectorium' ? '1' : '0';
     window.location.href =
-        '/join/?room=' + encodeURIComponent(cleaned) + '&lectorium=' + encodeURIComponent(lectorium);
+        '/join/?room=' +
+        encodeURIComponent(cleaned) +
+        '&lectorium=' +
+        encodeURIComponent(lectorium) +
+        '&create=1';
     window.localStorage.lastRoom = cleaned;
 }
 

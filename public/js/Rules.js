@@ -132,6 +132,11 @@ let BUTTONS = {
 
 function handleRules(isPresenter) {
     console.log('07.1 ----> IsPresenter: ' + isPresenter);
+    try {
+        if (typeof enforceGuestChrome === 'function') enforceGuestChrome(!isPresenter);
+    } catch {
+        /* ignore */
+    }
     if (!isRulesActive) return;
     if (!isPresenter) {
         // ##################################
@@ -139,10 +144,27 @@ function handleRules(isPresenter) {
         // ##################################
         BUTTONS.main.participantsButton = false;
         BUTTONS.main.breakoutRoomButton = false;
+        BUTTONS.main.settingsButton = false;
+        BUTTONS.main.chatButton = false;
         BUTTONS.participantsList.saveInfoButton = false;
         try {
             hide(participantsButton);
             hide(chatShowParticipantsListBtn);
+            hide(settingsButton);
+            hide(chatButton);
+            elemDisplay('settingsButton', false);
+            elemDisplay('settingsSplit', false);
+            elemDisplay('settingsExtraDropdown', false);
+            elemDisplay('settingsExtraToggle', false);
+            elemDisplay('inviteAllDiscussionButton', false);
+            elemDisplay('chatButton', false);
+            elemDisplay('hearOnlyPresenterButton', false);
+            elemDisplay('compactHearOnlyBtn', false);
+            const copyBtn = typeof getId === 'function' ? getId('copyRoomLinkButton') : null;
+            if (copyBtn) {
+                show(copyBtn);
+                elemDisplay('copyRoomLinkButton', true);
+            }
         } catch {
             /* ignore */
         }
@@ -164,6 +186,20 @@ function handleRules(isPresenter) {
         // BUTTONS.consumerVideo.drawingButton = false;
         // BUTTONS.producerVideo.drawingButton = false;
         BUTTONS.whiteboard.whiteboardLockButton = false;
+        // Leave + chat X — only room creator (applied via syncCreatorOnlyChrome)
+        BUTTONS.main.exitButton = false;
+        try {
+            hide(exitButton);
+            elemDisplay('exitButton', false);
+            elemDisplay('exitDropdown', false);
+            elemDisplay('exitMenu', false);
+            if (typeof chatCloseButton !== 'undefined' && chatCloseButton) {
+                hide(chatCloseButton);
+                elemDisplay('chatCloseButton', false);
+            }
+        } catch {
+            /* ignore */
+        }
 
         //...
     } else {
@@ -265,6 +301,12 @@ function handleRules(isPresenter) {
         console.log('Rules moderator data ---->', moderatorData);
         rc.updateRoomModeratorALL(moderatorData);
     }
+    // Creator-only leave + chat X (moderators/guests never get them)
+    try {
+        rc?.syncCreatorOnlyChrome?.();
+    } catch {
+        /* ignore */
+    }
     // main. settings...
     BUTTONS.main.shareButton ? show(shareButton) : hide(shareButton);
     if (BUTTONS.settings.tabRTMPStreamingBtn) {
@@ -299,6 +341,11 @@ function handleRules(isPresenter) {
 
 function handleRulesBroadcasting() {
     console.log('07.2 ----> handleRulesBroadcasting');
+    try {
+        if (typeof enforceGuestChrome === 'function') enforceGuestChrome(true);
+    } catch {
+        /* ignore */
+    }
     BUTTONS.main.shareButton = false;
     BUTTONS.main.hideMeButton = false;
     BUTTONS.main.startAudioButton = false;
@@ -314,6 +361,7 @@ function handleRulesBroadcasting() {
     BUTTONS.main.breakoutRoomButton = false;
     BUTTONS.main.transcriptionButton = false;
     BUTTONS.main.settingsButton = false;
+    BUTTONS.main.chatButton = false;
     BUTTONS.participantsList.saveInfoButton = false;
     BUTTONS.settings.lockRoomButton = false;
     BUTTONS.settings.unlockRoomButton = false;
@@ -356,10 +404,24 @@ function handleRulesBroadcasting() {
     elemDisplay('unlockRoomButton', false);
     elemDisplay('lobbyButton', false);
     elemDisplay('settingsButton', false);
+    elemDisplay('settingsSplit', false);
+    elemDisplay('settingsExtraDropdown', false);
+    elemDisplay('chatButton', false);
+    elemDisplay('hearOnlyPresenterButton', false);
+    elemDisplay('compactHearOnlyBtn', false);
     elemDisplay('tabRTMPStreamingBtn', false);
     elemDisplay('tabNotificationsBtn', false);
 
     elemDisplay('startVideoDeviceDropdown', false);
     elemDisplay('startAudioDeviceDropdown', false);
     elemDisplay('settingsExtraDropdown', false);
+    try {
+        const copyBtn = typeof getId === 'function' ? getId('copyRoomLinkButton') : null;
+        if (copyBtn) {
+            show(copyBtn);
+            elemDisplay('copyRoomLinkButton', true);
+        }
+    } catch {
+        /* ignore */
+    }
 }

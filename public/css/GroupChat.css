@@ -30,6 +30,7 @@
     /* Only when open (.show) — avoid layout side-effects while hidden */
     #chatRoom.show.chat-container,
     #chatRoom.show {
+        position: fixed !important;
         width: 100% !important;
         min-width: 0 !important;
         max-width: 100vw !important;
@@ -45,6 +46,7 @@
         border-radius: 0 !important;
         box-sizing: border-box !important;
         overflow-x: hidden !important;
+        z-index: 1100 !important;
     }
 
     #chatRoom.show .chat-app,
@@ -61,6 +63,21 @@
         max-width: min(85vw, 100%) !important;
         box-sizing: border-box !important;
         word-break: break-word;
+    }
+
+    /* Close via dock chat icon — hide header X on mobile */
+    #chatCloseButton,
+    #chatRoom.show #chatCloseButton,
+    .chat-option-buttons #chatCloseButton {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+        opacity: 0 !important;
     }
 }
 

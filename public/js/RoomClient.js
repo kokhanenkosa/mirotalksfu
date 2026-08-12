@@ -387,6 +387,8 @@ class RoomClient {
         this._forceSimpleMedia = false; // skip VB / use soft constraints on dialog invite
         this._dialogInviteInProgress = false;
         this._leavingDialog = false; // suppress videoOff avatar while exiting dialog
+        this._discussionInviteOpen = false; // soft invite-all session is open
+        this._discussionDeclined = false; // local guest declined invite-all
         this._meetingCreatorId = null; // room creator peer id (camera for scenes)
         this._stageScene = null; // { mode:1|2, creatorId, moderatorId, bubbleLayout }
         this._stageSceneActive = false;
@@ -470,9 +472,18 @@ class RoomClient {
         this.enableWebcamLayers = true; // Enable simulcast or SVC for webcam
         this.enableSharingLayers = true; // Enable simulcast or SVC for screen sharing
         this.numSimulcastStreamsWebcam = 3; // Number of streams for simulcast in webcam
-        this.numSimulcastStreamsSharing = 1; // Number of streams for simulcast in screen sharing
+        // Screen: 1 by default (Safari-safe). Chromium desktop may use 2 via canUseScreenSimulcast2().
+        this.numSimulcastStreamsSharing = 1;
         this.webcamScalabilityMode = 'L3T3'; // Scalability Mode for webcam | 'L1T3' for VP8/H264 (in each simulcast encoding), 'L3T3_KEY' for VP9
-        this.sharingScalabilityMode = 'L1T3'; // Scalability Mode for screen sharing | 'L1T3' for VP8/H264 (in each simulcast encoding), 'L3T3' for VP9
+        this.sharingScalabilityMode = 'L1T3'; // Scalability Mode for screen sharing | 'L1T3' for VP8/H264, 'L3T3' for VP9/AV1 SVC
+
+        // Adaptive quality (priority ≠ forced layer) — see AdaptiveQualityController.js
+        this._aq =
+            typeof AdaptiveQualityController !== 'undefined'
+                ? new AdaptiveQualityController(this)
+                : null;
+        this._consumerLayerCache = this._aq?._layerCache || new Map();
+        this._consumerPauseCache = this._aq?._pauseCache || new Map();
 
         this.myVideoEl = null;
         this.myAudioEl = null;
@@ -558,11 +569,16 @@ class RoomClient {
             rawPhoneToken !== '1'
                 ? rawPhoneToken
                 : '';
+        const createFlag = String(
+            typeof getQueryParam === 'function' ? getQueryParam('create') || '' : ''
+        ).toLowerCase();
+        const allow_create = createFlag === '1' || createFlag === 'true';
         try {
             await this.socket.request('createRoom', {
                 room_id,
                 phone_token,
                 lectorium: Boolean(isLectoriumEnabled),
+                allow_create,
             });
         } catch (err) {
             console.log('Create room:', err);
@@ -578,6 +594,10 @@ class RoomClient {
             }
             if (msg.includes('create not allowed')) {
                 openURL('/no-create-access', false, true);
+                throw err;
+            }
+            if (msg.includes('only via /newroom') || msg.includes('/newroom')) {
+                openURL('/newroom', false, true);
                 throw err;
             }
             if (/does not exist/i.test(msg)) {
@@ -743,6 +763,13 @@ class RoomClient {
 
         // Init Send/Receive Transports
         await this.initTransports(this.device);
+        try {
+            this.resetAdaptiveQuality?.();
+            this._aq?.start?.();
+            this.scheduleAdaptiveVideoQuality(500);
+        } catch {
+            /* ignore */
+        }
     }
 
     async handleRoomInfo(room) {
@@ -790,6 +817,11 @@ class RoomClient {
                     moderatorId: room.stageScene.moderatorId || '',
                     bubbleLayout: room.stageScene.bubbleLayout || '',
                 };
+            }
+            try {
+                this.syncCreatorOnlyChrome();
+            } catch {
+                /* ignore */
             }
             if (this._stageScene?.mode) {
                 [800, 2000, 4000].forEach((ms) => setTimeout(() => this.applyStageScene(), ms));
@@ -1630,6 +1662,14 @@ class RoomClient {
             // Сразу натягиваем layout на существующий кружок (масштаб/кадр), без ожидания
             this.applyRemoteCamBubbleLayout(data.peer_id, encoded);
         }
+        if (data.type === 'screenView') {
+            const peer = this.peers?.get?.(data.peer_id);
+            if (peer?.peer_info) peer.peer_info.peer_screen_view = data.status;
+            if (data.peer_id === this.peer_id && this.peer_info) {
+                this.peer_info.peer_screen_view = data.status;
+            }
+            this.applyScreenShareViewForPeer(data.peer_id);
+        }
     };
 
     handleFileInfoData = (data) => {
@@ -2380,9 +2420,19 @@ class RoomClient {
                         stream = await navigator.mediaDevices.getUserMedia(soft);
                     }
                 } else {
-                    stream = screen
-                        ? await navigator.mediaDevices.getDisplayMedia(mediaConstraints)
-                        : await navigator.mediaDevices.getUserMedia(mediaConstraints);
+                    if (screen) {
+                        try {
+                            stream = await navigator.mediaDevices.getDisplayMedia(mediaConstraints);
+                        } catch (displayErr) {
+                            // Safari / strict resolution: retry without WxH so Window picker stays available
+                            console.warn('getDisplayMedia failed, retrying soft constraints', displayErr);
+                            stream = await navigator.mediaDevices.getDisplayMedia(
+                                this.getScreenConstraintsFallback()
+                            );
+                        }
+                    } else {
+                        stream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+                    }
                 }
 
                 // Handle Virtual Background and Blur using MediaPipe (skip on forced dialog invite)
@@ -2474,9 +2524,9 @@ class RoomClient {
             if (video) {
                 if (this._forceSimpleMedia) {
                     // Single layer — more reliable on mobile / Telegram WebView
-                    params.encodings = [{ maxBitrate: 900000 }];
+                    params.encodings = [{ maxBitrate: 2700000 }];
                     params.codecOptions = {
-                        videoGoogleStartBitrate: 600,
+                        videoGoogleStartBitrate: 1500,
                     };
                 } else {
                     const { encodings, codec } = this.getWebCamEncoding();
@@ -3008,24 +3058,88 @@ class RoomClient {
         };
     }
 
+    /** Moderator preference: window | monitor | browser (system default). */
+    getPreferredScreenShareSurface() {
+        try {
+            const el = typeof screenShareSurface !== 'undefined' ? screenShareSurface : null;
+            const fromUi = el?.value;
+            if (fromUi === 'window' || fromUi === 'monitor' || fromUi === 'browser') return fromUi;
+            const saved =
+                typeof localStorageSettings !== 'undefined'
+                    ? localStorageSettings.screen_share_surface
+                    : null;
+            if (saved === 'window' || saved === 'monitor' || saved === 'browser') return saved;
+        } catch {
+            /* ignore */
+        }
+        return 'window';
+    }
+
     getScreenConstraints() {
         const selectedValue = this.getSelectedIndexValue(screenFps);
         const customFrameRate = parseInt(selectedValue, 10);
+        const fps = Number.isFinite(customFrameRate) && customFrameRate > 0 ? customFrameRate : 30;
+        const surfacePref = this.getPreferredScreenShareSurface();
+
+        const browser = String(this.peer_info?.browser_name || '').toLowerCase();
+        const ua = navigator.userAgent || '';
+        const isSafariUa =
+            /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(ua);
+        const isSafari =
+            this.isMobileSafari ||
+            isSafariUa ||
+            (browser.includes('safari') && !browser.includes('chrome'));
+
+        const videoBase = {};
+        if (surfacePref === 'window' || surfacePref === 'monitor') {
+            videoBase.displaySurface = surfacePref;
+        }
+
+        // Safari (esp. macOS): strict ideal WxH + audio:true often collapses the
+        // system picker to “Entire Screen” and hides Window / App options.
+        // Prefer a soft surface hint; never force monitor resolution.
+        if (isSafari) {
+            return {
+                audio: false,
+                video: {
+                    ...videoBase,
+                    frameRate: { ideal: Math.min(fps, 30), max: 30 },
+                },
+            };
+        }
 
         const screenResolutionMap = this.getResolutionMap();
+        const qualityKey = (typeof screenQuality !== 'undefined' && screenQuality?.value) || 'hd';
+        const [width, height] = screenResolutionMap[qualityKey] || [1920, 1080];
 
-        // Default to Full HD
-        const [width, height] = screenResolutionMap[screenQuality.value] || [1920, 1080];
-
-        const videoConstraints = {
-            width: { ideal: width },
-            height: { ideal: height },
-            frameRate: { ideal: customFrameRate || 30 },
-        };
-
-        return {
+        const constraints = {
             audio: true,
-            video: videoConstraints,
+            video: {
+                ...videoBase,
+                width: { ideal: width },
+                height: { ideal: height },
+                frameRate: { ideal: fps },
+            },
+            // Chromium-only hints (safely ignored elsewhere)
+            preferCurrentTab: false,
+            selfBrowserSurface: 'include',
+            surfaceSwitching: 'include',
+            systemAudio: 'include',
+            monitorTypeSurfaces: surfacePref === 'window' ? 'exclude' : 'include',
+        };
+        return constraints;
+    }
+
+    /** Softest getDisplayMedia options — used as Safari / Overconstrained fallback. */
+    getScreenConstraintsFallback() {
+        const surfacePref = this.getPreferredScreenShareSurface();
+        const video = { frameRate: { ideal: 30, max: 30 } };
+        if (surfacePref === 'window' || surfacePref === 'monitor') {
+            video.displaySurface = surfacePref;
+        }
+        return {
+            audio: false,
+            video,
         };
     }
 
@@ -3077,31 +3191,39 @@ class RoomClient {
                 console.log('WEBCAM ENCODING: VP9 or AV1 with SVC');
                 encodings = [
                     {
-                        maxBitrate: 2500000,
+                        maxBitrate: 5400000, // 3× prior 1.8M
                         scalabilityMode: this.webcamScalabilityMode || 'L3T3_KEY',
                     },
                 ];
             } else {
-                // Leaner ladder: high ~2.5Mbps, mid ~700k (/2), low ~300k (/3–4)
+                // 3× ceilings: ~540k / 1.8M / 6M — manual session control can raise/lower live
                 console.log('WEBCAM ENCODING: VP8 or H264 with simulcast');
+                const ceilings = this.getManualWebcamBitrateCeilings?.() || {
+                    low: 540000,
+                    mid: 1800000,
+                    high: 6000000,
+                };
                 encodings = [
                     {
                         scaleResolutionDownBy: 1,
-                        maxBitrate: 2500000,
+                        maxBitrate: ceilings.high,
+                        maxFramerate: 30,
                         scalabilityMode: 'L1T3',
                     },
                 ];
                 if (this.numSimulcastStreamsWebcam > 1) {
                     encodings.unshift({
                         scaleResolutionDownBy: 2,
-                        maxBitrate: 700000,
+                        maxBitrate: ceilings.mid,
+                        maxFramerate: 30,
                         scalabilityMode: 'L1T3',
                     });
                 }
                 if (this.numSimulcastStreamsWebcam > 2) {
                     encodings.unshift({
                         scaleResolutionDownBy: 4,
-                        maxBitrate: 300000,
+                        maxBitrate: ceilings.low,
+                        maxFramerate: 30,
                         scalabilityMode: 'L1T3',
                     });
                 }
@@ -3114,16 +3236,34 @@ class RoomClient {
     // SCREEN ENCODING
     // ####################################################
 
+    /** Chromium desktop can use 2-layer screen simulcast; Safari/mobile stay L1 (picker/compat). */
+    canUseScreenSimulcast2() {
+        try {
+            if (this.isMobileSafari || this.isMobileDevice) return false;
+            const browser = String(this.peer_info?.browser_name || '').toLowerCase();
+            const ua = navigator.userAgent || '';
+            if (browser.includes('safari') || (/safari/i.test(ua) && !/chrome|chromium|android/i.test(ua))) {
+                return false;
+            }
+            if (browser.includes('firefox') || /firefox/i.test(ua)) return false;
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     getScreenEncoding() {
         let encodings;
         let codec;
+
+        const shareLayers = this.canUseScreenSimulcast2() ? 2 : this.numSimulcastStreamsSharing || 1;
 
         console.log('SCREEN ENCODING', {
             forceVP8: this.forceVP8,
             forceVP9: this.forceVP9,
             forceH264: this.forceH264,
             forceAV1: this.forceAV1,
-            numSimulcastStreamsSharing: this.numSimulcastStreamsSharing,
+            numSimulcastStreamsSharing: shareLayers,
             enableSharingLayers: this.enableSharingLayers,
             sharingScalabilityMode: this.sharingScalabilityMode,
             rtpCapabilitiesCodecs: this.device.rtpCapabilities.codecs,
@@ -3149,7 +3289,7 @@ class RoomClient {
             const firstVideoCodec = this.device.rtpCapabilities.codecs.find((c) => c.kind === 'video');
             console.log('SCREEN ENCODING: first codec available', { firstVideoCodec: firstVideoCodec });
 
-            // If VP9 is the only available video codec then use SVC.
+            // VP9/AV1 → multi-spatial SVC so receivers can drop resolution without freeze
             if (
                 ((this.forceVP9 || this.forceAV1) && codec) ||
                 (firstVideoCodec?.mimeType &&
@@ -3158,44 +3298,54 @@ class RoomClient {
                 console.log('SCREEN ENCODING: VP9 or AV1 with SVC');
                 encodings = [
                     {
-                        maxBitrate: 8000000,
-                        scalabilityMode: this.sharingScalabilityMode || 'L3T3',
+                        maxBitrate: 7500000, // 3× prior 2.5M
+                        maxFramerate: 30,
+                        scalabilityMode: 'L3T3',
                         dtx: true,
                     },
                 ];
             } else {
-                console.log('SCREEN ENCODING: VP8 or H264 with simulcast.');
+                console.log('SCREEN ENCODING: VP8 or H264 with simulcast.', { shareLayers });
+                const sc = this.getManualScreenBitrateCeilings?.() || {
+                    high: 7500000,
+                    mid: 2700000,
+                    low: 1200000,
+                };
                 encodings = [
                     {
                         scaleResolutionDownBy: 1,
-                        maxBitrate: 8000000,
-                        scalabilityMode: this.sharingScalabilityMode || 'L1T3',
+                        maxBitrate: sc.high,
+                        maxFramerate: 30,
+                        scalabilityMode: 'L1T3',
                         dtx: true,
                     },
                 ];
-                if (this.numSimulcastStreamsSharing > 1) {
+                if (shareLayers > 1) {
                     encodings.unshift({
                         scaleResolutionDownBy: 2,
-                        maxBitrate: 1000000,
-                        scalabilityMode: this.sharingScalabilityMode || 'L1T3',
+                        maxBitrate: sc.mid,
+                        maxFramerate: 15,
+                        scalabilityMode: 'L1T3',
                         dtx: true,
                     });
                 }
-                if (this.numSimulcastStreamsSharing > 2) {
+                if (shareLayers > 2) {
                     encodings.unshift({
                         scaleResolutionDownBy: 4,
-                        maxBitrate: 500000,
-                        scalabilityMode: this.sharingScalabilityMode || 'L1T3',
+                        maxBitrate: sc.low,
+                        maxFramerate: 15,
+                        scalabilityMode: 'L1T3',
                         dtx: true,
                     });
                 }
             }
         } else {
-            // No simulcast or SVC enabled.
+            const sc = this.getManualScreenBitrateCeilings?.() || { high: 7500000 };
             encodings = [
                 {
                     scaleResolutionDownBy: 1,
-                    maxBitrate: 5000000,
+                    maxBitrate: sc.high,
+                    maxFramerate: 30,
                     dtx: true,
                 },
             ];
@@ -3261,6 +3411,298 @@ class RoomClient {
         } catch {
             /* ignore */
         }
+        const peerId = screenTile.dataset?.peerId;
+        if (peerId) this.applyScreenShareViewForPeer(peerId);
+    }
+
+    // ####################################################
+    // SCREEN SHARE SCALE + CROP (moderator view sync)
+    // ####################################################
+
+    decodeScreenShareView(raw) {
+        const out = { scale: 1, crop: null };
+        if (raw == null || raw === '') return out;
+        if (typeof raw === 'object') {
+            const scale = Number(raw.scale);
+            out.scale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+            if (raw.crop && typeof raw.crop === 'object') {
+                const x = Number(raw.crop.x);
+                const y = Number(raw.crop.y);
+                const w = Number(raw.crop.w);
+                const h = Number(raw.crop.h);
+                if ([x, y, w, h].every((n) => Number.isFinite(n)) && w > 0.02 && h > 0.02) {
+                    out.crop = {
+                        x: Math.min(0.95, Math.max(0, x)),
+                        y: Math.min(0.95, Math.max(0, y)),
+                        w: Math.min(1, Math.max(0.05, w)),
+                        h: Math.min(1, Math.max(0.05, h)),
+                    };
+                }
+            }
+            return out;
+        }
+        const str = String(raw);
+        const [scalePart, cropPart] = str.split('|');
+        const scale = parseFloat(scalePart);
+        out.scale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+        if (cropPart) {
+            const parts = cropPart.split(',').map((n) => parseFloat(n));
+            if (parts.length === 4 && parts.every((n) => Number.isFinite(n))) {
+                out.crop = {
+                    x: Math.min(0.95, Math.max(0, parts[0])),
+                    y: Math.min(0.95, Math.max(0, parts[1])),
+                    w: Math.min(1, Math.max(0.05, parts[2])),
+                    h: Math.min(1, Math.max(0.05, parts[3])),
+                };
+            }
+        }
+        return out;
+    }
+
+    encodeScreenShareView(view) {
+        const v = this.decodeScreenShareView(view);
+        const scale = Math.round(v.scale * 1000) / 1000;
+        if (!v.crop) return String(scale);
+        const c = v.crop;
+        const fmt = (n) => (Math.round(n * 1000) / 1000).toFixed(3);
+        return `${scale}|${fmt(c.x)},${fmt(c.y)},${fmt(c.w)},${fmt(c.h)}`;
+    }
+
+    getLocalScreenShareView() {
+        let scale = 1;
+        try {
+            const el = typeof screenShareScale !== 'undefined' ? screenShareScale : null;
+            const fromUi = parseInt(el?.value, 10);
+            if (Number.isFinite(fromUi) && fromUi > 0) scale = fromUi / 100;
+            else if (typeof localStorageSettings !== 'undefined') {
+                const saved = parseInt(localStorageSettings.screen_share_scale, 10);
+                if (Number.isFinite(saved) && saved > 0) scale = saved / 100;
+            }
+        } catch {
+            /* ignore */
+        }
+        let crop = null;
+        try {
+            const cropOn =
+                typeof switchScreenShareCrop !== 'undefined' && !!switchScreenShareCrop?.checked;
+            const raw =
+                typeof localStorageSettings !== 'undefined' ? localStorageSettings.screen_share_crop : '';
+            if (cropOn && raw) {
+                const decoded = this.decodeScreenShareView(`1|${raw}`);
+                crop = decoded.crop;
+            }
+        } catch {
+            /* ignore */
+        }
+        return { scale, crop };
+    }
+
+    publishLocalScreenShareView(emit = true) {
+        const view = this.getLocalScreenShareView();
+        const encoded = this.encodeScreenShareView(view);
+        if (this.peer_info) this.peer_info.peer_screen_view = encoded;
+        this.applyScreenShareViewForPeer(this.peer_id);
+        if (emit && this.socket && this.peer_info?.peer_screen) {
+            this.updatePeerInfo(this.peer_name, this.peer_id, 'screenView', encoded, true);
+        }
+        return encoded;
+    }
+
+    applyScreenShareViewToTile(tile, viewRaw) {
+        if (!tile) return;
+        const video =
+            tile.querySelector(':scope > video') ||
+            [...tile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble'));
+        if (!video) return;
+
+        const view = this.decodeScreenShareView(viewRaw);
+        const hasCrop = !!view.crop;
+        const active = hasCrop || Math.abs(view.scale - 1) > 0.01;
+        tile.classList.toggle('screen-share-view', active);
+
+        if (!active) {
+            video.style.removeProperty('transform');
+            video.style.removeProperty('transform-origin');
+            video.style.removeProperty('clip-path');
+            return;
+        }
+
+        if (!hasCrop) {
+            video.style.transformOrigin = 'center center';
+            video.style.transform = `scale(${view.scale})`;
+            video.style.removeProperty('clip-path');
+            return;
+        }
+
+        const c = view.crop;
+        const zoom = Math.max(1 / Math.max(0.05, c.w), 1 / Math.max(0.05, c.h)) * view.scale;
+        const cx = c.x + c.w / 2;
+        const cy = c.y + c.h / 2;
+        video.style.transformOrigin = `${cx * 100}% ${cy * 100}%`;
+        video.style.transform = `scale(${zoom})`;
+        video.style.removeProperty('clip-path');
+    }
+
+    applyScreenShareViewForPeer(peerId) {
+        if (!peerId) return;
+        let raw = null;
+        if (peerId === this.peer_id) {
+            raw = this.peer_info?.peer_screen_view ?? this.encodeScreenShareView(this.getLocalScreenShareView());
+        } else {
+            const peer = this.peers?.get?.(peerId);
+            raw = peer?.peer_info?.peer_screen_view ?? null;
+        }
+        const tile = this.getPeerMediaTile?.(peerId, 'screen');
+        if (tile) this.applyScreenShareViewToTile(tile, raw);
+    }
+
+    startScreenShareCropPicker() {
+        const tile = this.getPeerMediaTile?.(this.peer_id, 'screen');
+        const video =
+            tile &&
+            (tile.querySelector(':scope > video') ||
+                [...tile.querySelectorAll('video')].find((v) => !v.closest('.cam-bubble')));
+        if (!tile || !video) {
+            try {
+                Swal?.fire?.({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'info',
+                    title: 'Сначала запустите демонстрацию экрана',
+                    showConfirmButton: false,
+                    timer: 2500,
+                });
+            } catch {
+                console.warn('[screenCrop] no local screen tile');
+            }
+            return;
+        }
+
+        this.cancelScreenShareCropPicker();
+        tile.classList.add('screen-share-cropping');
+
+        const overlay = document.createElement('div');
+        overlay.className = 'screen-share-crop-overlay';
+        overlay.id = 'screenShareCropOverlay';
+
+        const shade = document.createElement('div');
+        shade.className = 'screen-share-crop-shade';
+        const box = document.createElement('div');
+        box.className = 'screen-share-crop-box';
+        const hint = document.createElement('div');
+        hint.className = 'screen-share-crop-hint';
+        hint.textContent = 'Выделите область · Esc — отмена';
+        const actions = document.createElement('div');
+        actions.className = 'screen-share-crop-actions';
+        const applyBtn = document.createElement('button');
+        applyBtn.type = 'button';
+        applyBtn.className = 'screen-share-crop-apply';
+        applyBtn.textContent = 'Применить';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'screen-share-crop-cancel';
+        cancelBtn.textContent = 'Отмена';
+        actions.append(applyBtn, cancelBtn);
+        overlay.append(shade, box, hint, actions);
+        tile.appendChild(overlay);
+
+        let dragging = false;
+        let startX = 0;
+        let startY = 0;
+        let rect = null;
+
+        const toFrac = (clientX, clientY) => {
+            const r = video.getBoundingClientRect();
+            const x = (clientX - r.left) / Math.max(1, r.width);
+            const y = (clientY - r.top) / Math.max(1, r.height);
+            return {
+                x: Math.min(1, Math.max(0, x)),
+                y: Math.min(1, Math.max(0, y)),
+            };
+        };
+
+        const paintBox = (a, b) => {
+            const x1 = Math.min(a.x, b.x);
+            const y1 = Math.min(a.y, b.y);
+            const x2 = Math.max(a.x, b.x);
+            const y2 = Math.max(a.y, b.y);
+            rect = { x: x1, y: y1, w: x2 - x1, h: y2 - y1 };
+            const vr = video.getBoundingClientRect();
+            const tr = tile.getBoundingClientRect();
+            box.style.left = `${vr.left - tr.left + rect.x * vr.width}px`;
+            box.style.top = `${vr.top - tr.top + rect.y * vr.height}px`;
+            box.style.width = `${rect.w * vr.width}px`;
+            box.style.height = `${rect.h * vr.height}px`;
+            box.style.display = rect.w > 0.01 && rect.h > 0.01 ? 'block' : 'none';
+        };
+
+        const onDown = (e) => {
+            if (e.target.closest('.screen-share-crop-actions')) return;
+            e.preventDefault();
+            dragging = true;
+            const p = e.touches?.[0] || e;
+            startX = p.clientX;
+            startY = p.clientY;
+            const a = toFrac(startX, startY);
+            paintBox(a, a);
+        };
+        const onMove = (e) => {
+            if (!dragging) return;
+            e.preventDefault();
+            const p = e.touches?.[0] || e;
+            paintBox(toFrac(startX, startY), toFrac(p.clientX, p.clientY));
+        };
+        const onUp = () => {
+            dragging = false;
+        };
+
+        const finish = (apply) => {
+            if (apply && rect && rect.w > 0.03 && rect.h > 0.03) {
+                try {
+                    if (typeof localStorageSettings !== 'undefined') {
+                        localStorageSettings.screen_share_crop = [
+                            rect.x.toFixed(3),
+                            rect.y.toFixed(3),
+                            rect.w.toFixed(3),
+                            rect.h.toFixed(3),
+                        ].join(',');
+                        if (typeof lS !== 'undefined') lS.setSettings(localStorageSettings);
+                    }
+                    if (typeof switchScreenShareCrop !== 'undefined' && switchScreenShareCrop) {
+                        switchScreenShareCrop.checked = true;
+                    }
+                } catch {
+                    /* ignore */
+                }
+                this.publishLocalScreenShareView(true);
+            }
+            this.cancelScreenShareCropPicker();
+        };
+
+        const onKey = (e) => {
+            if (e.key === 'Escape') finish(false);
+        };
+
+        overlay.addEventListener('mousedown', onDown);
+        overlay.addEventListener('mousemove', onMove);
+        overlay.addEventListener('mouseup', onUp);
+        overlay.addEventListener('touchstart', onDown, { passive: false });
+        overlay.addEventListener('touchmove', onMove, { passive: false });
+        overlay.addEventListener('touchend', onUp);
+        applyBtn.onclick = () => finish(true);
+        cancelBtn.onclick = () => finish(false);
+        document.addEventListener('keydown', onKey);
+
+        this._screenCropPicker = { overlay, onKey, tile };
+    }
+
+    cancelScreenShareCropPicker() {
+        const state = this._screenCropPicker;
+        if (!state) return;
+        document.removeEventListener('keydown', state.onKey);
+        state.overlay?.remove();
+        state.tile?.classList.remove('screen-share-cropping');
+        this._screenCropPicker = null;
     }
 
     createElement(id, type, className) {
@@ -3487,6 +3929,10 @@ class RoomClient {
                 this.refreshCamBubble(this.peer_id);
                 this.refreshDialogSplitIfNeeded(this.peer_id);
                 this.scheduleAdaptiveVideoQuality(250);
+                if (isScreen) {
+                    this.publishLocalScreenShareView(true);
+                    setTimeout(() => this.applyScreenShareViewForPeer(this.peer_id), 200);
+                }
                 break;
             case mediaType.audio:
                 elem = document.createElement('audio');
@@ -4232,6 +4678,13 @@ class RoomClient {
                 this.refreshCamBubble(remotePeerId);
                 this.scheduleCamBubbleRetry(remotePeerId);
                 this.refreshDialogSplitIfNeeded(remotePeerId);
+                if (remoteIsScreen) {
+                    if (peer_info?.peer_screen_view) {
+                        const peer = this.peers?.get?.(remotePeerId);
+                        if (peer?.peer_info) peer.peer_info.peer_screen_view = peer_info.peer_screen_view;
+                    }
+                    setTimeout(() => this.applyScreenShareViewForPeer(remotePeerId), 150);
+                }
                 if (this._stageScene?.mode) {
                     setTimeout(() => this.applyStageScene(), 150);
                 }
@@ -4279,8 +4732,8 @@ class RoomClient {
     }
 
     // ####################################################
-    // ADAPTIVE VIDEO QUALITY (visible tiles → simulcast layer)
-    // 1 tile → high, 2 → mid (~1/2), 3+ → low (~1/3–1/4)
+    // ADAPTIVE VIDEO QUALITY
+    // priority (layout) ≠ forced quality — see AdaptiveQualityController.js
     // ####################################################
 
     countVisibleVideoTiles() {
@@ -4292,34 +4745,277 @@ class RoomClient {
             if (el.style.display === 'none') return;
             const cs = getComputedStyle(el);
             if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return;
-            // Count tiles that actually have a video (or avatar slot in dialog)
             const hasVideo = !!el.querySelector('video');
             const isVideoOff = (el.id || '').endsWith('__videoOff');
             if (!hasVideo && !isVideoOff) return;
-            // Screen share counts as one "heavy" tile
             n += 1;
         });
-        // Creator circle on screen still means 2 visual people, but decode is 1 screen + 1 cam stream
         if (document.querySelector('#videoPinMediaContainer .has-cam-bubble .cam-bubble video')) {
             n += 1;
         }
         return Math.max(1, n);
     }
 
-    layersForVisibleCount(count, { isScreen = false, isPinned = false } = {}) {
-        // Screen / pinned spotlight stays high quality
-        if (isScreen || isPinned) {
-            return { spatialLayer: 2, temporalLayer: 2 };
-        }
-        const n = Math.max(1, Number(count) || 1);
-        if (n <= 1) return { spatialLayer: 2, temporalLayer: 2 }; // full
-        if (n === 2) return { spatialLayer: 1, temporalLayer: 2 }; // ~1/2
-        if (n === 3) return { spatialLayer: 0, temporalLayer: 2 }; // ~1/3–1/4
-        if (n <= 5) return { spatialLayer: 0, temporalLayer: 1 };
-        return { spatialLayer: 0, temporalLayer: 0 };
+    getConsumerMaxPreferredLayers(consumer) {
+        return (
+            this._aq?._getMaxLayers?.(consumer) || {
+                spatialLayer: 0,
+                temporalLayer: 0,
+            }
+        );
     }
 
-    scheduleAdaptiveVideoQuality(delayMs = 200) {
+    /** @deprecated priority≠layer; kept for compatibility — maps to controller layout priority */
+    layersFromPriority(priority, max) {
+        const maxS = Math.max(0, max.spatialLayer | 0);
+        const maxT = Math.max(0, max.temporalLayer | 0);
+        if (priority === 'critical' || priority === 'high') {
+            return { spatialLayer: maxS, temporalLayer: maxT };
+        }
+        if (priority === 'medium' || priority === 'mid') {
+            const midS = maxS <= 0 ? 0 : Math.max(0, Math.min(maxS, 1));
+            return { spatialLayer: midS, temporalLayer: Math.min(maxT, 2) };
+        }
+        return { spatialLayer: 0, temporalLayer: Math.min(1, maxT) };
+    }
+
+    getStreamQualityPreset() {
+        try {
+            const el = typeof streamQualityPreset !== 'undefined' ? streamQualityPreset : null;
+            const fromUi = el?.value;
+            const allowed = AdaptiveQualityController?.PRESETS || ['max', 'high', 'balanced', 'saver', 'perf'];
+            if (fromUi && allowed.includes(fromUi)) return fromUi;
+            const saved =
+                typeof localStorageSettings !== 'undefined' ? localStorageSettings.stream_quality_preset : null;
+            if (saved && allowed.includes(saved)) return saved;
+            // migrate legacy auto → max
+            if (saved === 'auto') return 'max';
+        } catch {
+            /* ignore */
+        }
+        return this._aq?.getPreset?.() || 'max';
+    }
+
+    setStreamQualityPreset(preset, { persist = true, apply = true } = {}) {
+        const allowed = AdaptiveQualityController?.PRESETS || ['max', 'high', 'balanced', 'saver', 'perf'];
+        let p = allowed.includes(preset) ? preset : 'max';
+        if (preset === 'auto') p = 'max';
+        this._streamQualityPreset = p;
+        try {
+            if (typeof streamQualityPreset !== 'undefined' && streamQualityPreset) {
+                streamQualityPreset.value = p;
+            }
+            if (persist && typeof localStorageSettings !== 'undefined') {
+                localStorageSettings.stream_quality_preset = p;
+                if (typeof lS !== 'undefined') lS.setSettings(localStorageSettings);
+            }
+        } catch {
+            /* ignore */
+        }
+        this._aq?.setPreset?.(p);
+        if (apply) this.scheduleAdaptiveVideoQuality(50, 'manual_preset');
+        return p;
+    }
+
+    /** Default / manual webcam simulcast ceilings (bps). High default 6 Mbps (3× prior). */
+    getManualWebcamBitrateCeilings() {
+        let highMbps = 6;
+        try {
+            if (this._manualWebcamHighMbps > 0) highMbps = this._manualWebcamHighMbps;
+            else if (typeof localStorageSettings !== 'undefined' && localStorageSettings.manual_webcam_mbps) {
+                highMbps = Number(localStorageSettings.manual_webcam_mbps) || 6;
+            }
+        } catch {
+            /* ignore */
+        }
+        highMbps = Math.max(0.5, Math.min(20, highMbps));
+        const high = Math.round(highMbps * 1000000);
+        return {
+            high,
+            mid: Math.round(high / 3.33),
+            low: Math.round(high / 11.1),
+        };
+    }
+
+    getManualScreenBitrateCeilings() {
+        let highMbps = 7.5;
+        try {
+            if (this._manualScreenHighMbps > 0) highMbps = this._manualScreenHighMbps;
+            else if (typeof localStorageSettings !== 'undefined' && localStorageSettings.manual_screen_mbps) {
+                highMbps = Number(localStorageSettings.manual_screen_mbps) || 7.5;
+            }
+        } catch {
+            /* ignore */
+        }
+        highMbps = Math.max(0.5, Math.min(25, highMbps));
+        const high = Math.round(highMbps * 1000000);
+        return {
+            high,
+            mid: Math.round(high * 0.36),
+            low: Math.round(high * 0.16),
+        };
+    }
+
+    /**
+     * Hot apply quality for creator/moderator during live session.
+     * Does not recreate producers — only setParameters + consumer layer policy.
+     */
+    async applyManualSessionQuality(opts = {}) {
+        const {
+            preset,
+            webcamMbps,
+            screenMbps,
+            forceHighLayers = true,
+            persist = true,
+        } = opts;
+
+        if (preset) this.setStreamQualityPreset(preset, { persist, apply: false });
+
+        if (webcamMbps != null && Number(webcamMbps) > 0) {
+            this._manualWebcamHighMbps = Number(webcamMbps);
+            if (persist && typeof localStorageSettings !== 'undefined') {
+                localStorageSettings.manual_webcam_mbps = this._manualWebcamHighMbps;
+            }
+        }
+        if (screenMbps != null && Number(screenMbps) > 0) {
+            this._manualScreenHighMbps = Number(screenMbps);
+            if (persist && typeof localStorageSettings !== 'undefined') {
+                localStorageSettings.manual_screen_mbps = this._manualScreenHighMbps;
+            }
+        }
+        if (typeof forceHighLayers === 'boolean') {
+            this._manualForceHighLayers = forceHighLayers;
+            if (persist && typeof localStorageSettings !== 'undefined') {
+                localStorageSettings.manual_force_high_layers = forceHighLayers;
+            }
+        }
+        try {
+            if (persist && typeof lS !== 'undefined' && typeof localStorageSettings !== 'undefined') {
+                lS.setSettings(localStorageSettings);
+            }
+        } catch {
+            /* ignore */
+        }
+
+        this._aq?.setManualSessionControls?.({
+            forceHighLayers: this._manualForceHighLayers !== false,
+            webcamHighMbps: this._manualWebcamHighMbps,
+            screenHighMbps: this._manualScreenHighMbps,
+        });
+
+        // Live uplink ceilings (webcam + screen) — explicit manual reason
+        await this._applyLiveProducerCeilings(mediaType.video, this.getManualWebcamBitrateCeilings());
+        if (this.producerLabel?.has?.(mediaType.screen)) {
+            await this._applyLiveProducerCeilings(mediaType.screen, this.getManualScreenBitrateCeilings());
+        }
+
+        // Reset AQ baseline so protected path keeps new manual ceilings
+        if (this._aq) {
+            this._aq._producerBaseline = null;
+            this._aq._lastProducerState = null;
+        }
+
+        this.scheduleAdaptiveVideoQuality(50, 'manual_preset');
+        return {
+            preset: this.getStreamQualityPreset(),
+            webcam: this.getManualWebcamBitrateCeilings(),
+            screen: this.getManualScreenBitrateCeilings(),
+            forceHighLayers: this._manualForceHighLayers !== false,
+        };
+    }
+
+    async _applyLiveProducerCeilings(label, ceilings) {
+        try {
+            if (!this.producerLabel?.has?.(label)) return;
+            const producer = this.producers?.get?.(this.producerLabel.get(label));
+            if (!producer || typeof producer.getParameters !== 'function') return;
+            const params = producer.getParameters();
+            const encodings = params?.encodings;
+            if (!Array.isArray(encodings) || !encodings.length) return;
+            const targets =
+                encodings.length >= 3
+                    ? [ceilings.low, ceilings.mid, ceilings.high]
+                    : encodings.length === 2
+                      ? [ceilings.mid, ceilings.high]
+                      : [ceilings.high];
+            let changed = false;
+            const old = encodings.map((e) => e.maxBitrate);
+            encodings.forEach((enc, i) => {
+                const next = targets[Math.min(i, targets.length - 1)];
+                if (enc.maxBitrate !== next) {
+                    enc.maxBitrate = next;
+                    changed = true;
+                }
+            });
+            if (!changed) return;
+            await producer.setParameters(params);
+            if (typeof localStorage !== 'undefined' && localStorage.getItem('video_debug') === '1') {
+                console.warn('[MANUAL PRODUCER CEILING]', {
+                    label,
+                    reason: 'manual_session_quality',
+                    old,
+                    new: encodings.map((e) => e.maxBitrate),
+                });
+            }
+        } catch (err) {
+            console.warn('_applyLiveProducerCeilings', label, err?.message || err);
+        }
+    }
+
+    /** Layout-only classification (legacy shape). Real decisions live in AdaptiveQualityController. */
+    classifyVideoConsumer(consumerId, consumer) {
+        if (this._aq) {
+            const layout = this._aq._classifyLayout(consumerId, consumer);
+            const pri =
+                layout.priority === 'critical'
+                    ? 'high'
+                    : layout.priority === 'medium'
+                      ? 'mid'
+                      : layout.priority === 'low'
+                        ? 'low'
+                        : 'high';
+            return { priority: pri, pause: !!layout.pause, layoutPriority: layout.priority, reason: layout.reason };
+        }
+        return { priority: 'mid', pause: false };
+    }
+
+    async setConsumerTransportPaused(consumerId, shouldPause) {
+        if (this._aq) {
+            await this._aq._setPaused(consumerId, shouldPause);
+            return;
+        }
+        const consumer = this.consumers?.get?.(consumerId);
+        if (!consumer || consumer.kind !== 'video') return;
+        if (!this._consumerPauseCache) this._consumerPauseCache = new Map();
+        if (this._consumerPauseCache.get(consumerId) === shouldPause) return;
+        try {
+            if (shouldPause) {
+                await this.socket.request('pauseConsumer', { consumer_id: consumerId, type: 'video' });
+                try {
+                    consumer.pause();
+                } catch {
+                    /* ignore */
+                }
+            } else {
+                await this.socket.request('resumeConsumer', { consumer_id: consumerId, type: 'video' });
+                try {
+                    consumer.resume();
+                } catch {
+                    /* ignore */
+                }
+            }
+            this._consumerPauseCache.set(consumerId, shouldPause);
+        } catch (err) {
+            console.warn('setConsumerTransportPaused', consumerId, err?.error || err);
+        }
+    }
+
+    scheduleAdaptiveVideoQuality(delayMs = 350, reason = 'layout') {
+        if (this._aq) {
+            if (!this._aq._started) this._aq.start();
+            this._aq.schedule(delayMs, reason);
+            return;
+        }
         clearTimeout(this._adaptiveVideoQualityTimer);
         this._adaptiveVideoQualityTimer = setTimeout(() => {
             this.applyAdaptiveVideoQuality().catch((err) => console.warn('adaptive video quality', err));
@@ -4327,101 +5023,154 @@ class RoomClient {
     }
 
     async applyAdaptiveVideoQuality() {
-        if (!this.socket || !this.consumers?.size) {
-            this.adaptLocalVideoCapture?.();
+        if (this._aq) {
+            await this._aq.apply(this._aq._pendingApplyReason || 'layout');
             return;
         }
-        const visible = this.countVisibleVideoTiles();
-        const pinnedId = this.pinnedVideoPlayerId || null;
-
-        const jobs = [];
-        for (const [consumerId, consumer] of this.consumers.entries()) {
-            if (consumer.kind !== 'video') continue;
-            const tile = this.getId(consumerId + '__video');
-            const mediaKind = tile?.dataset?.mediaKind || '';
-            const isScreen = mediaKind === 'screen';
-            const isPinned = Boolean(
-                pinnedId &&
-                    (consumerId === pinnedId ||
-                        tile?.classList?.contains('is-pinned-video') ||
-                        tile?.parentElement?.id === 'videoPinMediaContainer')
-            );
-            // Hidden tiles: request lowest layer (still subscribed but cheap)
-            const hidden =
-                tile?.dataset?.stageHidden === '1' ||
-                tile?.dataset?.dialogHidden === '1' ||
-                tile?.classList?.contains('cam-bubble-source-hidden') ||
-                tile?.style?.display === 'none';
-
-            const layers = hidden
-                ? { spatialLayer: 0, temporalLayer: 0 }
-                : this.layersForVisibleCount(visible, { isScreen, isPinned });
-
-            const key = `${layers.spatialLayer}:${layers.temporalLayer}`;
-            if (this._consumerLayerCache?.get(consumerId) === key) continue;
-            if (!this._consumerLayerCache) this._consumerLayerCache = new Map();
-            this._consumerLayerCache.set(consumerId, key);
-
-            jobs.push(
-                this.socket
+        // Minimal fallback if controller script failed to load
+        try {
+            for (const [consumerId, consumer] of this.consumers.entries()) {
+                if (consumer.kind !== 'video') continue;
+                const { priority, pause } = this.classifyVideoConsumer(consumerId, consumer);
+                await this.setConsumerTransportPaused(consumerId, pause);
+                if (pause || !['simulcast', 'svc'].includes(consumer.type)) continue;
+                const max = this.getConsumerMaxPreferredLayers(consumer);
+                const layers = this.layersFromPriority(priority, max);
+                await this.socket
                     .request('setConsumerPreferredLayers', {
                         consumer_id: consumerId,
                         spatialLayer: layers.spatialLayer,
                         temporalLayer: layers.temporalLayer,
                     })
-                    .catch((err) => {
-                        this._consumerLayerCache?.delete(consumerId);
-                        console.warn('setConsumerPreferredLayers', consumerId, err);
-                    })
-            );
+                    .catch(() => {});
+            }
+            this.ensureLocalCamPlaying?.();
+        } catch (err) {
+            console.warn('adaptive video quality fallback', err);
         }
-        if (jobs.length) {
-            await Promise.allSettled(jobs);
-            console.log('[adaptiveQuality] visible=', visible, 'updated=', jobs.length);
-        }
-        this.adaptLocalVideoCapture(visible);
     }
 
-    /** Reduce own webcam capture when many people show video (saves uplink + encode CPU). */
-    async adaptLocalVideoCapture(visibleCount = null) {
+    /** Keep local webcam alive — never applyConstraints(width/height) mid-call. */
+    async adaptLocalVideoCapture(_visibleCount = null) {
         try {
             if (!this.producerLabel?.has?.(mediaType.video)) return;
             const producer = this.producers?.get?.(this.producerLabel.get(mediaType.video));
             const track = producer?.track;
             if (!track || track.readyState !== 'live') return;
-
-            const n = visibleCount ?? this.countVisibleVideoTiles();
-            let width = 1280;
-            let height = 720;
-            let frameRate = 30;
-            if (n >= 5) {
-                width = 480;
-                height = 270;
-                frameRate = 12;
-            } else if (n >= 4) {
-                width = 640;
-                height = 360;
-                frameRate = 15;
-            } else if (n >= 3) {
-                width = 854;
-                height = 480;
-                frameRate = 20;
-            } else if (n >= 2) {
-                width = 960;
-                height = 540;
-                frameRate = 24;
-            }
-            const key = `${width}x${height}@${frameRate}`;
-            if (this._localCaptureQualityKey === key) return;
-            this._localCaptureQualityKey = key;
-            await track.applyConstraints({
-                width: { ideal: width },
-                height: { ideal: height },
-                frameRate: { ideal: frameRate, max: frameRate },
-            });
-            console.log('[adaptiveQuality] local capture', key);
+            this.ensureLocalCamPlaying();
+            // Protected lecturer: layout must NOT call setParameters.
+            // Producer ceilings only from sender_telemetry inside AdaptiveQualityController.
+            if (this._aq?.isProtectedLecturerProducer?.()) return;
+            if (this._aq) await this._aq._adaptProducerCeilings({ reason: 'layout' });
         } catch (err) {
             console.warn('adaptLocalVideoCapture', err?.message || err);
+        }
+    }
+
+    /** @deprecated Producer ceilings — layout must not degrade lecturer */
+    async adaptLocalProducerBitrate() {
+        if (this._aq?.isProtectedLecturerProducer?.()) return;
+        if (this._aq) {
+            await this._aq._adaptProducerCeilings({ reason: 'layout' });
+        }
+    }
+
+    isProtectedLecturerProducer() {
+        return !!this._aq?.isProtectedLecturerProducer?.();
+    }
+
+    resetAdaptiveQuality() {
+        this._aq?.reset?.();
+        this._consumerLayerCache = this._aq?._layerCache || new Map();
+        this._consumerPauseCache = this._aq?._pauseCache || new Map();
+    }
+
+    /** True if this peer created the meeting (not just a moderator). */
+    isRoomCreator() {
+        try {
+            const creatorId = this.ensureMeetingCreatorId?.() || this._meetingCreatorId;
+            return Boolean(creatorId && creatorId === this.peer_id);
+        } catch {
+            return false;
+        }
+    }
+
+    /** Leave + chat X only for room creator. */
+    syncCreatorOnlyChrome() {
+        const isCreator = this.isRoomCreator();
+        try {
+            document.documentElement.setAttribute('data-is-creator', isCreator ? '1' : '0');
+            document.body?.classList?.toggle?.('is-room-creator', isCreator);
+        } catch {
+            /* ignore */
+        }
+
+        const exitBtn = this.getId('exitButton');
+        const exitDd = this.getId('exitDropdown');
+        const exitMenu = this.getId('exitMenu');
+        const closeBtn = this.getId('chatCloseButton');
+
+        if (isCreator) {
+            if (typeof BUTTONS !== 'undefined') BUTTONS.main.exitButton = true;
+            if (exitBtn) {
+                exitBtn.classList.remove('hidden');
+                exitBtn.style.removeProperty('display');
+                exitBtn.removeAttribute('data-guest-hidden');
+            }
+            if (exitDd) {
+                exitDd.classList.remove('hidden');
+                exitDd.style.removeProperty('display');
+                exitDd.removeAttribute('data-guest-hidden');
+            }
+            if (closeBtn && !this.isMobileDevice) {
+                closeBtn.classList.remove('hidden');
+                closeBtn.style.removeProperty('display');
+            }
+        } else {
+            if (typeof BUTTONS !== 'undefined') BUTTONS.main.exitButton = false;
+            [exitBtn, exitDd, exitMenu].forEach((el) => {
+                if (!el) return;
+                el.classList.add('hidden');
+                el.style.setProperty('display', 'none', 'important');
+                el.setAttribute('data-guest-hidden', '1');
+            });
+            if (closeBtn) {
+                closeBtn.classList.add('hidden');
+                closeBtn.style.setProperty('display', 'none', 'important');
+            }
+        }
+    }
+
+    /** Resume local camera <video> / cam-bubble if the track is live but UI stalled. */
+    ensureLocalCamPlaying() {
+        try {
+            const now = Date.now();
+            if (this._lastLocalCamPlayCheck && now - this._lastLocalCamPlayCheck < 2000) return;
+            this._lastLocalCamPlayCheck = now;
+
+            const producerId = this.producerLabel?.get?.(mediaType.video);
+            const ids = new Set();
+            if (producerId) ids.add(producerId);
+            if (this.myVideoEl?.id) ids.add(this.myVideoEl.id);
+            if (this.videoProducerId) ids.add(this.videoProducerId);
+
+            ids.forEach((id) => {
+                const el = this.getId(id);
+                if (el?.tagName === 'VIDEO' && el.srcObject && el.paused) {
+                    el.play?.().catch?.(() => {});
+                }
+            });
+
+            document
+                .querySelectorAll(
+                    `.cam-bubble[data-cam-peer-id="${this.peer_id}"] video, ` +
+                        `#videoPinMediaContainer .cam-bubble[data-cam-peer-id="${this.peer_id}"] video`
+                )
+                .forEach((v) => {
+                    if (v?.srcObject && v.paused) v.play?.().catch?.(() => {});
+                });
+        } catch {
+            /* ignore */
         }
     }
 
@@ -4429,7 +5178,9 @@ class RoomClient {
         if (!this.consumers.get(consumer_id)) return;
 
         console.log('Remove consumer', { consumer_id: consumer_id, consumer_kind: consumer_kind });
+        this._aq?.onConsumerRemoved?.(consumer_id);
         this._consumerLayerCache?.delete(consumer_id);
+        this._consumerPauseCache?.delete(consumer_id);
 
         const elem = this.getId(consumer_id);
         if (elem) {
@@ -4735,6 +5486,12 @@ class RoomClient {
 
         const clean = () => {
             this._isConnected = false;
+            try {
+                this._aq?.stop?.();
+                this.resetAdaptiveQuality?.();
+            } catch {
+                /* ignore */
+            }
             if (this.consumerTransport) this.consumerTransport.close();
             if (this.producerTransport) this.producerTransport.close();
             if (this.socket) {
@@ -5112,6 +5869,9 @@ class RoomClient {
 
     setIsScreen(status) {
         this.peer_info.peer_screen = status;
+        if (!status) {
+            this.cancelScreenShareCropPicker?.();
+        }
         if (!this.peer_info.peer_screen && !this.peer_info.peer_video) {
             console.log('Set local screen enabled: ' + status);
             if (!isBroadcastingEnabled || isPresenter || this._broadcastSpotlit) {
@@ -6435,6 +7195,17 @@ class RoomClient {
             } else {
                 // Mobile: always full-viewport — never chatCenter (800px min-width overflows)
                 this.chatMaximize();
+                this.chatFillViewport();
+                // No header X on mobile — close via dock chat icon
+                try {
+                    const closeBtn = this.getId('chatCloseButton');
+                    if (closeBtn) {
+                        closeBtn.classList.add('hidden');
+                        closeBtn.style.setProperty('display', 'none', 'important');
+                    }
+                } catch {
+                    /* ignore */
+                }
             }
             this.sound('open');
             this.showPeerAboutAndMessages('all', 'all');
@@ -6496,11 +7267,24 @@ class RoomClient {
     async ensurePublicChatPinned() {
         try {
             if (this.isMobileDevice) return;
-            if (!BUTTONS.main.chatButton && !isPresenter) {
-                BUTTONS.main.chatButton = true;
-            }
-            if (!this.isChatOpen) {
-                await this.toggleChat(false);
+            // Temporarily allow toggleChat without showing guest dock chat icon
+            const prevChatBtn = BUTTONS.main.chatButton;
+            BUTTONS.main.chatButton = true;
+            try {
+                if (!this.isChatOpen) {
+                    await this.toggleChat(false);
+                }
+            } finally {
+                if (!isPresenter) {
+                    BUTTONS.main.chatButton = false;
+                    const chatBtn = this.getId('chatButton');
+                    if (chatBtn) {
+                        chatBtn.classList.add('hidden');
+                        chatBtn.style.display = 'none';
+                    }
+                } else {
+                    BUTTONS.main.chatButton = prevChatBtn;
+                }
             }
             this.showPeerAboutAndMessages('all', 'all');
             if (!this.isChatPinned) {
@@ -6602,20 +7386,58 @@ class RoomClient {
             this.userLog('warning', 'Список участников доступен только ведущему и модераторам', 'top-end');
             return;
         }
+        // Ensure button/chrome not stuck from guest hide
+        try {
+            const pBtn = document.getElementById('participantsButton');
+            if (pBtn) {
+                pBtn.classList.remove('hidden');
+                pBtn.style.removeProperty('display');
+                pBtn.removeAttribute('data-guest-hidden');
+            }
+            BUTTONS.main.participantsButton = true;
+        } catch {
+            /* ignore */
+        }
         this.isParticipantsOpen = !this.isParticipantsOpen;
         this.syncChatToolbarButtons();
         if (!this.isParticipantsOpen && this.isChatOpen) {
-            this.toggleChat(true);
+            // Closing participants: hide plist, keep chat if desktop pinned
+            const plist = this.getId('plist');
+            if (plist && !plist.classList.contains('hidden')) {
+                plist.classList.add('hidden');
+            }
+            if (this.isMobileDevice) {
+                this.toggleChat(true);
+            }
+            this.syncChatToolbarButtons();
             return;
         }
         if (!this.isChatOpen) {
             await this.toggleChat(true);
-            if (!BUTTONS.main.chatButton) {
-                elemDisplay('chat', false);
-            }
         }
-        if ((isDesktopDevice && this.isChatPinned) || !isDesktopDevice) {
-            this.toggleShowParticipants();
+        // Always show people list for moderator
+        const plist = this.getId('plist');
+        const chat = this.getId('chat');
+        if (plist) {
+            plist.classList.remove('hidden');
+            plist.style.display = '';
+            plist.style.width = this.isMobileDevice || this.isChatPinned ? '100%' : '300px';
+            plist.style.position = this.isMobileDevice ? 'fixed' : 'absolute';
+        }
+        if (chat && this.isMobileDevice) {
+            // Mobile: participants fill the panel
+            elemDisplay(chat.id, false);
+        } else if (chat && this.isChatPinned) {
+            elemDisplay(chat.id, false);
+            chat.style.marginLeft = '300px';
+        }
+        await getRoomParticipants();
+        this.isParticipantsOpen = true;
+        this.syncChatToolbarButtons();
+        this.updateChatFooterVisibility();
+        if (this.isMobileDevice) {
+            this.chatMaximize();
+            this.chatFillViewport();
         }
     }
 
@@ -11792,6 +12614,9 @@ class RoomClient {
                 endedGuests.forEach((id) => this.collapseDialogPeerTile(id));
                 this.exitDialogSplitLayout();
                 this.hideDialogControlsBar();
+                this._discussionInviteOpen = false;
+                this._discussionDeclined = false;
+                this.hideJoinDiscussionButton();
                 try {
                     resizeVideoMedia();
                     handleAspectRatio();
@@ -11803,6 +12628,12 @@ class RoomClient {
             case 'dialogInvite':
                 // Guest receives invite: auto-start A/V then split layout
                 this.handleDialogInvite(cmd);
+                break;
+            case 'discussionInviteAll':
+                this.handleDiscussionInviteAll(cmd);
+                break;
+            case 'discussionAccept':
+                this.handleDiscussionAccept(cmd);
                 break;
             case 'stageScene':
                 this.handleStageSceneUpdate(cmd);
@@ -12093,7 +12924,7 @@ class RoomClient {
         if (!isPresenter) {
             return this.userLog('warning', 'Только модератор может завершить диалог', 'top-end');
         }
-        if (!this._dialogSplitActive) {
+        if (!this._dialogSplitActive && !this._discussionInviteOpen) {
             return this.userLog('info', 'Диалог не активен', 'top-end');
         }
         const guests = [...(this._dialogGuestIds || [])];
@@ -12110,6 +12941,9 @@ class RoomClient {
             this.emitPeerMediaAction(guestId, 'hide');
             this.collapseDialogPeerTile(guestId);
         }
+        this._discussionInviteOpen = false;
+        this._discussionDeclined = false;
+        this.hideJoinDiscussionButton();
         this.exitDialogSplitLayout();
         this.hideDialogControlsBar();
         this.userLog('success', 'Диалог завершён', 'top-end', 3000);
@@ -12125,10 +12959,11 @@ class RoomClient {
         if (!guests.length) {
             return this.endDialog();
         }
-        this.emitPeerMediaAction(guestId, 'mute');
-        this.emitPeerMediaAction(guestId, 'hide');
-        this.collapseDialogPeerTile(guestId);
+        // Layout remaining guests FIRST — mute/hide of the removed peer can race and hide others
+        this._dialogGuestIds = guests;
+        this.protectDialogPeerTiles(guests);
         this.applyDialogSplitLayout(this.peer_id, guests);
+        this.protectDialogPeerTiles(guests);
         this.emitCmd({
             type: 'dialogGuestRemove',
             broadcast: true,
@@ -12139,25 +12974,90 @@ class RoomClient {
             peer_name: this.peer_name,
             peer_uuid: this.peer_uuid,
         });
+        this.collapseDialogPeerTile(guestId);
+        this.emitPeerMediaAction(guestId, 'mute');
+        this.emitPeerMediaAction(guestId, 'hide');
         this.renderDialogControlsBar();
+        // Re-assert remaining tiles after consumer-closed of removed peer
+        [150, 500, 1200].forEach((ms) => {
+            setTimeout(() => {
+                if (!this._dialogSplitActive) return;
+                this.protectDialogPeerTiles(this._dialogGuestIds);
+                this.applyDialogSplitLayout(this.peer_id, this._dialogGuestIds);
+                this.protectDialogPeerTiles(this._dialogGuestIds);
+            }, ms);
+        });
         this.userLog('success', 'Участник убран из диалога', 'top-end', 3000);
     }
 
+    /** Keep dialog guest camera tiles visible (by peer id) — never lose remaining guests. */
+    protectDialogPeerTiles(guestIds = []) {
+        const ids = (guestIds || []).filter(Boolean);
+        if (!ids.length) return;
+        const idSet = new Set(ids);
+        if (this._dialogPresenterId) idSet.add(this._dialogPresenterId);
+        document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
+            const liveVideo = el.querySelector('video[name]');
+            const peerId =
+                liveVideo?.getAttribute('name') ||
+                el.dataset?.peerId ||
+                (el.id || '').replace(/__(videoOff|video|dialogSlot)$/, '');
+            if (!peerId || !idSet.has(peerId)) return;
+            el.dataset.dialogHidden = '0';
+            el.dataset.stageHidden = '0';
+            el.dataset.stageProtected = '1';
+            el.style.display = '';
+            el.style.removeProperty('display');
+            el.style.visibility = 'visible';
+            el.style.opacity = '1';
+            el.classList.remove('cam-bubble-source-hidden');
+            const v = el.querySelector('video');
+            try {
+                if (v?.paused) v.play?.().catch?.(() => {});
+            } catch {
+                /* ignore */
+            }
+        });
+        ids.forEach((id) => {
+            const wrap =
+                this.getCameraWrapByPeerId(id) ||
+                this.getId(id + '__videoOff') ||
+                this.getId(id + '__dialogSlot');
+            if (!wrap) return;
+            wrap.dataset.dialogHidden = '0';
+            wrap.dataset.stageHidden = '0';
+            wrap.dataset.stageProtected = '1';
+            wrap.style.display = '';
+            wrap.style.removeProperty('display');
+        });
+    }
+
     handleDialogSplitUpdate(cmd = {}) {
-        const presenterId = cmd.presenterId || '';
-        const guestIds = (Array.isArray(cmd.guestIds) ? cmd.guestIds : cmd.guestId ? [cmd.guestId] : [])
-            .filter(Boolean)
-            .filter((id) => id !== presenterId);
-        const wasGuest = (this._dialogGuestIds || []).includes(this.peer_id);
-        const stillGuest = guestIds.includes(this.peer_id);
-        const removedId = cmd.removedGuestId || '';
+        const presenterId = cmd.presenterId || this._dialogPresenterId || '';
         const previousGuests = [...(this._dialogGuestIds || [])];
+        const removedId =
+            cmd.removedGuestId ||
+            (cmd.type === 'dialogGuestLeave' || cmd.type === 'dialogGuestRemove' ? cmd.guestId : '') ||
+            '';
+
+        // Remaining guests: prefer explicit guestIds; for leave/remove without list, derive from previous
+        let guestIds = Array.isArray(cmd.guestIds) ? cmd.guestIds.filter(Boolean) : [];
+        const onlyRemoved =
+            removedId &&
+            (!guestIds.length || (guestIds.length === 1 && guestIds[0] === removedId));
+        if (onlyRemoved) {
+            guestIds = previousGuests.filter((id) => id && id !== removedId && id !== presenterId);
+        } else {
+            guestIds = guestIds.filter((id) => id !== presenterId && id !== removedId);
+        }
+
+        const wasGuest = previousGuests.includes(this.peer_id);
+        const stillGuest = guestIds.includes(this.peer_id);
 
         if (!presenterId || !guestIds.length) {
             if (wasGuest && this.peer_id !== presenterId) {
                 this.leaveDialogAsGuest();
             }
-            // Collapse tiles for everyone who left the dialog
             previousGuests.forEach((id) => this.collapseDialogPeerTile(id));
             if (removedId) this.collapseDialogPeerTile(removedId);
             this.exitDialogSplitLayout();
@@ -12165,27 +13065,42 @@ class RoomClient {
             return;
         }
 
-        this.applyDialogSplitLayout(presenterId, guestIds);
-
-        // This client was removed from dialog — stop A/V and leave layout role
+        // This client was removed — leave before re-applying layout
         if (
             (removedId === this.peer_id || (wasGuest && !stillGuest)) &&
             this.peer_id !== presenterId
         ) {
-            this.leaveDialogAsGuest();
+            this.collapseDialogPeerTile(this.peer_id);
+            this.leaveDialogAsGuest({ silent: !!cmd.type });
             this.exitDialogSplitLayout();
+            // Still refresh layout for remaining peers if we somehow stay in room viewers
+            return;
         }
 
-        // Remotes: drop avatar of guest who left (keep dialog for remaining guests)
-        if (removedId && removedId !== this.peer_id) {
-            this.collapseDialogPeerTile(removedId);
-            if (this._dialogSplitActive) {
-                this.applyDialogSplitLayout(presenterId, guestIds);
-            }
-        }
+        // Drop tiles of guests who left, then re-apply for remaining
+        if (removedId) this.collapseDialogPeerTile(removedId);
         previousGuests
             .filter((id) => id && !guestIds.includes(id) && id !== this.peer_id)
             .forEach((id) => this.collapseDialogPeerTile(id));
+
+        this._dialogGuestIds = guestIds;
+        this._dialogPresenterId = presenterId;
+        this.protectDialogPeerTiles(guestIds);
+        this.applyDialogSplitLayout(presenterId, guestIds);
+        this.protectDialogPeerTiles(guestIds);
+        if (this.isLocalDialogParticipant()) this.renderDialogControlsBar();
+        else this.hideDialogControlsBar();
+
+        // Spectators / remaining guests: retry layout after async tile updates
+        [200, 800, 2000].forEach((ms) => {
+            setTimeout(() => {
+                if (this._dialogSplitActive && (this._dialogGuestIds || []).length) {
+                    this.protectDialogPeerTiles(this._dialogGuestIds);
+                    this.applyDialogSplitLayout(this._dialogPresenterId, this._dialogGuestIds);
+                    this.protectDialogPeerTiles(this._dialogGuestIds);
+                }
+            }, ms);
+        });
     }
 
     leaveDialogAsGuest(opts = {}) {
@@ -12213,6 +13128,11 @@ class RoomClient {
             }
             this.lockBroadcastGuestControls();
             this.hideDialogControlsBar();
+            try {
+                document.body.classList.remove('dialog-participant');
+            } catch {
+                /* ignore */
+            }
             this._leavingDialog = false;
         }
         if (!silent) {
@@ -12242,11 +13162,13 @@ class RoomClient {
             return this.userLog('info', 'Диалог не активен', 'top-end');
         }
         const guestId = this.peer_id;
+        const remaining = (this._dialogGuestIds || []).filter((id) => id && id !== guestId);
         this.emitCmd({
             type: 'dialogGuestLeave',
             broadcast: true,
             guestId,
             removedGuestId: guestId,
+            guestIds: remaining,
             presenterId: this._dialogPresenterId,
             peer_name: this.peer_name,
             peer_uuid: this.peer_uuid,
@@ -12256,13 +13178,17 @@ class RoomClient {
         // Extra cleanup — avatar must not remain after dialog collapse
         this.removeVideoOff(guestId);
         this.removeDialogPlaceholder(guestId);
+        if (this._discussionInviteOpen) {
+            this._discussionDeclined = true;
+            this.showJoinDiscussionButton();
+        }
         try {
             resizeVideoMedia();
             handleAspectRatio();
         } catch {
             /* ignore */
         }
-        this.userLog('success', 'Вы завершили диалог', 'top-end', 3000);
+        this.userLog('success', 'Вы вышли из обсуждения', 'top-end', 3000);
     }
 
     /** Drop a peer's dialog/camera-off tile (lectorium guest leave / dialog end). */
@@ -12301,6 +13227,13 @@ class RoomClient {
         this._dialogInviteInProgress = true;
 
         try {
+            // Lower raised hand as soon as invite arrives (don't wait for media confirm)
+            if (this.peer_info?.peer_hand) {
+                this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
+            }
+            this.hideJoinDiscussionButton();
+            this._discussionDeclined = false;
+
             // Keep spotlit for the whole invite — produce() gates on it
             this._broadcastSpotlit = true;
             this.unlockBroadcastSpotlitControls(mediaType.audio);
@@ -12311,6 +13244,165 @@ class RoomClient {
         } finally {
             this._dialogInviteInProgress = false;
         }
+    }
+
+    /** Presenter: soft-invite every non-presenter peer into a shared discussion. */
+    inviteAllToDiscussion() {
+        if (!isPresenter) {
+            return this.userLog('warning', 'Только модератор может пригласить всех в обсуждение', 'top-end');
+        }
+        const peerIds = [];
+        for (const [id, peer] of this.peers || []) {
+            if (!id || id === this.peer_id) continue;
+            if (peer?.peer_info?.peer_presenter) continue;
+            peerIds.push(id);
+        }
+        if (!peerIds.length) {
+            return this.userLog('info', 'В комнате нет гостей для приглашения', 'top-end');
+        }
+        this._discussionInviteOpen = true;
+        if (!this.isMobileDevice) {
+            this.ensurePublicChatPinned();
+        }
+        // Keep current dialog guests; new ones join after accepting
+        if (!this._dialogSplitActive) {
+            // Shell layout with presenter only until first accept — use empty guests placeholder via flag
+            this._dialogPresenterId = this.peer_id;
+            this._dialogGuestIds = [];
+            this._dialogSplitActive = false;
+        }
+        this.emitCmd({
+            type: 'discussionInviteAll',
+            broadcast: true,
+            presenterId: this.peer_id,
+            peer_name: this.peer_name,
+            peer_uuid: this.peer_uuid,
+        });
+        this.renderDialogControlsBar();
+        this.userLog('success', 'Приглашение в обсуждение отправлено всем участникам', 'top-end', 3000);
+    }
+
+    handleDiscussionInviteAll(cmd = {}) {
+        if (cmd.presenterId) {
+            this._dialogPresenterId = cmd.presenterId;
+        }
+        if (isPresenter) {
+            this._discussionInviteOpen = true;
+            return;
+        }
+        if ((this._dialogGuestIds || []).includes(this.peer_id) && this._dialogSplitActive) {
+            return;
+        }
+        this._discussionInviteOpen = true;
+        sound('notify');
+        Swal.fire({
+            background: swalBackground,
+            position: 'center',
+            title: 'Принять участие в общем обсуждении?',
+            showCancelButton: true,
+            confirmButtonText: 'Да',
+            cancelButtonText: 'Отказаться',
+            allowOutsideClick: false,
+            buttonsStyling: false,
+            customClass: {
+                popup: 'optrf-share-popup',
+                confirmButton: 'optrf-swal-btn',
+                cancelButton: 'optrf-swal-btn optrf-swal-btn--ghost',
+                title: 'optrf-swal-title',
+                actions: 'optrf-swal-actions',
+            },
+            showClass: { popup: 'animate__animated animate__fadeInDown' },
+            hideClass: { popup: 'animate__animated animate__fadeOutUp' },
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.acceptDiscussionInvite(cmd);
+            } else {
+                this._discussionDeclined = true;
+                this.showJoinDiscussionButton();
+            }
+        });
+    }
+
+    async acceptDiscussionInvite(cmd = {}) {
+        if (isPresenter) return;
+        const presenterId = cmd.presenterId || this._dialogPresenterId || '';
+        if (!presenterId && !this._discussionInviteOpen) {
+            return this.userLog('info', 'Обсуждение сейчас не открыто', 'top-end');
+        }
+        this._discussionDeclined = false;
+        this.hideJoinDiscussionButton();
+        if (this.peer_info?.peer_hand) {
+            this.updatePeerInfo(this.peer_name, this.peer_id, 'hand', false);
+        }
+        this.emitCmd({
+            type: 'discussionAccept',
+            broadcast: true,
+            peer_id: this.peer_id,
+            presenterId: presenterId || this._dialogPresenterId,
+            peer_name: this.peer_name,
+            peer_uuid: this.peer_uuid,
+        });
+        await this.startDialogMediaAndLayout({
+            presenterId: presenterId || this._dialogPresenterId,
+            guestIds: [...(this._dialogGuestIds || []).filter((id) => id !== this.peer_id), this.peer_id],
+            guestId: this.peer_id,
+        });
+        this.renderDialogControlsBar();
+    }
+
+    handleDiscussionAccept(cmd = {}) {
+        const peerId = cmd.peer_id || '';
+        const presenterId = cmd.presenterId || this._dialogPresenterId || this.peer_id;
+        if (!peerId || peerId === this.peer_id) return;
+
+        if (isPresenter || this.peer_id === presenterId) {
+            const guestIds = [...(this._dialogGuestIds || [])];
+            if (!guestIds.includes(peerId)) guestIds.push(peerId);
+            this.rememberDialogGuestName(peerId, this.getPeerDisplayName(peerId));
+            this.clearHandRaiseAlert(peerId);
+            this.applyDialogSplitLayout(presenterId, guestIds);
+            this.emitCmd({
+                type: 'dialogSplit',
+                broadcast: true,
+                presenterId,
+                guestId: guestIds[0],
+                guestIds,
+                peer_name: this.peer_name,
+                peer_uuid: this.peer_uuid,
+            });
+            this.renderDialogControlsBar();
+            [600, 1500, 3000].forEach((ms) => {
+                setTimeout(() => {
+                    if (this._dialogSplitActive) {
+                        this.applyDialogSplitLayout(presenterId, this._dialogGuestIds);
+                    }
+                }, ms);
+            });
+            return;
+        }
+
+        // Spectators / other guests: wait for dialogSplit, but prefetch layout if we already have list
+        if (this._dialogSplitActive || this._discussionInviteOpen) {
+            const guestIds = [...(this._dialogGuestIds || [])];
+            if (!guestIds.includes(peerId)) guestIds.push(peerId);
+            if (guestIds.length) {
+                this.applyDialogSplitLayout(presenterId, guestIds);
+            }
+        }
+    }
+
+    showJoinDiscussionButton() {
+        const btn = this.getId('joinDiscussionButton');
+        if (!btn || isPresenter) return;
+        show(btn);
+        elemDisplay('joinDiscussionButton', true);
+    }
+
+    hideJoinDiscussionButton() {
+        const btn = this.getId('joinDiscussionButton');
+        if (!btn) return;
+        hide(btn);
+        elemDisplay('joinDiscussionButton', false);
     }
 
     needsUserMediaGesture() {
@@ -12407,7 +13499,7 @@ class RoomClient {
             return;
         }
 
-        // Guest: only "end dialog" for themselves
+        // Guest: leave discussion for themselves
         if (!isPresenter) {
             if (!(this._dialogGuestIds || []).includes(this.peer_id)) {
                 bar.classList.add('hidden');
@@ -12415,7 +13507,7 @@ class RoomClient {
             }
             bar.innerHTML = `
                 <button type="button" id="dialogGuestLeaveBtn" class="dialog-controls-end-btn">
-                    <i class="fas fa-phone-slash"></i> Завершить диалог
+                    <i class="fas fa-phone-slash"></i> Выйти из обсуждения
                 </button>
             `;
             bar.classList.remove('hidden');
@@ -12447,16 +13539,23 @@ class RoomClient {
             .join('');
         bar.innerHTML = `
             <span class="dialog-controls-label"><i class="fas fa-comments"></i> Диалог</span>
+            <button type="button" id="dialogInviteAllBtn" class="dialog-controls-add-btn" title="Пригласить всех участников комнаты в обсуждение">
+                <i class="fas fa-users"></i> Пригласить всех
+            </button>
             ${guestButtons}
             ${raiseButtons}
             <button type="button" id="dialogEndBtn" class="dialog-controls-end-btn">Завершить диалог</button>
         `;
         bar.classList.remove('hidden');
+        bar.querySelector('#dialogInviteAllBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.inviteAllToDiscussion();
+        });
         bar.querySelector('#dialogEndBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.endDialog();
         });
-        bar.querySelectorAll('.dialog-controls-add-btn').forEach((btn) => {
+        bar.querySelectorAll('.dialog-controls-add-btn[data-peer-id]').forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.invitePeerToDialog(btn.getAttribute('data-peer-id'));
@@ -12499,23 +13598,27 @@ class RoomClient {
             host.id = 'handRaiseAlertsHost';
             host.className = 'hand-raise-alerts-host';
         }
-        // Stage / cam-bubble hide own video tile — always float on body so invite stays visible
-        const myWrap = this.getCameraWrapByPeerId(this.peer_id);
-        const wrapHidden =
-            !myWrap ||
-            myWrap.dataset?.stageHidden === '1' ||
-            myWrap.classList.contains('cam-bubble-source-hidden') ||
-            myWrap.style.display === 'none' ||
-            document.body.classList.contains('stage-scene-active') ||
-            document.body.classList.contains('cam-bubble-stage') ||
-            document.body.classList.contains('dialog-with-stage');
-        if (wrapHidden) {
-            if (host.parentElement !== document.body) document.body.appendChild(host);
-            host.classList.add('hand-raise-alerts-host--floating');
-        } else {
-            if (getComputedStyle(myWrap).position === 'static') myWrap.style.position = 'relative';
-            if (host.parentElement !== myWrap) myWrap.appendChild(host);
-            host.classList.remove('hand-raise-alerts-host--floating');
+        // Dock slot (bottom bar, left of mic cluster) — visible next to scene controls
+        const dockSlot = document.getElementById('handRaiseDockSlot');
+        const sceneBar = document.getElementById('stageSceneBar');
+        let cluster = document.getElementById('stageBottomCluster');
+        if (!cluster) {
+            cluster = document.createElement('div');
+            cluster.id = 'stageBottomCluster';
+            cluster.className = 'stage-bottom-cluster';
+            document.body.appendChild(cluster);
+        }
+        if (sceneBar && sceneBar.parentElement !== cluster) {
+            cluster.appendChild(sceneBar);
+        }
+        if (host.parentElement !== cluster) {
+            cluster.appendChild(host);
+        }
+        host.classList.add('hand-raise-alerts-host--dock');
+        host.classList.remove('hand-raise-alerts-host--floating');
+        // Keep dock slot as a11y mirror on mobile full-width dock
+        if (dockSlot && this.isMobileDevice) {
+            dockSlot.classList.toggle('has-alerts', !host.classList.contains('hidden') && !!this._handRaiseAlerts?.size);
         }
         return host;
     }
@@ -12564,10 +13667,15 @@ class RoomClient {
     }
 
     showHandRaiseAlert(peerId, peerName) {
+        // Creator / moderators (isPresenter) must always see raise-hand invites
         if (!isPresenter || !peerId || peerId === this.peer_id) return;
         this._handRaiseAlerts.set(peerId, { name: peerName || 'Участник' });
         this.renderHandRaiseAlerts();
-        this.sound('raiseHand');
+        try {
+            this.sound('raiseHand');
+        } catch {
+            /* ignore */
+        }
     }
 
     clearHandRaiseAlert(peerId) {
@@ -12754,6 +13862,13 @@ class RoomClient {
 
         this._dialogSplitActive = true;
         this._applyingDialogSplit = true;
+        try {
+            if ((guestIds || []).includes(this.peer_id) || this._broadcastSpotlit) {
+                document.body.classList.add('dialog-participant');
+            }
+        } catch {
+            /* ignore */
+        }
 
         // Co-lecturer stage (mod screen + creator circle) must survive dialog.
         // All room viewers (incl. non-dialog guests) see stage + dialog guest cameras.
@@ -12766,9 +13881,14 @@ class RoomClient {
                 this.applyStageScene();
                 if (this.isLocalDialogParticipant()) this.renderDialogControlsBar?.();
                 else this.hideDialogControlsBar?.();
-                this.scheduleAdaptiveVideoQuality(250);
+                this.scheduleAdaptiveVideoQuality(250, 'dialog_layout');
             } finally {
                 this._applyingDialogSplit = false;
+            }
+            try {
+                this._aq?.notifyDialogChange?.(true);
+            } catch {
+                /* ignore */
             }
             return;
         }
@@ -13038,10 +14158,16 @@ class RoomClient {
                 /* ignore */
             }
         });
+        this.protectDialogPeerTiles(guestIds);
 
         // Presenter self-view orientation rule after dialog layout
         this.refreshLocalCameraMirror();
-        this.scheduleAdaptiveVideoQuality(250);
+        this.scheduleAdaptiveVideoQuality(250, 'dialog_layout');
+        try {
+            this._aq?.notifyDialogChange?.(true);
+        } catch {
+            /* ignore */
+        }
     }
 
     ensureDialogFilmstrip(filmWraps = []) {
@@ -13129,9 +14255,19 @@ class RoomClient {
         const restoreStage = Boolean(this._stageScene?.mode);
         this._dialogSplitActive = false;
         this._pendingRoomDialog = null;
+        try {
+            this._aq?.notifyDialogChange?.(false);
+        } catch {
+            /* ignore */
+        }
         this.teardownDialogFilmstrip();
         this.clearDialogGridClasses();
-        document.body.classList.remove('dialog-split-active', 'dialog-split-mobile', 'dialog-with-stage');
+        document.body.classList.remove(
+            'dialog-split-active',
+            'dialog-split-mobile',
+            'dialog-with-stage',
+            'dialog-participant'
+        );
 
         document.querySelectorAll('.Camera[data-dialog-hidden="1"]').forEach((el) => {
             el.style.display = '';
@@ -13522,11 +14658,24 @@ class RoomClient {
     }
 
     /** Hide every media tile except the active stage tile(s). */
-    hideNonStageTiles(keepTiles = []) {
+    hideNonStageTiles(keepTiles = [], keepPeerIds = []) {
         const keep = new Set(keepTiles.filter(Boolean));
+        const keepIds = new Set([
+            ...(keepPeerIds || []).filter(Boolean),
+            ...(this._dialogSplitActive ? this._dialogGuestIds || [] : []),
+            ...(this._dialogSplitActive && this._dialogPresenterId ? [this._dialogPresenterId] : []),
+        ]);
         document.querySelectorAll('#videoMediaContainer .Camera, #videoPinMediaContainer .Camera').forEach((el) => {
-            if (keep.has(el)) {
+            const liveVideo = el.querySelector('video[name]');
+            const peerId =
+                liveVideo?.getAttribute('name') ||
+                el.dataset?.peerId ||
+                (el.id || '').replace(/__(videoOff|video|dialogSlot)$/, '');
+            const keepById = peerId && keepIds.has(peerId);
+            if (keep.has(el) || keepById || el.dataset?.stageProtected === '1') {
                 el.dataset.stageHidden = '0';
+                el.dataset.stageProtected = '1';
+                el.dataset.dialogHidden = '0';
                 el.style.display = '';
                 el.style.removeProperty('display');
                 return;
@@ -13591,6 +14740,7 @@ class RoomClient {
                     }
                     const v = wrap.querySelector('video');
                     try {
+                        // Avoid restart flicker — only resume if paused
                         if (v?.paused) v.play?.().catch?.(() => {});
                     } catch {
                         /* ignore */
@@ -13733,6 +14883,11 @@ class RoomClient {
         }
         const { mode, creatorId, moderatorId } = this._stageScene;
         this._meetingCreatorId = creatorId || this._meetingCreatorId;
+        try {
+            this.syncCreatorOnlyChrome();
+        } catch {
+            /* ignore */
+        }
         document.body.classList.add('stage-scene-active');
         document.body.classList.toggle('stage-scene-1', mode === 1);
         document.body.classList.toggle('stage-scene-2', mode === 2);
@@ -13745,26 +14900,41 @@ class RoomClient {
         // Everyone in the room sees dialog guest cameras beside the stage (not only invitees)
         const showDialogGuests = Boolean(this._dialogSplitActive);
         const dialogGuests = showDialogGuests ? [...(this._dialogGuestIds || [])] : [];
+        this.protectDialogPeerTiles(dialogGuests);
         const guestKeep = dialogGuests
-            .map((id) => this.getCameraWrapByPeerId(id) || this.getId(id + '__videoOff') || this.ensureDialogPlaceholder(id))
+            .map(
+                (id) =>
+                    this.getCameraWrapByPeerId(id) ||
+                    this.getId(id + '__videoOff') ||
+                    this.ensureDialogPlaceholder(id)
+            )
             .filter(Boolean);
         const layoutStage = () => {
-            if (showDialogGuests) this.layoutDialogGuestsBesideStage(dialogGuests);
-            else this.applyCamBubbleStageLayout(true);
+            if (showDialogGuests) {
+                this.protectDialogPeerTiles(dialogGuests);
+                this.layoutDialogGuestsBesideStage(dialogGuests);
+                this.protectDialogPeerTiles(dialogGuests);
+            } else this.applyCamBubbleStageLayout(true);
         };
         const dialogParticipant = showDialogGuests && this.isLocalDialogParticipant();
 
         if (mode === 2) {
             this._stageSceneActive = false;
             if (modId) this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: true });
-            this.revealStageHiddenTiles();
+            // Don't flash guest tiles: reveal only non-protected
+            document.querySelectorAll('.Camera[data-stage-hidden="1"], [data-stage-hidden="1"]').forEach((el) => {
+                if (el.dataset?.stageProtected === '1') return;
+                el.style.display = '';
+                el.style.removeProperty('display');
+                delete el.dataset.stageHidden;
+            });
 
             const creatorTile =
                 this.getPeerMediaTile(creatorId, 'video') || this.getId?.(creatorId + '__videoOff');
             if (creatorTile) {
                 creatorTile.classList.remove('cam-bubble-source-hidden');
                 this.forcePinMediaTile(creatorTile);
-                this.hideNonStageTiles([creatorTile, ...guestKeep]);
+                this.hideNonStageTiles([creatorTile, ...guestKeep], dialogGuests);
             }
             if (modId) {
                 const screenTile = this.getPeerMediaTile(modId, 'screen');
@@ -13783,23 +14953,31 @@ class RoomClient {
 
         // ——— mode 1: moderator screen + creator circle ———
         this._stageSceneActive = true;
-        this.revealStageHiddenTiles();
+        document.querySelectorAll('.Camera[data-stage-hidden="1"], [data-stage-hidden="1"]').forEach((el) => {
+            if (el.dataset?.stageProtected === '1') return;
+            el.style.display = '';
+            el.style.removeProperty('display');
+            delete el.dataset.stageHidden;
+        });
 
         const screenTile = this.getPeerMediaTile(modId, 'screen');
         if (!screenTile) {
             this.userLog?.('warning', 'Нет демонстрации экрана для сцены 1', 'top-end', 4000);
             layoutStage();
-            [300, 800, 1600, 3200].forEach((ms) => {
+            // Single retry only — avoid multi-retry guest camera flicker
+            if (!this._stageSceneRetryScheduled) {
+                this._stageSceneRetryScheduled = true;
                 setTimeout(() => {
+                    this._stageSceneRetryScheduled = false;
                     if (this._stageScene?.mode === 1) this.applyStageScene();
-                }, ms);
-            });
+                }, 900);
+            }
             return;
         }
 
         this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: false });
         this.forcePinMediaTile(screenTile);
-        this.hideNonStageTiles([screenTile, ...guestKeep]);
+        this.hideNonStageTiles([screenTile, ...guestKeep], dialogGuests);
 
         const creatorVideo =
             this.getPeerMediaTile(creatorId, 'video') || this.getId?.(creatorId + '__videoOff');
@@ -13863,13 +15041,20 @@ class RoomClient {
     }
 
     renderStageSceneBar() {
+        let cluster = document.getElementById('stageBottomCluster');
+        if (!cluster) {
+            cluster = document.createElement('div');
+            cluster.id = 'stageBottomCluster';
+            cluster.className = 'stage-bottom-cluster';
+            document.body.appendChild(cluster);
+        }
         let bar = document.getElementById('stageSceneBar');
         if (!bar) {
             bar = document.createElement('div');
             bar.id = 'stageSceneBar';
             bar.className = 'stage-scene-bar';
-            document.body.appendChild(bar);
         }
+        if (bar.parentElement !== cluster) cluster.appendChild(bar);
         if (!this.canControlStageScenes()) {
             bar.classList.add('hidden');
             return;
@@ -14121,7 +15306,17 @@ class RoomClient {
         // Unlock media controls for invited guest (broadcast / lectorium / dialog)
         if (type === mediaType.audio || type === 'audio') {
             BUTTONS.main.startAudioButton = true;
-            elemDisplay('startAudioButton', true);
+            const startBtn = this.getId('startAudioButton');
+            const stopBtn = this.getId('stopAudioButton');
+            if (startBtn) {
+                startBtn.classList.remove('hidden');
+                startBtn.style.display = 'inline-flex';
+            }
+            if (stopBtn) {
+                stopBtn.classList.add('hidden');
+                stopBtn.style.display = 'none';
+            }
+            elemDisplay('startAudioButton', true, 'inline-flex');
             elemDisplay('stopAudioButton', false);
         }
         if (type === mediaType.video || type === 'video') {
@@ -14142,8 +15337,15 @@ class RoomClient {
             elemDisplay('startScreenButton', true);
             elemDisplay('stopScreenButton', false);
         }
-        BUTTONS.main.settingsButton = true;
-        elemDisplay('settingsButton', true);
+        // Settings gear stays presenter-only — do not unlock for dialog guests
+        if (typeof enforceGuestChrome === 'function') enforceGuestChrome(!isPresenter);
+        if (typeof enforceGuestMicVisible === 'function') {
+            const hasAudio = this.producerExist?.(mediaType.audio);
+            const audioPaused = hasAudio
+                ? this.producers?.get?.(this.producerLabel?.get?.(mediaType.audio))?.paused
+                : true;
+            enforceGuestMicVisible(!!(hasAudio && !audioPaused));
+        }
     }
 
     async peerMediaStartForced(type) {
@@ -14949,6 +16151,9 @@ class RoomClient {
                         typeof status === 'string' ? status : this.encodeCamBubbleLayout(status);
                     this.peer_info.peer_cam_bubble = true;
                     break;
+                case 'screenView':
+                    this.peer_info.peer_screen_view = status;
+                    break;
                 case 'hand':
                     this.peer_info.peer_hand = status;
                     const peer_hand = this.getPeerHandBtn(peer_id);
@@ -14990,6 +16195,8 @@ class RoomClient {
                     break;
                 case 'camBubble':
                 case 'camBubbleLayout':
+                    break;
+                case 'screenView':
                     break;
                 case 'hand':
                     {
@@ -15506,7 +16713,12 @@ class RoomClient {
 
     /** Сильный drop-shadow по силуэту клипа (тонкий stroke почти не даёт тени) */
     buildCamBubbleFxFilter(color, fxName) {
+        // iOS Safari often paints drop-shadow as a dark rectangular blob — use lighter mobile filter
+        const mobileSoft = !!(this.isMobileDevice || this.isMobileSafari || window.innerWidth <= 768);
         if (fxName === 'soft') {
+            if (mobileSoft) {
+                return 'drop-shadow(0 4px 10px rgba(0,0,0,0.35))';
+            }
             return [
                 'drop-shadow(0 6px 6px rgba(0,0,0,0.45))',
                 'drop-shadow(0 14px 18px rgba(0,0,0,0.55))',
@@ -15771,14 +16983,18 @@ class RoomClient {
             elemDisplay('startScreenButton', !hasScreen);
             elemDisplay('stopScreenButton', !!hasScreen);
             if (typeof show === 'function') {
-                show(settingsButton);
-                show(participantsButton);
+                if (isPresenter) {
+                    show(settingsButton);
+                    show(participantsButton);
+                    elemDisplay('settingsButton', true);
+                    elemDisplay('settingsSplit', true);
+                    elemDisplay('participantsButton', true);
+                }
                 if (typeof swapCameraButton !== 'undefined' && swapCameraButton) show(swapCameraButton);
             }
-            elemDisplay('settingsButton', true);
-            elemDisplay('participantsButton', true);
             elemDisplay('swapCameraButton', true);
             elemDisplay('tabVideoDevicesBtn', true);
+            if (typeof enforceGuestChrome === 'function') enforceGuestChrome(!isPresenter);
         } catch (err) {
             console.warn('unlockPresenterMediaControls', err);
         }
@@ -16375,6 +17591,8 @@ class RoomClient {
         }
         this.ensureScreenVideoPlaying(screenTile);
         this.syncCamBubbleButton();
+        this.scheduleAdaptiveVideoQuality(200);
+        this.applyScreenShareViewForPeer(peerId);
         return true;
     }
 

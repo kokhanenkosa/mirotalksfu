@@ -1097,13 +1097,13 @@ body {
     #bottomButtonsScroller {
         width: 100%;
         padding: 8px 12px;
-        justify-content: flex-start;
+        justify-content: center;
         gap: 0.5rem;
         overflow-x: auto;
         overflow-y: hidden;
         box-sizing: border-box;
         scroll-behavior: smooth;
-        scroll-snap-type: x proximity;
+        scroll-snap-type: none;
         scrollbar-width: none;
         -webkit-overflow-scrolling: touch;
         touch-action: pan-x;

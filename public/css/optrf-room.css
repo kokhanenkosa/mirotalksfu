@@ -94,6 +94,79 @@ body,
     background: #181818 !important;
 }
 
+@media (max-width: 768px) {
+    .swal2-container:has(.init-modal-size) {
+        padding: 6px !important;
+        align-items: center !important;
+        overflow: hidden !important;
+    }
+
+    .init-modal-size {
+        width: min(100vw - 12px, 480px) !important;
+        max-width: calc(100vw - 12px) !important;
+        max-height: min(100dvh, 100vh) !important;
+        max-height: 100dvh !important;
+        padding: 12px 12px 10px !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-sizing: border-box !important;
+        margin: 0 !important;
+    }
+
+    .init-modal-size .swal2-title {
+        font-size: 1.05rem !important;
+        margin: 0 0 8px !important;
+        padding: 0 !important;
+        flex-shrink: 0;
+    }
+
+    .init-modal-size .swal2-html-container {
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        flex: 1 1 auto;
+        min-height: 0;
+    }
+
+    .init-modal-size .init-user {
+        gap: 8px !important;
+    }
+
+    .init-modal-size .init-video-container {
+        margin: 0 !important;
+    }
+
+    .init-modal-size .init-video-container video {
+        min-height: 72px !important;
+        max-height: 22dvh !important;
+    }
+
+    .init-modal-size .swal2-input,
+    .init-modal-size .optrf-swal-input {
+        margin: 6px 0 0 !important;
+        padding: 8px 10px !important;
+        font-size: 14px !important;
+        flex-shrink: 0;
+    }
+
+    .init-modal-size .swal2-actions {
+        margin: 8px 0 0 !important;
+        padding: 0 !important;
+        flex-shrink: 0;
+    }
+
+    .init-modal-size .initComands {
+        gap: 6px !important;
+    }
+
+    .init-modal-size .init-user select,
+    .init-modal-size .init-user .form-select {
+        font-size: 11px !important;
+        padding: 6px 8px !important;
+    }
+}
+
 .init-user,
 .init-modal-size .init-user {
     display: flex !important;
@@ -271,41 +344,67 @@ button.swal2-deny {
     display: none !important;
 }
 
-/* Sticky hand-raise alerts — bottom-left, compact */
-.hand-raise-alerts-host {
-    position: absolute;
-    top: auto;
-    bottom: 14px;
-    left: 12px;
-    right: auto;
-    z-index: 40;
+/* Bottom-left cluster: scenes + hand-raise invites (dock level) */
+.stage-bottom-cluster {
+    position: fixed !important;
+    left: 14px !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: calc(var(--bottom-btns-margin-bottom, 18px) + env(safe-area-inset-bottom, 0px)) !important;
+    z-index: 47 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    pointer-events: none;
+    max-width: calc(100vw - 28px);
+}
+
+.stage-bottom-cluster > * {
+    pointer-events: auto;
+}
+
+/* Sticky hand-raise alerts — next to scene bar in bottom dock gap */
+.hand-raise-alerts-host,
+.hand-raise-alerts-host--dock,
+.hand-raise-alerts-host--floating {
+    position: static !important;
+    top: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    z-index: 47;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
     pointer-events: none;
-    max-width: min(280px, calc(100% - 24px));
-}
-
-.hand-raise-alerts-host--floating {
-    position: fixed;
-    top: calc(var(--optrf-topbar-h, 48px) + 56px);
-    bottom: auto;
-    left: 16px;
-    right: auto;
-    z-index: 55;
-    max-width: min(320px, calc(100vw - 32px));
-}
-
-/* Above stage scene bar while co-lecturer layout is active */
-body.stage-scene-active .hand-raise-alerts-host--floating,
-body.cam-bubble-stage .hand-raise-alerts-host--floating,
-body.dialog-with-stage .hand-raise-alerts-host--floating {
-    top: calc(var(--optrf-topbar-h, 48px) + 64px);
-    z-index: 55;
+    max-width: min(420px, 46vw);
 }
 
 .hand-raise-alerts-host.hidden {
     display: none !important;
+}
+
+.hand-raise-dock-slot {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .stage-bottom-cluster {
+        left: 8px !important;
+        bottom: calc(var(--optrf-dock-h, 58px) + 8px) !important;
+        z-index: 1310 !important;
+        max-width: calc(100vw - 16px);
+        flex-wrap: wrap;
+    }
+
+    .hand-raise-alerts-host,
+    .hand-raise-alerts-host--dock {
+        max-width: calc(100vw - 16px);
+    }
 }
 
 .hand-raise-banner {
@@ -313,37 +412,45 @@ body.dialog-with-stage .hand-raise-alerts-host--floating {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 6px 8px;
+    gap: 12px;
+    padding: 12px 14px;
     border-radius: 8px;
-    background: rgba(12, 16, 22, 0.9);
-    border: 1px solid rgba(0, 168, 232, 0.4);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    background: #181818;
+    border: 1px solid #3c3c3c;
+    box-shadow: none;
     color: #fff;
     animation: handRaisePulse 1.6s ease-in-out infinite;
+    min-height: 64px;
+    box-sizing: border-box;
 }
 
 .hand-raise-banner-text {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    line-height: 1.25;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
 }
 
 .hand-raise-banner-text .fa-hand-paper {
     color: #ffc107;
-    font-size: 12px;
+    font-size: 18px;
+}
+
+.hand-raise-banner-text b {
+    font-size: 16px;
+    font-weight: 700;
 }
 
 .hand-raise-invite-btn {
     border: 0;
-    border-radius: 6px;
-    padding: 5px 8px;
+    border-radius: 8px;
+    padding: 10px 14px;
     background: #00a8e8;
     color: #fff;
-    font-weight: 600;
-    font-size: 11px;
+    font-weight: 700;
+    font-size: 14px;
     cursor: pointer;
     white-space: nowrap;
 }
@@ -569,13 +676,13 @@ body.cam-bubble-stage #chatRoom {
     z-index: 50 !important;
 }
 
-/* Stage scene switcher — pinned bottom-left, same size as lecture dock */
+/* Stage scene switcher — lives inside .stage-bottom-cluster */
 .stage-scene-bar {
-    position: fixed !important;
-    left: 14px !important;
+    position: static !important;
+    left: auto !important;
     right: auto !important;
     top: auto !important;
-    bottom: calc(var(--bottom-btns-margin-bottom, 18px) + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: auto !important;
     transform: none !important;
     z-index: 46 !important;
     display: flex !important;
@@ -667,9 +774,6 @@ body.cam-bubble-stage #chatRoom {
 
 @media (max-width: 640px) {
     .stage-scene-bar {
-        left: 8px !important;
-        bottom: calc(var(--optrf-dock-h, 58px) + 8px) !important;
-        z-index: 1310 !important;
         max-width: calc(100vw - 16px) !important;
         overflow-x: auto !important;
     }
@@ -810,19 +914,20 @@ body.dialog-split-mobile .dialog-controls-bar {
 }
 
 @media (max-width: 768px) {
-    /* Compact chip — do not cover bottom speaker strip */
+    /* Compact chip — centered above the stage */
     .dialog-controls-bar,
     body.dialog-split-mobile .dialog-controls-bar {
         top: calc(var(--optrf-topbar-h, 48px) + 8px);
         bottom: auto;
-        left: auto;
-        right: 8px;
-        transform: none;
-        max-width: min(220px, calc(100vw - 16px));
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        max-width: min(280px, calc(100vw - 16px));
         padding: 4px 6px;
         gap: 4px;
         flex-wrap: wrap;
-        justify-content: flex-end;
+        justify-content: center;
+        align-items: center;
     }
 
     .dialog-controls-end-btn,
@@ -832,6 +937,7 @@ body.dialog-split-mobile .dialog-controls-bar {
         border-radius: 6px;
         line-height: 1.2;
         white-space: nowrap;
+        margin: 0 auto;
     }
 
     .dialog-controls-end-btn i {
@@ -1124,6 +1230,52 @@ html[data-theme] #mySettings #shortcutsTable {
     border-color: var(--optrf-border);
 }
 
+/* Leave meeting + chat X: only room creator (not moderators / guests) */
+html:not([data-is-creator='1']) #exitDropdown,
+html:not([data-is-creator='1']) #exitButton,
+html:not([data-is-creator='1']) #exitMenu,
+html:not([data-is-creator='1']) #chatCloseButton,
+html:not([data-is-creator='1']) #chatRoom.show #chatCloseButton,
+body.is-guest #exitDropdown,
+body.is-guest #exitButton,
+body.is-guest #exitMenu,
+body.is-guest #chatCloseButton,
+html[data-peer-role='guest'] #exitDropdown,
+html[data-peer-role='guest'] #exitButton,
+html[data-peer-role='guest'] #exitMenu,
+html[data-peer-role='guest'] #chatCloseButton {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Mobile: hide chat header close X even for creator (close via dock) */
+html.is-mobile-ua #chatCloseButton,
+html.is-mobile-ua #chatRoom.show #chatCloseButton {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}
+
+@media (max-width: 768px) {
+    #chatCloseButton,
+    #chatRoom.show #chatCloseButton {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+    }
+}
+
 /* Video is intentionally graphite in every global theme. */
 html[data-theme] #videoMediaContainer,
 html[data-theme] #videoPinMediaContainer,
@@ -1273,25 +1425,68 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
 
     /* Chat leaves room for the pinned dock */
     #chatRoom.show {
+        position: fixed !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: 0 !important;
         bottom: var(--optrf-dock-h) !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
         height: calc(100% - var(--optrf-dock-h)) !important;
         max-height: calc(100dvh - var(--optrf-dock-h)) !important;
+        transform: none !important;
+        margin: 0 !important;
         z-index: 1100 !important;
     }
 
-
     #bottomButtonsScroller {
-        display: flex;
+        display: flex !important;
         width: 100%;
         box-sizing: border-box;
         padding: 6px 8px;
-        gap: 2px;
-        justify-content: space-between;
-        align-items: center;
-        overflow-x: hidden;
+        gap: 4px;
+        justify-content: center !important;
+        align-items: center !important;
+        overflow-x: auto;
         overflow-y: visible;
         scroll-snap-type: none;
-        -webkit-overflow-scrolling: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Guests: keep controls centered as a single group */
+    body.is-guest #bottomButtonsScroller {
+        justify-content: center !important;
+    }
+
+    body.is-guest #exitDropdown {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    /* Mic toggle must stay visible for dialog / spotlit guests */
+    body.dialog-split-active #startAudioSplit,
+    body.is-guest.dialog-participant #startAudioSplit {
+        display: inline-flex !important;
+        align-items: center !important;
+    }
+
+    body.dialog-split-active #startAudioButton:not(.hidden),
+    body.dialog-split-active #startAudioButton.optrf-mic-visible,
+    body.is-guest.dialog-participant #startAudioButton:not(.hidden),
+    body.is-guest.dialog-participant #startAudioButton.optrf-mic-visible {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    body.dialog-split-active #stopAudioButton:not(.hidden),
+    body.is-guest.dialog-participant #stopAudioButton:not(.hidden) {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
     }
 
     #bottomButtonsScroller > * {
@@ -1299,7 +1494,7 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         scroll-snap-align: unset;
     }
 
-    /* Порядок: мик · кам · экран/кружок · рука · чат · люди · ещё · выход */
+    /* Порядок: мик · кам · экран/кружок · рука · чат · люди · ссылка · ещё · выход */
     #startAudioSplit {
         order: 1;
     }
@@ -1326,12 +1521,26 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
     #participantsButton {
         order: 8;
     }
-    #settingsSplit {
+    #handRaiseDockSlot {
+        order: 0;
+        display: none;
+    }
+
+    #copyRoomLinkButton {
         order: 9;
+    }
+    #joinDiscussionButton {
+        order: 10;
+    }
+    #inviteAllDiscussionButton {
+        order: 11;
+    }
+    #settingsSplit {
+        order: 12;
     }
     #exitDropdown {
         order: 20;
-        margin-left: auto;
+        margin-left: 0;
     }
 
     /* Вторичное — только через меню «Ещё» */
@@ -1346,6 +1555,41 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
     #stopScreenButton:not(.hidden),
     #camBubbleButton:not(.hidden),
     #camBubbleButton[data-cam-bubble-ready='1'] {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        vertical-align: middle;
+    }
+
+    #swapCameraButton,
+    #swapCameraButton i {
+        line-height: 1 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* Guests never see settings gear / hear-only / chat on mobile dock */
+    body.is-guest #settingsSplit,
+    body.is-guest #settingsButton,
+    body.is-guest #settingsExtraDropdown,
+    body.is-guest #settingsExtraToggle,
+    body.is-guest #chatButton,
+    body.is-guest #hearOnlyPresenterButton,
+    body.is-guest #compactHearOnlyBtn,
+    body.is-guest .split-btn#settingsSplit {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+    }
+
+    body.is-guest #copyRoomLinkButton:not(.hidden) {
         display: inline-flex !important;
     }
 
@@ -1375,6 +1619,14 @@ body.super-admin-observer #bottomButtons .navbar-dropdown:not(:has(#exitButton))
         font-size: 1.15rem;
         padding: 8px;
         border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #bottomButtons .split-btn {
+        display: inline-flex;
+        align-items: center;
     }
 
     /* Шестерёнка + «Ещё» компактнее */
@@ -1538,6 +1790,31 @@ body.optrf-compact-ui #mySettings .tab {
     }
 }
 
+/* Portrait lock hint (best-effort; full lock needs PWA/fullscreen) */
+html.optrf-portrait-lock,
+body.optrf-portrait-lock {
+    overscroll-behavior: none;
+}
+
+/* Guests: no chat / hear-only / settings gear; keep copy-link */
+body.is-guest #settingsSplit,
+body.is-guest #settingsButton,
+body.is-guest #settingsExtraDropdown,
+body.is-guest #settingsExtraToggle,
+body.is-guest #chatButton,
+body.is-guest #hearOnlyPresenterButton,
+body.is-guest #compactHearOnlyBtn {
+    display: none !important;
+}
+
+body.is-guest #copyRoomLinkButton {
+    display: inline-flex !important;
+}
+
+body.is-guest #copyRoomLinkButton.hidden {
+    display: inline-flex !important;
+}
+
 /* Cursor room chrome */
 #bottomButtons {
     background: #181818 !important;
@@ -1625,4 +1902,219 @@ html[data-theme] .Camera,
 html[data-theme] video {
     background: #141414 !important;
     background-image: none !important;
+}
+
+/* ========== Guest chrome (role attr — stronger than body class lag) ========== */
+html[data-peer-role='guest'] #settingsSplit,
+html[data-peer-role='guest'] #settingsButton,
+html[data-peer-role='guest'] #settingsExtraDropdown,
+html[data-peer-role='guest'] #settingsExtraToggle,
+html[data-peer-role='guest'] #settingsExtraMenu,
+html[data-peer-role='guest'] #chatButton,
+html[data-peer-role='guest'] #hearOnlyPresenterButton,
+html[data-peer-role='guest'] #compactHearOnlyBtn,
+html[data-peer-role='guest'] #participantsButton,
+html[data-peer-role='guest'] #inviteAllDiscussionButton,
+html[data-peer-role='guest'] [data-guest-hidden='1'] {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+    border: 0 !important;
+}
+
+html[data-peer-role='guest'] #copyRoomLinkButton,
+html[data-peer-role='presenter'] #copyRoomLinkButton,
+#copyRoomLinkButton {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Mic muted state must stay clickable */
+html[data-peer-role='guest'] #startAudioButton.optrf-mic-visible,
+body.dialog-participant #startAudioButton.optrf-mic-visible,
+body.dialog-split-active #startAudioButton.optrf-mic-visible {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+}
+
+html[data-peer-role='guest'] #startAudioSplit,
+body.dialog-participant #startAudioSplit {
+    display: inline-flex !important;
+    visibility: visible !important;
+}
+
+/* ========== Portrait lock: keep mobile (vertical) chrome even in landscape ========== */
+html.is-mobile-ua.optrf-portrait-lock {
+    --optrf-mobile-layout: 1;
+}
+
+/* Same dock rules as narrow phones — keyed by UA class, not viewport width */
+html.is-mobile-ua #bottomButtons {
+    top: auto !important;
+    right: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    transform: none !important;
+    flex-direction: row !important;
+    border-radius: 16px 16px 0 0 !important;
+    z-index: 1300 !important;
+}
+
+html.is-mobile-ua #bottomButtonsScroller {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 6px 8px !important;
+    overflow-x: auto !important;
+}
+
+html.is-mobile-ua #exitDropdown {
+    margin-left: 0 !important;
+}
+
+html.is-mobile-ua #videoMediaContainer,
+html.is-mobile-ua #videoPinMediaContainer {
+    top: var(--optrf-topbar-h, 48px) !important;
+    height: calc(100% - var(--optrf-dock-h, 58px) - var(--optrf-topbar-h, 48px)) !important;
+}
+
+/* Landscape on phone: still use stacked mobile stage, never desktop side-by-side */
+@media screen and (orientation: landscape) {
+    html.is-mobile-ua.optrf-portrait-lock #bottomButtonsScroller {
+        justify-content: center !important;
+    }
+
+    html.is-mobile-ua.optrf-portrait-lock body.dialog-split-active #videoMediaContainer {
+        flex-direction: column !important;
+    }
+}
+
+/* Screen share scale + crop (moderator view) */
+.Camera.screen-share-view,
+.has-cam-bubble.screen-share-view,
+.is-pinned-video.screen-share-view {
+    overflow: hidden !important;
+}
+
+.Camera.screen-share-view > video,
+.has-cam-bubble.screen-share-view > video,
+.is-pinned-video.screen-share-view > video {
+    will-change: transform;
+}
+
+.Camera.screen-share-cropping {
+    position: relative;
+}
+
+.screen-share-crop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 80;
+    cursor: crosshair;
+    touch-action: none;
+}
+
+.screen-share-crop-shade {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+.screen-share-crop-box {
+    position: absolute;
+    display: none;
+    border: 2px solid #ff3b30;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.screen-share-crop-hint {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(20, 20, 20, 0.92);
+    color: #e8e8e8;
+    font: 500 12px/1.3 Inter, system-ui, sans-serif;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.screen-share-crop-actions {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 2;
+}
+
+.screen-share-crop-actions button {
+    border: 0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font: 600 12px/1 Inter, system-ui, sans-serif;
+    cursor: pointer;
+}
+
+.screen-share-crop-apply {
+    background: #2f6fed;
+    color: #fff;
+}
+
+.screen-share-crop-cancel {
+    background: #2a2a2a;
+    color: #ddd;
+}
+
+.screen-share-crop-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.screen-share-crop-pick {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 4px 10px !important;
+    margin: 0 !important;
+    width: auto !important;
+}
+
+.screen-share-crop-pick p {
+    margin: 0;
+    font-size: 12px;
 }

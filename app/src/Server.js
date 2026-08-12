@@ -1074,6 +1074,14 @@ async function startServer() {
             res.redirect('/login');
             return;
         } else {
+            // Short-lived create token: createRoom socket requires this cookie
+            res.cookie('optrf_room_create', '1', {
+                maxAge: 15 * 60 * 1000,
+                httpOnly: true,
+                sameSite: 'lax',
+                secure: true,
+                path: '/',
+            });
             htmlInjector.injectHtml(views.newRoom, res);
         }
     });
@@ -1443,8 +1451,15 @@ async function startServer() {
                 if (!phoneSession) {
                     return res.redirect(phoneAuth.buildAuthRedirect(req, req.originalUrl));
                 }
+                const wantsCreate =
+                    String(req.query.create || '').toLowerCase() === '1' ||
+                    String(req.query.create || '').toLowerCase() === 'true';
+                // Creating a missing room is only allowed from /newroom (?create=1)
                 if (!roomList.has(room) && !phoneSession.canCreate) {
                     return res.status(403).send(phoneAuth.forbiddenCreateHtml());
+                }
+                if (!roomList.has(room) && phoneSession.canCreate && !wantsCreate) {
+                    return res.redirect('/whoAreYou/' + room);
                 }
             }
 
@@ -1550,8 +1565,11 @@ async function startServer() {
             if (!phoneSession) {
                 return res.redirect(phoneAuth.buildAuthRedirect(req, `/join/${roomId}`));
             }
-            // Гость с подтверждённым номером ждёт организатора, если комнаты ещё нет
-            if (!roomList.has(roomId) && !phoneSession.canCreate) {
+            const wantsCreate =
+                String(req.query.create || '').toLowerCase() === '1' ||
+                String(req.query.create || '').toLowerCase() === 'true';
+            // Гость / создатель без ?create=1 ждёт организатора, если комнаты ещё нет
+            if (!roomList.has(roomId) && (!phoneSession.canCreate || !wantsCreate)) {
                 return res.redirect('/whoAreYou/' + roomId);
             }
         }
@@ -2731,6 +2749,7 @@ async function startServer() {
             'restartIce',
             'consume',
             'resumeConsumer',
+            'pauseConsumer',
             'getProducers',
             'getPeerCounts',
             'getRoomInfo',
@@ -2760,7 +2779,7 @@ async function startServer() {
             }
         });
 
-        socket.on('createRoom', async ({ room_id, phone_token, lectorium }, callback) => {
+        socket.on('createRoom', async ({ room_id, phone_token, lectorium, allow_create }, callback) => {
             try {
             // Security: reject invalid room ids (XSS / path traversal / empty).
             if (!Validator.isValidRoomName(room_id)) {
@@ -2784,6 +2803,16 @@ async function startServer() {
                     return callback({ error: 'create not allowed for this phone' });
                 }
                 socket.phone_session = phoneSession;
+            }
+
+            // New rooms only after visiting /newroom (httpOnly cookie)
+            const cookieHeader = socket.handshake?.headers?.cookie || '';
+            const hasCreateCookie = /(?:^|;\s*)optrf_room_create=1(?:;|$)/.test(cookieHeader);
+            if (!roomList.has(room_id) && !(allow_create && hasCreateCookie)) {
+                log.warn('[createRoom] - Missing /newroom create cookie', { room_id, allow_create, hasCreateCookie });
+                return callback({
+                    error: 'room create only via /newroom',
+                });
             }
 
             // Security: per-IP rate limit to prevent roomList spam/enumeration.
@@ -3653,6 +3682,32 @@ async function startServer() {
             }
         });
 
+        socket.on('pauseConsumer', async ({ consumer_id, type }, callback) => {
+            const reply = typeof callback === 'function' ? callback : () => {};
+            try {
+                if (!roomExists(socket)) {
+                    return reply({ error: 'Room not found' });
+                }
+                const peer = getPeer(socket);
+                if (!peer) {
+                    return reply({ error: 'Peer not found' });
+                }
+                if (isPeerInLobby(peer)) {
+                    return reply({ error: 'In lobby' });
+                }
+                const consumer = peer.getConsumer(consumer_id);
+                if (!consumer) {
+                    return reply({ error: `consumer ${consumer_id} not found` });
+                }
+                await consumer.pause();
+                log.debug('Consumer paused', { consumer_id, type, peer_id: socket.id });
+                reply('successfully');
+            } catch (error) {
+                log.warn('Pause consumer', { error: error?.message || error });
+                reply({ error: error?.message || 'pauseConsumer failed' });
+            }
+        });
+
         // Adaptive quality: client picks simulcast/SVC spatial+temporal layers per consumer
         socket.on('setConsumerPreferredLayers', async (dataObject, callback) => {
             const reply = typeof callback === 'function' ? callback : () => {};
@@ -3681,8 +3736,21 @@ async function startServer() {
                 if (!['simulcast', 'svc'].includes(consumer.type)) {
                     return reply({ ok: true, skipped: true, type: consumer.type });
                 }
-                const s = Math.max(0, Math.min(2, Math.floor(spatialLayer)));
-                const t = Math.max(0, Math.min(2, Math.floor(temporalLayer)));
+                // Clamp to what this consumer actually supports (screen often has 1 layer)
+                const encodings = consumer.rtpParameters?.encodings || [];
+                const mode = String(encodings[0]?.scalabilityMode || '');
+                const m = mode.match(/L(\d)T(\d)/i);
+                let maxS = Math.max(0, encodings.length - 1);
+                let maxT = 2;
+                if (m) {
+                    maxS = Math.max(0, parseInt(m[1], 10) - 1);
+                    maxT = Math.max(0, parseInt(m[2], 10) - 1);
+                } else if (encodings.length <= 1) {
+                    maxS = 0;
+                    maxT = 0;
+                }
+                const s = Math.max(0, Math.min(maxS, Math.floor(spatialLayer)));
+                const t = Math.max(0, Math.min(maxT, Math.floor(temporalLayer)));
                 await consumer.setPreferredLayers({ spatialLayer: s, temporalLayer: t });
                 log.debug('Consumer preferred layers', {
                     consumer_id,

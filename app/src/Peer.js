@@ -106,6 +106,13 @@ module.exports = class Peer {
                     this.peer_info.peer_cam_bubble = true;
                 }
                 break;
+            case 'screenView':
+                // Масштаб/обрезка демонстрации: "1.25" или "1.25|0.1,0.05,0.7,0.85"
+                this.peer_info.peer_screen_view =
+                    data.status === undefined || data.status === null || data.status === ''
+                        ? null
+                        : data.status;
+                break;
             default:
                 break;
         }
@@ -340,12 +347,22 @@ module.exports = class Peer {
         const { id, type, kind, rtpParameters, producerPaused } = consumer;
 
         if (['simulcast', 'svc'].includes(type) && kind === 'video') {
-            // Start at mid layer; client adapts via setConsumerPreferredLayers by visible tile count.
-            // mediasoup spatial/temporal layers are 0-based (0=low … 2=high for L3).
-            const { scalabilityMode } = rtpParameters.encodings?.[0] || {};
-            const maxSpatial = Math.max(0, (parseInt(String(scalabilityMode || 'L3').substring(1, 2), 10) || 3) - 1);
-            const maxTemporal = Math.max(0, (parseInt(String(scalabilityMode || 'T3').substring(3, 4), 10) || 3) - 1);
-            const spatialLayer = Math.min(1, maxSpatial); // mid by default
+            // Start at highest available layer — no participant-count downscale.
+            // mediasoup layers are 0-based; screen often has a single encoding (maxSpatial=0).
+            const encodings = rtpParameters.encodings || [];
+            const { scalabilityMode } = encodings[0] || {};
+            const mode = String(scalabilityMode || '');
+            const m = mode.match(/L(\d)T(\d)/i);
+            let maxSpatial = Math.max(0, encodings.length - 1);
+            let maxTemporal = 2;
+            if (m) {
+                maxSpatial = Math.max(0, parseInt(m[1], 10) - 1);
+                maxTemporal = Math.max(0, parseInt(m[2], 10) - 1);
+            } else if (encodings.length <= 1) {
+                maxSpatial = 0;
+                maxTemporal = 0;
+            }
+            const spatialLayer = Math.min(1, maxSpatial); // mid by default; client raises visible to high
             const temporalLayer = maxTemporal;
 
             try {

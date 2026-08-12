@@ -203,6 +203,17 @@ const videoFps = getId('videoFps');
 const screenQuality = getId('screenQuality');
 const screenFps = getId('screenFps');
 const screenOptimization = getId('screenOptimization');
+const screenShareSurface = getId('screenShareSurface');
+const screenShareScale = getId('screenShareScale');
+const streamQualityPreset = getId('streamQualityPreset');
+const manualWebcamMbps = getId('manualWebcamMbps');
+const manualWebcamMbpsLabel = getId('manualWebcamMbpsLabel');
+const manualScreenMbps = getId('manualScreenMbps');
+const manualScreenMbpsLabel = getId('manualScreenMbpsLabel');
+const switchManualForceHighLayers = getId('switchManualForceHighLayers');
+const manualQualityApplyBtn = getId('manualQualityApplyBtn');
+const switchScreenShareCrop = getId('switchScreenShareCrop');
+const screenShareCropPickBtn = getId('screenShareCropPickBtn');
 const initVideoSelect = getId('initVideoSelect');
 const microphoneSelect = getId('microphoneSelect');
 const initMicrophoneSelect = getId('initMicrophoneSelect');
@@ -406,9 +417,42 @@ function initDocumentListener() {
     });
 }
 
+function lockMobilePortraitOrientation() {
+    const mobileUa = !!(isMobileDevice || isTabletDevice || isIPadDevice || isMobileSafari);
+    if (!mobileUa) return;
+    try {
+        document.documentElement.classList.add('optrf-portrait-lock', 'is-mobile-ua');
+        document.body?.classList?.add?.('optrf-portrait-lock', 'is-mobile-ua');
+    } catch {
+        /* ignore */
+    }
+    const tryLock = () => {
+        try {
+            const orient = screen?.orientation;
+            if (orient?.lock) {
+                Promise.resolve(orient.lock('portrait')).catch(() => {
+                    Promise.resolve(orient.lock('portrait-primary')).catch(() => {});
+                });
+            }
+        } catch {
+            /* browsers often allow lock only in fullscreen / PWA */
+        }
+    };
+    tryLock();
+    window.addEventListener('orientationchange', () => {
+        tryLock();
+        // Keep UA mobile layout class — do not switch to desktop chrome on landscape width
+        document.documentElement.classList.add('optrf-portrait-lock', 'is-mobile-ua');
+        document.body?.classList?.add?.('optrf-portrait-lock', 'is-mobile-ua');
+    });
+    document.addEventListener('fullscreenchange', tryLock);
+    document.addEventListener('click', tryLock, { once: true, capture: true });
+}
+
 async function initClient() {
     await getThemes();
     setTheme();
+    lockMobilePortraitOrientation();
 
     // Transcription
     transcription = new Transcription();
@@ -612,8 +656,10 @@ function getQueryParam(param) {
 function getRoomId() {
     let queryRoomId = getQueryParam('room');
     let roomId = queryRoomId ? queryRoomId : location.pathname.substring(6);
+    // Empty / random room id → create only via /newroom
     if (roomId == '' || roomId === 'random') {
-        roomId = makeId(12);
+        window.location.replace('/newroom');
+        return 'pending';
     }
     console.log('Direct join', { room: roomId });
     window.localStorage.lastRoom = roomId;
@@ -652,6 +698,48 @@ async function initRoom() {
 
 async function initEnumerateDevices() {
     console.log('01 ----> init Enumerate Devices');
+
+    // Media permission at entry only for room creators (from /newroom?…&create=1)
+    // or explicit presenter reconnect. Guests wait until dialog invite.
+    const createFlag = String(getQueryParam('create') || '').toLowerCase();
+    const allowEntryMedia =
+        createFlag === '1' ||
+        createFlag === 'true' ||
+        (typeof isPeerPresenter === 'function' && isPeerPresenter()) ||
+        (typeof isPresenter !== 'undefined' && isPresenter === true);
+
+    if (!allowEntryMedia && !isSuperAdminObserver) {
+        console.log('01b ----> Skip getUserMedia until dialog / manual start');
+        isAudioAllowed = false;
+        isVideoAllowed = false;
+        try {
+            if (videoSelect && !videoSelect.options.length) {
+                const o = document.createElement('option');
+                o.text = 'Камера';
+                videoSelect.appendChild(o);
+            }
+            if (initVideoSelect && !initVideoSelect.options.length) {
+                const o = document.createElement('option');
+                o.text = 'Камера';
+                initVideoSelect.appendChild(o);
+            }
+            if (microphoneSelect && !microphoneSelect.options.length) {
+                const o = document.createElement('option');
+                o.text = 'Микрофон';
+                microphoneSelect.appendChild(o);
+            }
+            if (initMicrophoneSelect && !initMicrophoneSelect.options.length) {
+                const o = document.createElement('option');
+                o.text = 'Микрофон';
+                initMicrophoneSelect.appendChild(o);
+            }
+        } catch (err) {
+            console.warn('Device placeholder init', err);
+        }
+        await initRoom();
+        return;
+    }
+
     if (isMobileDevice && navigator.mediaDevices?.getUserMedia) {
         let stream;
         try {
@@ -1225,6 +1313,7 @@ function getPeerInfo() {
         peer_video_privacy: isVideoPrivacyActive,
         peer_cam_bubble: false,
         peer_cam_bubble_layout: null,
+        peer_screen_view: null,
         peer_hand: false,
         peer_observer: isSuperAdminObserver,
         is_desktop_device: isDesktopDevice,
@@ -1891,7 +1980,12 @@ function roomIsReady() {
 
     updateMyAvatarResetButtonVisibility();
 
-    BUTTONS.main.exitButton && show(exitButton);
+    // Leave room + chat X: room creator only (not moderators/guests)
+    try {
+        rc.syncCreatorOnlyChrome?.();
+    } catch {
+        /* ignore */
+    }
     BUTTONS.main.shareButton && show(shareButton);
     BUTTONS.main.hideMeButton && show(hideMeButton);
     if (BUTTONS.settings.tabRecording) {
@@ -1900,7 +1994,12 @@ function roomIsReady() {
         hide(startRecButton);
         hide(tabRecordingBtn);
     }
-    BUTTONS.main.chatButton && show(chatButton);
+    if (isPresenter) {
+        BUTTONS.main.chatButton && show(chatButton);
+    } else {
+        hide(chatButton);
+        elemDisplay('chatButton', false);
+    }
     // Participants list: presenter/moderator only
     if (BUTTONS.main.participantsButton && isPresenter) {
         show(participantsButton);
@@ -2001,7 +2100,11 @@ function roomIsReady() {
     }
     BUTTONS.main.whiteboardButton && show(whiteboardButton);
     if (BUTTONS.main.documentPiPButton && showDocumentPipBtn) show(documentPiPButton);
-    BUTTONS.main.settingsButton && show(settingsButton);
+    if (isPresenter) {
+        BUTTONS.main.settingsButton && show(settingsButton);
+    } else if (typeof enforceGuestChrome === 'function') {
+        enforceGuestChrome(true);
+    }
     isAudioAllowed ? show(stopAudioButton) : BUTTONS.main.startAudioButton && show(startAudioButton);
     isVideoAllowed ? show(stopVideoButton) : BUTTONS.main.startVideoButton && show(startVideoButton);
     if (!BUTTONS.main.startAudioButton) {
@@ -2054,9 +2157,10 @@ function roomIsReady() {
         setTimeout(pinChat, 1200);
         setTimeout(pinChat, 2500);
     } else if (rc && isMobileDevice) {
-        // Ensure chat stays closed after join (no leftover .show / pin)
+        // Close chat only if user hasn't opened it yet (avoid fighting open state)
         const closeMobileChat = () => {
             try {
+                if (rc.isChatOpen) return;
                 const el = document.getElementById('chatRoom');
                 if (el) {
                     el.classList.remove('show');
@@ -2069,7 +2173,6 @@ function roomIsReady() {
             }
         };
         setTimeout(closeMobileChat, 200);
-        setTimeout(closeMobileChat, 800);
     }
 
     // Force-hide theme picker
@@ -2467,6 +2570,58 @@ function handleButtons() {
         if (isMobileDevice || !BUTTONS.popup.shareRoomQrOnHover) return;
         hide(qrRoomPopupContainer);
     };
+    const copyRoomLinkButton = getId('copyRoomLinkButton');
+    if (copyRoomLinkButton) {
+        copyRoomLinkButton.classList.remove('hidden');
+        copyRoomLinkButton.style.setProperty('display', 'inline-flex', 'important');
+        copyRoomLinkButton.setAttribute('title', 'Поделиться ссылкой');
+        copyRoomLinkButton.setAttribute('aria-label', 'Поделиться ссылкой');
+        elemDisplay('copyRoomLinkButton', true, 'inline-flex');
+        show(copyRoomLinkButton);
+        copyRoomLinkButton.onclick = () => {
+            copyRoomURL();
+        };
+    }
+    if (typeof enforceGuestChrome === 'function') {
+        enforceGuestChrome(!isPresenter);
+        try {
+            rc?.syncCreatorOnlyChrome?.();
+        } catch {
+            /* ignore */
+        }
+        // Only re-run when role flips — avoid DOM thrash every 1.5s (was freezing UI)
+        let lastPresenterChrome = !!isPresenter;
+        setInterval(() => {
+            const nowPresenter = !!isPresenter;
+            if (nowPresenter === lastPresenterChrome) {
+                try {
+                    rc?.syncCreatorOnlyChrome?.();
+                } catch {
+                    /* ignore */
+                }
+                return;
+            }
+            lastPresenterChrome = nowPresenter;
+            try {
+                enforceGuestChrome(!nowPresenter);
+                rc?.syncCreatorOnlyChrome?.();
+            } catch {
+                /* ignore */
+            }
+        }, 2000);
+    }
+    const joinDiscussionButton = getId('joinDiscussionButton');
+    if (joinDiscussionButton) {
+        joinDiscussionButton.onclick = () => {
+            rc.acceptDiscussionInvite?.();
+        };
+    }
+    const inviteAllDiscussionButton = getId('inviteAllDiscussionButton');
+    if (inviteAllDiscussionButton) {
+        inviteAllDiscussionButton.onclick = () => {
+            rc.inviteAllToDiscussion?.();
+        };
+    }
     hideMeButton.onclick = (e) => {
         if (isHideALLVideosActive) {
             return userLog('warning', 'Для этой функции включите режим фокуса видео', 'top-end', 6000);
@@ -2733,7 +2888,8 @@ function handleButtons() {
         rc.chatSave();
     };
     chatCloseButton.onclick = () => {
-        // Desktop: chat stays pinned; mobile may toggle
+        // Only room creator may use header X; others close via dock chat icon
+        if (!rc?.isRoomCreator?.()) return;
         if (!isMobileDevice) {
             rc.ensurePublicChatPinned();
             return;
@@ -2808,34 +2964,72 @@ function handleButtons() {
     };
     startAudioButton.onclick = async () => {
         const moderator = rc.getModerator();
-        if (moderator.audio_cant_unmute) {
+        const dialogOrSpotlit = !!(rc._broadcastSpotlit || rc._dialogSplitActive);
+        // Same exception as camera: dialog / spotlit guests may unmute
+        if (moderator.audio_cant_unmute && !dialogOrSpotlit) {
             return userLog('warning', 'Модератор запретил включать микрофон', 'top-end', 6000);
         }
         if (isPushToTalkActive) return;
+        if (dialogOrSpotlit) {
+            BUTTONS.main.startAudioButton = true;
+        }
         setAudioButtonsDisabled(true);
         if (!isEnumerateAudioDevices) await initEnumerateAudioDevices();
 
         const producerExist = rc.producerExist(RoomClient.mediaType.audio);
         console.log('START AUDIO producerExist --->', producerExist);
 
-        producerExist
-            ? await rc.resumeProducer(RoomClient.mediaType.audio)
-            : await rc.produce(RoomClient.mediaType.audio, microphoneSelect.value);
-
-        rc.updatePeerInfo(peer_name, socket.id, 'audio', true);
+        try {
+            if (dialogOrSpotlit) {
+                await rc.peerMediaStartForced(RoomClient.mediaType.audio);
+            } else if (producerExist) {
+                await rc.resumeProducer(RoomClient.mediaType.audio);
+            } else {
+                await rc.produce(RoomClient.mediaType.audio, microphoneSelect.value);
+            }
+            rc.updatePeerInfo(peer_name, socket.id, 'audio', true);
+        } catch (err) {
+            console.error('startAudioButton failed', err);
+            setAudioButtonsDisabled(false);
+            if (BUTTONS.main.startAudioButton || dialogOrSpotlit) {
+                show(startAudioButton);
+                elemDisplay('startAudioButton', true);
+            }
+        }
     };
     stopAudioButton.onclick = async () => {
         if (isPushToTalkActive) return;
+        const dialogOrSpotlit = !!(
+            rc._broadcastSpotlit ||
+            rc._dialogSplitActive ||
+            (rc._dialogGuestIds || []).includes(rc.peer_id)
+        );
+        if (dialogOrSpotlit) {
+            BUTTONS.main.startAudioButton = true;
+        }
         setAudioButtonsDisabled(true);
 
         const producerExist = rc.producerExist(RoomClient.mediaType.audio);
         console.log('STOP AUDIO producerExist --->', producerExist);
 
-        producerExist
-            ? await rc.pauseProducer(RoomClient.mediaType.audio)
-            : await rc.closeProducer(RoomClient.mediaType.audio);
-
-        rc.updatePeerInfo(peer_name, socket.id, 'audio', false);
+        try {
+            if (producerExist) {
+                await rc.pauseProducer(RoomClient.mediaType.audio);
+            } else {
+                await rc.closeProducer(RoomClient.mediaType.audio);
+            }
+            rc.updatePeerInfo(peer_name, socket.id, 'audio', false);
+        } finally {
+            // Always restore mute toggle for guests (and dialog participants)
+            if (!isPresenter || dialogOrSpotlit) {
+                if (typeof enforceGuestMicVisible === 'function') enforceGuestMicVisible(false);
+                else syncGuestMicDock?.(false);
+                setAudioButtonsDisabled(false);
+                setTimeout(() => {
+                    if (typeof enforceGuestMicVisible === 'function') enforceGuestMicVisible(false);
+                }, 80);
+            }
+        }
     };
     startVideoButton.onclick = async () => {
         const moderator = rc.getModerator();
@@ -3331,8 +3525,47 @@ async function toggleScreenSharing() {
         const selectedValue = getId('videoFps').options[localStorageSettings.screen_fps].value;
         const customFrameRate = parseInt(selectedValue, 10);
         const frameRate = selectedValue == 'max' ? defaultFrameRate : customFrameRate;
+        const ua = navigator.userAgent || '';
+        const isSafariUa =
+            /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(ua);
+        const surfacePref =
+            localStorageSettings.screen_share_surface === 'monitor' ||
+            localStorageSettings.screen_share_surface === 'browser' ||
+            localStorageSettings.screen_share_surface === 'window'
+                ? localStorageSettings.screen_share_surface
+                : 'window';
+        const videoBase = {};
+        if (surfacePref === 'window' || surfacePref === 'monitor') {
+            videoBase.displaySurface = surfacePref;
+        }
+        // Safari: avoid audio + fixed resolution — otherwise picker may only offer Entire Screen
+        const displayConstraints = isSafariUa
+            ? {
+                  audio: false,
+                  video: {
+                      ...videoBase,
+                      frameRate: typeof frameRate === 'number' ? { ideal: frameRate, max: 30 } : frameRate,
+                  },
+              }
+            : {
+                  audio: true,
+                  video: {
+                      ...videoBase,
+                      frameRate: frameRate,
+                  },
+              };
+        const fallbackVideo = {};
+        if (surfacePref === 'window' || surfacePref === 'monitor') {
+            fallbackVideo.displaySurface = surfacePref;
+        }
         await navigator.mediaDevices
-            .getDisplayMedia({ audio: true, video: { frameRate: frameRate } })
+            .getDisplayMedia(displayConstraints)
+            .catch(() =>
+                navigator.mediaDevices.getDisplayMedia({
+                    audio: false,
+                    video: fallbackVideo,
+                })
+            )
             .then((screenStream) => {
                 if (initVideo.classList.contains('mirror')) {
                     initVideo.classList.toggle('mirror');
@@ -3720,6 +3953,101 @@ function handleSelects() {
         lS.setSettings(localStorageSettings);
         e.target.blur();
     };
+    if (screenShareSurface) {
+        screenShareSurface.onchange = () => {
+            const value = screenShareSurface.value || 'window';
+            localStorageSettings.screen_share_surface = value;
+            lS.setSettings(localStorageSettings);
+            screenShareSurface.blur?.();
+        };
+    }
+    if (screenShareScale) {
+        screenShareScale.onchange = () => {
+            const value = parseInt(screenShareScale.value, 10) || 100;
+            localStorageSettings.screen_share_scale = value;
+            lS.setSettings(localStorageSettings);
+            rc.publishLocalScreenShareView?.(true);
+            screenShareScale.blur?.();
+        };
+    }
+    if (switchScreenShareCrop) {
+        switchScreenShareCrop.onchange = (e) => {
+            const on = e.currentTarget.checked;
+            if (!on) {
+                localStorageSettings.screen_share_crop = '';
+                lS.setSettings(localStorageSettings);
+                rc.cancelScreenShareCropPicker?.();
+                rc.publishLocalScreenShareView?.(true);
+            } else if (!localStorageSettings.screen_share_crop) {
+                // Enable + no area yet → open picker
+                rc.startScreenShareCropPicker?.();
+            } else {
+                rc.publishLocalScreenShareView?.(true);
+            }
+            e.target.blur();
+        };
+    }
+    if (screenShareCropPickBtn) {
+        screenShareCropPickBtn.onclick = () => {
+            rc.startScreenShareCropPicker?.();
+        };
+    }
+    if (streamQualityPreset) {
+        streamQualityPreset.onchange = () => {
+            applyManualSessionQualityFromUi({ toast: true });
+            streamQualityPreset.blur?.();
+        };
+    }
+    const syncManualMbpsLabels = () => {
+        if (manualWebcamMbps && manualWebcamMbpsLabel) {
+            manualWebcamMbpsLabel.textContent = String(manualWebcamMbps.value);
+        }
+        if (manualScreenMbps && manualScreenMbpsLabel) {
+            manualScreenMbpsLabel.textContent = String(manualScreenMbps.value);
+        }
+    };
+    if (manualWebcamMbps) {
+        manualWebcamMbps.oninput = syncManualMbpsLabels;
+        manualWebcamMbps.onchange = () => applyManualSessionQualityFromUi({ toast: true });
+    }
+    if (manualScreenMbps) {
+        manualScreenMbps.oninput = syncManualMbpsLabels;
+        manualScreenMbps.onchange = () => applyManualSessionQualityFromUi({ toast: true });
+    }
+    if (switchManualForceHighLayers) {
+        switchManualForceHighLayers.onchange = () => applyManualSessionQualityFromUi({ toast: true });
+    }
+    if (manualQualityApplyBtn) {
+        manualQualityApplyBtn.onclick = () => applyManualSessionQualityFromUi({ toast: true });
+    }
+
+    async function applyManualSessionQualityFromUi({ toast = false } = {}) {
+        if (!rc?.applyManualSessionQuality) return;
+        const preset = streamQualityPreset?.value || 'max';
+        const webcamMbps = Number(manualWebcamMbps?.value || 6);
+        const screenMbps = Number(manualScreenMbps?.value || 7.5);
+        const forceHighLayers = switchManualForceHighLayers ? !!switchManualForceHighLayers.checked : true;
+        try {
+            const result = await rc.applyManualSessionQuality({
+                preset,
+                webcamMbps,
+                screenMbps,
+                forceHighLayers,
+                persist: true,
+            });
+            syncManualMbpsLabels();
+            if (toast) {
+                userLog(
+                    'info',
+                    `Качество: ${preset}, cam ${result.webcam.high / 1e6}M, screen ${result.screen.high / 1e6}M`,
+                    'top-end',
+                    2800
+                );
+            }
+        } catch (err) {
+            console.warn('applyManualSessionQualityFromUi', err);
+        }
+    }
     switchEveryoneCantChatPrivately.onchange = (e) => {
         const chatCantPrivately = e.currentTarget.checked;
         rc.updateRoomModerator({ type: 'chat_cant_privately', status: chatCantPrivately });
@@ -4324,6 +4652,50 @@ function loadSettingsFromLocalStorage() {
     screenOptimization.selectedIndex = localStorageSettings.screen_optimization;
     videoFps.selectedIndex = localStorageSettings.video_fps;
     screenFps.selectedIndex = localStorageSettings.screen_fps;
+    if (screenShareSurface) {
+        const surface = localStorageSettings.screen_share_surface || 'window';
+        screenShareSurface.value =
+            surface === 'window' || surface === 'monitor' || surface === 'browser' ? surface : 'window';
+    }
+    if (screenShareScale) {
+        const scale = String(localStorageSettings.screen_share_scale || 100);
+        const opt = [...screenShareScale.options].find((o) => o.value === scale);
+        screenShareScale.value = opt ? scale : '100';
+    }
+    if (switchScreenShareCrop) {
+        switchScreenShareCrop.checked = !!localStorageSettings.screen_share_crop;
+    }
+    if (streamQualityPreset) {
+        let preset = localStorageSettings.stream_quality_preset || 'max';
+        if (preset === 'auto') preset = 'max';
+        streamQualityPreset.value = ['max', 'high', 'balanced', 'saver', 'perf'].includes(preset)
+            ? preset
+            : 'max';
+    }
+    if (manualWebcamMbps) {
+        const w = Number(localStorageSettings.manual_webcam_mbps || 6);
+        manualWebcamMbps.value = String(Math.max(1, Math.min(12, w)));
+        if (manualWebcamMbpsLabel) manualWebcamMbpsLabel.textContent = manualWebcamMbps.value;
+    }
+    if (manualScreenMbps) {
+        const s = Number(localStorageSettings.manual_screen_mbps || 7.5);
+        manualScreenMbps.value = String(Math.max(1, Math.min(15, s)));
+        if (manualScreenMbpsLabel) manualScreenMbpsLabel.textContent = manualScreenMbps.value;
+    }
+    if (switchManualForceHighLayers) {
+        switchManualForceHighLayers.checked = localStorageSettings.manual_force_high_layers !== false;
+    }
+    if (rc?.applyManualSessionQuality) {
+        rc.applyManualSessionQuality({
+            preset: streamQualityPreset?.value || 'max',
+            webcamMbps: Number(manualWebcamMbps?.value || 6),
+            screenMbps: Number(manualScreenMbps?.value || 7.5),
+            forceHighLayers: switchManualForceHighLayers ? !!switchManualForceHighLayers.checked : true,
+            persist: false,
+        }).catch(() => {});
+    } else {
+        rc?.setStreamQualityPreset?.(streamQualityPreset?.value || 'max', { persist: false, apply: true });
+    }
     BtnAspectRatio.selectedIndex = localStorageSettings.aspect_ratio;
     BtnVideoObjectFit.selectedIndex = localStorageSettings.video_obj_fit;
     BtnVideoControls.selectedIndex = localStorageSettings.video_controls;
@@ -4394,39 +4766,51 @@ function handleRoomClientEvents() {
         raiseHandButton?.classList.remove('is-hand-raised');
         hand = false;
     });
-    rc.on(RoomClient.EVENTS.startAudio, () => {
-        console.log('Room event: Client start audio');
-        hide(startAudioButton);
-        show(stopAudioButton);
-        setColor(startAudioButton, 'red');
-        setAudioButtonsDisabled(false);
-        audio = true;
-        applyKeepAwake(audio);
-    });
+    const syncGuestMicDock = (micOn) => {
+        if (typeof enforceGuestMicVisible === 'function') {
+            enforceGuestMicVisible(micOn);
+            return;
+        }
+        BUTTONS.main.startAudioButton = true;
+        if (micOn) {
+            hide(startAudioButton);
+            show(stopAudioButton);
+        } else {
+            hide(stopAudioButton);
+            show(startAudioButton);
+        }
+    };
     rc.on(RoomClient.EVENTS.pauseAudio, () => {
         console.log('Room event: Client pause audio');
-        hide(stopAudioButton);
-        BUTTONS.main.startAudioButton && show(startAudioButton);
+        syncGuestMicDock(false);
         setColor(startAudioButton, 'red');
         setAudioButtonsDisabled(false);
         audio = false;
         applyKeepAwake(audio);
+        if (!isPresenter) setTimeout(() => syncGuestMicDock(false), 50);
     });
     rc.on(RoomClient.EVENTS.resumeAudio, () => {
         console.log('Room event: Client resume audio');
-        hide(startAudioButton);
-        BUTTONS.main.startAudioButton && show(stopAudioButton);
+        syncGuestMicDock(true);
         setAudioButtonsDisabled(false);
         audio = true;
         applyKeepAwake(audio);
     });
     rc.on(RoomClient.EVENTS.stopAudio, () => {
         console.log('Room event: Client stop audio');
-        hide(stopAudioButton);
-        show(startAudioButton);
+        syncGuestMicDock(false);
         setAudioButtonsDisabled(false);
         stopMicrophoneProcessing();
         audio = false;
+        applyKeepAwake(audio);
+        if (!isPresenter) setTimeout(() => syncGuestMicDock(false), 50);
+    });
+    rc.on(RoomClient.EVENTS.startAudio, () => {
+        console.log('Room event: Client start audio');
+        syncGuestMicDock(true);
+        setColor(startAudioButton, 'red');
+        setAudioButtonsDisabled(false);
+        audio = true;
         applyKeepAwake(audio);
     });
     rc.on(RoomClient.EVENTS.startVideo, () => {
@@ -5160,6 +5544,19 @@ function getId(id) {
 
 function setupSettingsExtraDropdown() {
     if (!settingsSplit || !settingsExtraDropdown || !settingsExtraToggle || !settingsExtraMenu) return;
+
+    // Guests never get settings / extra menu
+    if (!isPresenter) {
+        hide(settingsSplit);
+        hide(settingsButton);
+        hide(settingsExtraDropdown);
+        hide(settingsExtraMenu);
+        elemDisplay('settingsSplit', false);
+        elemDisplay('settingsButton', false);
+        elemDisplay('settingsExtraDropdown', false);
+        if (typeof enforceGuestChrome === 'function') enforceGuestChrome(true);
+        return;
+    }
 
     // TODO improve me.....
     if (BUTTONS.main.extraButton) {
@@ -8583,12 +8980,14 @@ function updateTimerDisplay(el, seconds) {
 // ####################################################
 
 function toggleExitMenu() {
-    if (!exitMenu) return leaveRoom();
-    // Non-presenters skip the dropdown and leave the room directly
-    if (!isPresenter) {
+    // Only room creator may leave via dock button
+    if (!rc?.isRoomCreator?.()) {
         hide(exitMenu);
-        return leaveRoom();
+        hide(exitButton);
+        hide(exitDropdown);
+        return;
     }
+    if (!exitMenu) return leaveRoom();
     if (exitLeaveAllBtn) show(exitLeaveAllBtn);
     exitMenu.classList.contains('hidden') ? show(exitMenu) : hide(exitMenu);
 }

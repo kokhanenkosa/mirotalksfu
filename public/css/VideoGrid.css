@@ -143,16 +143,23 @@
 }
 
 .peer-name-bar .username {
-    position: static;
-    margin: 0;
-    right: auto;
-    bottom: auto;
+    position: static !important;
+    margin: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    top: auto !important;
+    height: auto !important;
+    padding: 6px 10px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    line-height: 1.2 !important;
 }
 
 .peer-name-bar .peer-name-fs {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    align-self: center;
     width: 32px;
     height: 32px;
     margin: 0;
@@ -164,10 +171,18 @@
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
     cursor: pointer;
     font-size: 14px;
+    flex-shrink: 0;
+    line-height: 1;
 }
 
 .peer-name-bar .peer-name-fs:hover {
     background: var(--optrf-accent, #00a8e8);
+}
+
+.peer-name-bar .peer-name-fs::before {
+    display: block;
+    line-height: 1;
+    margin: 0;
 }
 
 .rec-indicator {
@@ -296,6 +311,7 @@
         bottom: 4px;
         right: 4px;
         max-width: calc(100% - 12px);
+        align-items: center;
     }
 
     .peer-name-bar .peer-name-fs {
@@ -611,6 +627,31 @@ body.cam-bubble-stage #videoPinMediaContainer .has-cam-bubble > video {
     overflow: hidden;
     background: #111;
     pointer-events: none;
+}
+
+/* Mobile: filter drop-shadow often renders as a dark rectangle — prefer ring box-shadow */
+@media (max-width: 768px) {
+    .cam-bubble {
+        -webkit-filter: none !important;
+        filter: none !important;
+    }
+
+    .cam-bubble-clip {
+        -webkit-filter: none !important;
+        filter: none !important;
+        animation: none !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .cam-bubble.fx-pulse .cam-bubble-clip,
+    .cam-bubble.fx-pulse .cam-bubble-aura {
+        animation: none !important;
+        filter: none !important;
+    }
+
+    .cam-bubble-aura {
+        display: none !important;
+    }
 }
 
 .cam-bubble.no-border .cam-bubble-stroke {
@@ -981,11 +1022,23 @@ body.cam-bubble-stage #videoPinMediaContainer .has-cam-bubble > video {
     width: 100%;
     border-radius: 8px;
     border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(0, 0, 0, 0.35);
+    background: #141414;
     color: #e8eef5;
     padding: 6px 8px;
     font-size: 12px;
     font-weight: 600;
+    color-scheme: dark;
+}
+
+#camBubbleControlPanel .cam-bubble-panel-fx select option,
+#camBubbleControlPanel select option {
+    background: #141414;
+    color: #e8eef5;
+}
+
+#camBubbleControlPanel select:focus {
+    outline: 1px solid rgba(0, 168, 232, 0.6);
+    background: #141414;
 }
 
 /* Кружок камеры: всегда явно в доке, когда экран шарится */

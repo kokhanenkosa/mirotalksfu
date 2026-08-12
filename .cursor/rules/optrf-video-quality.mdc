@@ -1,0 +1,41 @@
+---
+description: OPTRF video quality — no artificial limits, realtime first, manual session control
+alwaysApply: true
+---
+
+# OPTRF / Uchilka — качество видео
+
+## Принцип
+
+Ничего лишнего не лимитировать. Цель: **realtime + отличное качество**.
+
+Порядок приоритетов:
+
+1. Стабильный realtime без freeze
+2. Высокое качество главного спикера / screen
+3. Ручное управление создателем и модератором во время сессии
+4. Авто-деградация только как emergency (реальная сеть/CPU), не proactive
+
+## Запрещено без явной просьбы пользователя
+
+- Снижать bitrate / FPS / layers «на всякий случай» из‑за dialog, числа peers, visible tiles, layout
+- Возвращать «auto» как default вместо ручных пресетов
+- Скрытые caps вроде 500 kbps–1 Mbps на transport / producer
+- Mid-call `applyConstraints({ width, height })` для adaptive
+- Трогать protected lecturer producer из layout-событий
+
+## Сервер (ориентир)
+
+- `initialAvailableOutgoingBitrate` ≥ 12 Mbps
+- `maxIncomingBitrate` ≥ 20 Mbps
+- Не занижать без согласования
+
+## Клиент
+
+- Потолки encodings держать высокими (порядок Mbps на high layer)
+- Качество в сессии — **руками**: создатель/модератор меняют профиль и потолки на горячую
+- Adaptive не должен перечёркивать ручной выбор, кроме явного congestion
+
+## При сомнении
+
+Спросить пользователя. Лучше временно чуть снизить secondary consumer, чем резать uplink лектора.
