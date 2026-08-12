@@ -467,6 +467,7 @@
             try {
                 host.ensureLocalCamPlaying?.();
                 host.ensureCamBubblesPlaying?.();
+                host.ensureDialogVideosPlaying?.();
             } catch {
                 /* ignore */
             }
@@ -558,6 +559,11 @@
                 priority = 'high';
                 reason = 'cam_bubble';
                 pause = false;
+            } else if (isDialogGuest || isDialogPresenter) {
+                // Dialog tiles must stay live for ALL viewers (not only the guest themselves)
+                priority = isDialogPresenter ? 'high' : 'high';
+                reason = isDialogGuest ? 'dialog_guest' : 'dialog_presenter';
+                pause = false;
             } else if (hidden && !isScreen && !isPinned) {
                 pause = true;
                 priority = 'low';
@@ -573,12 +579,9 @@
             } else if (isPinned) {
                 priority = 'critical';
                 reason = 'pinned';
-            } else if (isCreator || isDialogPresenter) {
+            } else if (isCreator) {
                 priority = 'high';
-                reason = isCreator ? 'creator' : 'dialog_presenter';
-            } else if (isDialogGuest) {
-                priority = 'medium';
-                reason = 'dialog_guest';
+                reason = 'creator';
             } else {
                 priority = tileCssPx < this.cfg.tilePxLow ? 'low' : 'medium';
                 reason = 'visible_cam';
@@ -713,7 +716,9 @@
                     used + cost > usable &&
                     s === 0 &&
                     (ceiling.secondaryPause || health === 'BAD') &&
-                    PRIORITY_RANK[item.layout.priority] <= PRIORITY_RANK.low
+                    PRIORITY_RANK[item.layout.priority] <= PRIORITY_RANK.low &&
+                    !item.layout.isDialogGuest &&
+                    !item.layout.isDialogPresenter
                 ) {
                     item.desired.pause = true;
                     item.desired.reason = 'bandwidth_budget_pause';
@@ -726,7 +731,9 @@
                     s === 0 &&
                     health === 'BAD' &&
                     PRIORITY_RANK[item.layout.priority] <= PRIORITY_RANK.medium &&
-                    !item.layout.isScreen
+                    !item.layout.isScreen &&
+                    !item.layout.isDialogGuest &&
+                    !item.layout.isDialogPresenter
                 ) {
                     item.desired.pause = true;
                     item.desired.reason = 'bandwidth_budget_pause';

@@ -361,7 +361,7 @@ function handleRulesBroadcasting() {
     BUTTONS.main.breakoutRoomButton = false;
     BUTTONS.main.transcriptionButton = false;
     BUTTONS.main.settingsButton = false;
-    BUTTONS.main.chatButton = false;
+    BUTTONS.main.chatButton = true; // public chat stays available for broadcasting guests
     BUTTONS.participantsList.saveInfoButton = false;
     BUTTONS.settings.lockRoomButton = false;
     BUTTONS.settings.unlockRoomButton = false;
@@ -406,7 +406,12 @@ function handleRulesBroadcasting() {
     elemDisplay('settingsButton', false);
     elemDisplay('settingsSplit', false);
     elemDisplay('settingsExtraDropdown', false);
-    elemDisplay('chatButton', false);
+    elemDisplay('chatButton', true);
+    try {
+        show(chatButton);
+    } catch {
+        /* ignore */
+    }
     elemDisplay('hearOnlyPresenterButton', false);
     elemDisplay('compactHearOnlyBtn', false);
     elemDisplay('tabRTMPStreamingBtn', false);
@@ -421,6 +426,11 @@ function handleRulesBroadcasting() {
             show(copyBtn);
             elemDisplay('copyRoomLinkButton', true);
         }
+    } catch {
+        /* ignore */
+    }
+    try {
+        if (typeof enforceGuestChrome === 'function') enforceGuestChrome(true);
     } catch {
         /* ignore */
     }

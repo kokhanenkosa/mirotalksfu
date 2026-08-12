@@ -689,6 +689,55 @@ body.cam-bubble-stage #chatRoom {
     z-index: 50 !important;
 }
 
+/* Pinned chat: stage must never crawl under the 25% chat column */
+body.chat-pinned.stage-scene-active:not(.dialog-split-mobile) #videoPinMediaContainer,
+body.chat-pinned.cam-bubble-stage:not(.dialog-split-mobile) #videoPinMediaContainer,
+body.chat-pinned.dialog-with-stage:not(.dialog-split-mobile) #videoPinMediaContainer {
+    max-width: 75% !important;
+}
+
+body.chat-pinned.stage-scene-active:not(.dialog-split-mobile):not(.dialog-with-stage) #videoPinMediaContainer,
+body.chat-pinned.cam-bubble-stage:not(.dialog-split-mobile):not(.dialog-with-stage) #videoPinMediaContainer {
+    width: 75% !important;
+}
+
+/* Kill native media chrome (iOS Safari play/pause overlay on WebRTC videos) */
+#videoMediaContainer video,
+#videoPinMediaContainer video,
+.cam-bubble video,
+.Camera video,
+.dialog-split-slot video {
+    -webkit-media-controls: none !important;
+}
+
+#videoMediaContainer video::-webkit-media-controls,
+#videoPinMediaContainer video::-webkit-media-controls,
+.cam-bubble video::-webkit-media-controls,
+.Camera video::-webkit-media-controls {
+    display: none !important;
+    -webkit-appearance: none !important;
+}
+
+#videoMediaContainer video::-webkit-media-controls-enclosure,
+#videoPinMediaContainer video::-webkit-media-controls-enclosure,
+.cam-bubble video::-webkit-media-controls-enclosure,
+.Camera video::-webkit-media-controls-enclosure,
+#videoMediaContainer video::-webkit-media-controls-start-playback-button,
+#videoPinMediaContainer video::-webkit-media-controls-start-playback-button,
+.cam-bubble video::-webkit-media-controls-start-playback-button,
+.Camera video::-webkit-media-controls-start-playback-button,
+#videoMediaContainer video::-webkit-media-controls-overlay-play-button,
+#videoPinMediaContainer video::-webkit-media-controls-overlay-play-button,
+.cam-bubble video::-webkit-media-controls-overlay-play-button,
+.Camera video::-webkit-media-controls-overlay-play-button {
+    display: none !important;
+    -webkit-appearance: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
 /* Stage scene switcher — lives inside .stage-bottom-cluster */
 .stage-scene-bar {
     position: static !important;
