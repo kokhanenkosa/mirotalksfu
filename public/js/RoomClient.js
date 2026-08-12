@@ -8354,15 +8354,6 @@ class RoomClient {
 
     appendMessage(side, img, fromName, fromId, msg, toId, toName, msgId = '', reply = null) {
         const getSide = filterXSS(side);
-        // img is always internally computed (isValidAvatarURL / genAvatarSvg / genGravatar) and is
-        // set via setAttribute — no XSS risk. filterXSS must NOT be applied here because it encodes
-        // '<', '>' and '&' which breaks SVG data URIs produced by genAvatarSvg.
-        const getImg =
-            this.isValidAvatarURL(img) ||
-            (typeof img === 'string' && img.startsWith('data:image/')) ||
-            (typeof img === 'string' && (img.startsWith('../') || img.startsWith('/')))
-                ? img
-                : '';
         const getFromName = filterXSS(fromName);
         const getFromId = filterXSS(fromId);
         const getMsg = filterXSS(msg);
@@ -8375,36 +8366,7 @@ class RoomClient {
         // UI convention is: local user on the right, remote on the left.
         const myMessage = getSide === 'left';
         const messageClass = myMessage ? 'my-message float-right' : 'other-message';
-        const messageData = myMessage ? 'text-end' : 'text-start';
         const safeFromName = this.sanitizeHtml(getFromName);
-        const timeAndName = myMessage
-            ? `<span class="message-data-time">${time}, ${safeFromName} ( me ) </span>`
-            : `<span class="message-data-time">${time}, ${safeFromName} </span>`;
-
-        const formatMessage = this.formatMsg(getMsg);
-        const speechButton = this.isSpeechSynthesisSupported
-            ? `<button 
-                    id="msg-speech-${chatMessagesId}" 
-                    class="mr5" 
-                    onclick="rc.speechElementText('message-${chatMessagesId}')">
-                    ${icons.speech}
-                </button>`
-            : '';
-
-        // getImg is a user-controlled URL; use a temporary id and setAttribute
-        // after insertion to avoid double-decode XSS via insertAdjacentHTML.
-        const msgAvatarTmpId = `msg-av-${chatMessagesId}`;
-        const positionFirst = myMessage
-            ? `${timeAndName}<img id="${msgAvatarTmpId}" alt="avatar" />`
-            : `<img id="${msgAvatarTmpId}" alt="avatar" />${timeAndName}`;
-
-        const reactionEmojis = ['👍', '❤️', '😂', '😮', '😢', '🔥'];
-        const reactionButtons = reactionEmojis
-            .map(
-                (e) =>
-                    `<span class="reaction-emoji-btn" onclick="rc.sendChatReaction('msg-${chatMessagesId}', '${e}')" role="button">${e}</span>`
-            )
-            .join('');
 
         const replyName = filterXSS(reply?.reply_to_peer_name || reply?.fromName || '');
         const replyText = filterXSS(reply?.reply_to_text || reply?.text || '');
@@ -8416,6 +8378,11 @@ class RoomClient {
                    </div>`
                 : '';
 
+        // Telegram-style: name (others) + bubble with text + time; no action button row
+        const nameHtml = myMessage
+            ? ''
+            : `<div class="tg-msg-name">${safeFromName}</div>`;
+
         const newMessageHTML = `
             <li id="msg-${chatMessagesId}"  
                 data-from-id="${this.sanitizeHtml(getFromId)}" 
@@ -8423,45 +8390,38 @@ class RoomClient {
                 data-to-id="${this.sanitizeHtml(getToId)}" 
                 data-to-name="${this.sanitizeHtml(getToName)}"
                 data-msg-id="${this.sanitizeHtml(getMsgId)}"
-                class="clearfix"
+                class="clearfix tg-msg ${myMessage ? 'tg-msg--out' : 'tg-msg--in'}"
             >
-                <div class="message-data ${messageData}">
-                    ${positionFirst}
-                </div>
+                ${nameHtml}
                 <div class="message ${messageClass}">
                     ${replyHtml}
-                    <span class="text-start" id="message-${chatMessagesId}"></span>
+                    <span class="tg-msg-text text-start" id="message-${chatMessagesId}"></span>
+                    <span class="tg-msg-meta">
+                        <span class="tg-msg-time">${time}</span>
+                    </span>
                     <div class="message-reactions"></div>
-                    <hr/>
-                    <div class="about-buttons mt5">
+                    <div class="about-buttons mt5 tg-msg-actions">
                         <button 
                             id="msg-reply-${chatMessagesId}" 
                             class="mr5" 
-                            onclick="rc.setChatReply('msg-${chatMessagesId}')">
+                            onclick="rc.setChatReply('msg-${chatMessagesId}')"
+                            title="Ответить">
                             <i class="fas fa-reply"></i>
                         </button>
                         <button 
                             id="msg-copy-${chatMessagesId}" 
                             class="mr5" 
-                            onclick="rc.copyToClipboard('message-${chatMessagesId}')">
+                            onclick="rc.copyToClipboard('message-${chatMessagesId}')"
+                            title="Копировать">
                             ${icons.paste}
-                        </button>
-                        ${speechButton}
-                        <button 
-                            id="msg-react-${chatMessagesId}" 
-                            class="mr5" 
-                            onclick="rc.toggleReactionPicker('msg-${chatMessagesId}')">
-                            ${icons.smile}
                         </button>
                         <button 
                             id="msg-delete-${chatMessagesId}"   
                             class="mr5" 
-                            onclick="rc.deleteMessage('msg-${chatMessagesId}')">
+                            onclick="rc.deleteMessage('msg-${chatMessagesId}')"
+                            title="Удалить">
                             ${icons.trash}
                         </button>
-                    </div>
-                    <div id="reaction-picker-${chatMessagesId}" class="reaction-picker" style="display:none">
-                        ${reactionButtons}
                     </div>
                 </div>
             </li>
@@ -8484,12 +8444,6 @@ class RoomClient {
             default:
                 chatPrivateMessages.insertAdjacentHTML('beforeend', newMessageHTML);
                 break;
-        }
-
-        const msgAvatarEl = document.getElementById(msgAvatarTmpId);
-        if (msgAvatarEl) {
-            msgAvatarEl.setAttribute('src', getImg);
-            msgAvatarEl.removeAttribute('id');
         }
 
         const message = getId(`message-${chatMessagesId}`);
@@ -14882,6 +14836,31 @@ class RoomClient {
         }
     }
 
+    /** Strip native player chrome from every room <video> (iOS Safari pause/play overlays). */
+    stripAllVideoNativeControls() {
+        try {
+            document
+                .querySelectorAll('#videoMediaContainer video, #videoPinMediaContainer video, .cam-bubble video')
+                .forEach((v) => {
+                    v.controls = false;
+                    v.removeAttribute('controls');
+                    v.setAttribute('playsinline', 'true');
+                    v.setAttribute('webkit-playsinline', 'true');
+                    v.setAttribute('x-webkit-airplay', 'deny');
+                    v.disablePictureInPicture = true;
+                    try {
+                        v.controlsList?.add?.('nodownload');
+                        v.controlsList?.add?.('nofullscreen');
+                        v.controlsList?.add?.('noremoteplayback');
+                    } catch {
+                        /* ignore */
+                    }
+                });
+        } catch {
+            /* ignore */
+        }
+    }
+
     /** First / ongoing user gestures unlock room videos (kills iOS overlay play button). */
     installVideoGestureUnlock() {
         if (this._videoGestureUnlockInstalled) return;
@@ -14892,11 +14871,10 @@ class RoomClient {
             if (now - last < 1200) return;
             last = now;
             try {
+                this.stripAllVideoNativeControls();
                 document
                     .querySelectorAll('#videoMediaContainer video, #videoPinMediaContainer video, .cam-bubble video')
                     .forEach((v) => {
-                        v.controls = false;
-                        v.removeAttribute('controls');
                         if (v.srcObject) v.play?.().catch?.(() => {});
                     });
                 this.ensureDialogVideosPlaying?.();
@@ -14907,6 +14885,8 @@ class RoomClient {
         ['pointerdown', 'touchstart', 'click'].forEach((evt) => {
             document.addEventListener(evt, unlock, { capture: true, passive: true });
         });
+        // Keep stripping even if something re-enables controls
+        setInterval(() => this.stripAllVideoNativeControls(), 2000);
     }
 
     clearStageSceneVisuals() {
@@ -15035,22 +15015,38 @@ class RoomClient {
             .filter((id) => id && id !== creatorId && id !== modId)
             .map((id) => {
                 let wrap = this.getCameraWrapByPeerId(id);
+                // Prefer live camera tile, never screen
+                if (wrap?.dataset?.mediaKind === 'screen') {
+                    wrap =
+                        this.getPeerMediaTile?.(id, 'video') ||
+                        this.getId(id + '__videoOff') ||
+                        null;
+                }
                 if (wrap && wrap.classList.contains('dialog-split-placeholder')) wrap = null;
+                if (!wrap) wrap = this.getPeerMediaTile?.(id, 'video') || null;
                 if (!wrap) wrap = this.getId(id + '__videoOff');
                 if (!wrap) wrap = this.ensureDialogPlaceholder(id);
                 if (wrap) {
                     wrap.dataset.dialogHidden = '0';
                     wrap.dataset.stageHidden = '0';
-                    wrap.style.display = '';
-                    wrap.style.removeProperty('display');
+                    wrap.dataset.stageProtected = '1';
+                    wrap.style.setProperty('display', 'block', 'important');
+                    wrap.style.removeProperty('visibility');
+                    wrap.style.opacity = '1';
                     wrap.classList.remove('cam-bubble-source-hidden');
+                    // Beat CSS body.stage-scene-active .Camera[data-stage-hidden='1']
+                    wrap.removeAttribute('data-stage-hidden');
+                    wrap.dataset.stageHidden = '0';
                     if (wrap.parentElement !== this.videoMediaContainer) {
                         this.videoMediaContainer.appendChild(wrap);
                     }
                     const v = wrap.querySelector('video');
                     try {
-                        // Avoid restart flicker — only resume if paused
-                        if (v?.paused) v.play?.().catch?.(() => {});
+                        if (v) {
+                            v.controls = false;
+                            v.removeAttribute('controls');
+                            if (v.paused) v.play?.().catch?.(() => {});
+                        }
                     } catch {
                         /* ignore */
                     }
@@ -15198,6 +15194,7 @@ class RoomClient {
         } catch {
             /* ignore */
         }
+        // Instant class swap — CSS disables transitions while stage-scene-active
         document.body.classList.add('stage-scene-active');
         document.body.classList.toggle('stage-scene-1', mode === 1);
         document.body.classList.toggle('stage-scene-2', mode === 2);
@@ -15230,7 +15227,8 @@ class RoomClient {
 
         if (mode === 2) {
             this._stageSceneActive = false;
-            if (modId) this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: true });
+            // Don't flash-reveal creator cam before pin — strip bubble quietly
+            if (modId) this.stripCamBubble(modId, { camPeerId: creatorId, revealCam: false });
             document.querySelectorAll('.Camera[data-stage-hidden="1"], [data-stage-hidden="1"]').forEach((el) => {
                 if (el.dataset?.stageProtected === '1') return;
                 el.style.display = '';
@@ -17312,9 +17310,13 @@ class RoomClient {
         video.style.setProperty('top', `${topPct}%`, 'important');
         video.style.setProperty('object-fit', 'cover', 'important');
         video.style.setProperty('object-position', '50% 50%', 'important');
-        video.style.setProperty('transform', 'none', 'important');
+        video.style.setProperty('transform', 'translateZ(0)', 'important');
         video.style.setProperty('transform-origin', 'center center', 'important');
         video.style.setProperty('border-radius', '0', 'important');
+        // Avoid GPU filter/mask tearing on motion (Safari / Chrome)
+        video.style.setProperty('backface-visibility', 'hidden', 'important');
+        video.style.setProperty('-webkit-backface-visibility', 'hidden', 'important');
+        video.style.setProperty('image-rendering', 'auto', 'important');
 
         bubble.dataset.layout = this.encodeCamBubbleLayout(L);
         if (editable) {
@@ -17843,10 +17845,20 @@ class RoomClient {
             bubbleVideo = document.createElement('video');
             bubbleVideo.autoplay = true;
             bubbleVideo.playsInline = true;
+            bubbleVideo.setAttribute('playsinline', 'true');
+            bubbleVideo.setAttribute('webkit-playsinline', 'true');
             bubbleVideo.muted = true;
+            bubbleVideo.controls = false;
+            bubbleVideo.removeAttribute('controls');
             bubbleVideo.disablePictureInPicture = true;
+            bubbleVideo.setAttribute('controlslist', 'nodownload nofullscreen noremoteplayback');
+            bubbleVideo.setAttribute('x-webkit-airplay', 'deny');
             layers.clip.appendChild(bubbleVideo);
         }
+        bubbleVideo.controls = false;
+        bubbleVideo.removeAttribute('controls');
+        bubbleVideo.setAttribute('playsinline', 'true');
+        bubbleVideo.setAttribute('webkit-playsinline', 'true');
 
         if (bubbleVideo.srcObject !== sourceVideo.srcObject) {
             bubbleVideo.srcObject = sourceVideo.srcObject;

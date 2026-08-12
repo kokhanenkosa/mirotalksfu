@@ -708,14 +708,22 @@ body.chat-pinned.cam-bubble-stage:not(.dialog-split-mobile):not(.dialog-with-sta
 .Camera video,
 .dialog-split-slot video {
     -webkit-media-controls: none !important;
+    pointer-events: none !important;
 }
 
 #videoMediaContainer video::-webkit-media-controls,
 #videoPinMediaContainer video::-webkit-media-controls,
 .cam-bubble video::-webkit-media-controls,
-.Camera video::-webkit-media-controls {
+.Camera video::-webkit-media-controls,
+#videoMediaContainer video::-webkit-media-controls-panel,
+#videoPinMediaContainer video::-webkit-media-controls-panel,
+.cam-bubble video::-webkit-media-controls-panel,
+.Camera video::-webkit-media-controls-panel {
     display: none !important;
     -webkit-appearance: none !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 #videoMediaContainer video::-webkit-media-controls-enclosure,
@@ -729,13 +737,77 @@ body.chat-pinned.cam-bubble-stage:not(.dialog-split-mobile):not(.dialog-with-sta
 #videoMediaContainer video::-webkit-media-controls-overlay-play-button,
 #videoPinMediaContainer video::-webkit-media-controls-overlay-play-button,
 .cam-bubble video::-webkit-media-controls-overlay-play-button,
-.Camera video::-webkit-media-controls-overlay-play-button {
+.Camera video::-webkit-media-controls-overlay-play-button,
+#videoMediaContainer video::-webkit-media-controls-play-button,
+#videoPinMediaContainer video::-webkit-media-controls-play-button,
+.cam-bubble video::-webkit-media-controls-play-button,
+.Camera video::-webkit-media-controls-play-button {
     display: none !important;
     -webkit-appearance: none !important;
     opacity: 0 !important;
     pointer-events: none !important;
     width: 0 !important;
     height: 0 !important;
+    position: absolute !important;
+    top: -9999px !important;
+    z-index: -1 !important;
+}
+
+/* Invisible hit-layer not needed if video itself ignores pointer events */
+#videoMediaContainer video,
+#videoPinMediaContainer video,
+.cam-bubble video,
+.Camera > video,
+.dialog-split-slot > video {
+    pointer-events: none !important;
+}
+
+/* Seamless stage scene switches — no fades / slides */
+body.stage-scene-active #videoPinMediaContainer,
+body.stage-scene-active #videoMediaContainer,
+body.stage-scene-active .Camera,
+body.stage-scene-active .Camera video,
+body.stage-scene-active .cam-bubble,
+body.stage-scene-active .cam-bubble video,
+body.stage-scene-active .cam-bubble-clip,
+body.dialog-with-stage #videoPinMediaContainer,
+body.dialog-with-stage #videoMediaContainer,
+body.dialog-with-stage .Camera {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Dialog guest strip must stay visible beside stage */
+body.dialog-with-stage.dialog-split-active #videoMediaContainer {
+    min-width: 120px !important;
+    min-height: 120px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+body.dialog-with-stage.dialog-split-active #videoMediaContainer .dialog-split-slot,
+body.dialog-with-stage.dialog-split-active #videoMediaContainer .Camera {
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 3 !important;
+}
+
+body.dialog-with-stage.dialog-split-active #videoMediaContainer .dialog-split-slot[data-stage-hidden='0'],
+body.dialog-with-stage.dialog-split-active #videoMediaContainer .Camera[data-stage-hidden='0'] {
+    display: block !important;
+}
+
+/* Reduce GPU filter tearing on creator circle while person moves */
+.cam-bubble-clip,
+.cam-bubble-aura,
+.cam-bubble-stroke {
+    animation: none !important;
+}
+.cam-bubble:not(.panel-open) .cam-bubble-clip {
+    filter: none !important;
+}
+.cam-bubble:not(.panel-open) .cam-bubble-aura {
+    display: none !important;
 }
 
 /* Stage scene switcher — lives inside .stage-bottom-cluster */
@@ -2193,4 +2265,209 @@ html.is-mobile-ua #videoPinMediaContainer {
 .screen-share-crop-pick p {
     margin: 0;
     font-size: 12px;
+}
+
+/* ========== Telegram-style public chat ========== */
+#chatRoom.chat-container {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border-left: 1px solid #2b2b2b !important;
+}
+
+#chatRoom .chat-header {
+    padding: 10px 12px !important;
+    border-bottom: 1px solid #2b2b2b !important;
+    background: #1c1c1c !important;
+}
+
+#chatRoom .chat-about h6 {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}
+
+#chatRoom .chat-about img,
+#chatRoom .message-data,
+#chatRoom .chat-option-buttons .dropdown,
+#chatRoom #chatTogglePin,
+#chatRoom #chatMaxButton,
+#chatRoom #chatMinButton,
+#chatRoom #chatGhostButton,
+#chatRoom #chatSaveButton,
+#chatRoom .chat-toolbar-hint,
+#chatRoom #chatCharCount,
+#chatRoom #chatMarkdownButton,
+#chatRoom #chatCleanTextButton,
+#chatRoom #chatShowParticipantsListBtn,
+#chatRoom .empty-chat-img,
+#chatRoom hr {
+    display: none !important;
+}
+
+#chatRoom .chat-option-buttons {
+    gap: 4px;
+}
+
+#chatRoom .chat-history {
+    background: #0e0e0e !important;
+    padding: 10px 12px 16px !important;
+}
+
+#chatRoom .empty-chat-notice {
+    padding: 40px 16px !important;
+}
+#chatRoom .empty-chat-title {
+    font-size: 15px !important;
+    color: #aaa !important;
+}
+#chatRoom .empty-chat-desc {
+    font-size: 13px !important;
+    color: #666 !important;
+}
+
+#chatRoom .chat-history ul {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+#chatRoom .tg-msg {
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0 0 8px !important;
+    clear: both !important;
+}
+
+#chatRoom .tg-msg--out {
+    align-items: flex-end !important;
+}
+
+#chatRoom .tg-msg--in {
+    align-items: flex-start !important;
+}
+
+#chatRoom .tg-msg-name {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #6cb6ff !important;
+    margin: 0 0 2px 10px !important;
+}
+
+#chatRoom .chat-history .message {
+    position: relative !important;
+    display: inline-block !important;
+    max-width: min(85%, 420px) !important;
+    min-width: 48px !important;
+    padding: 6px 10px 4px !important;
+    border-radius: 14px !important;
+    border: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    line-height: 1.35 !important;
+    font-size: 14.5px !important;
+    float: none !important;
+    transform: none !important;
+}
+
+#chatRoom .chat-history .message:hover {
+    transform: none !important;
+}
+
+#chatRoom .chat-history .my-message {
+    background: #2b5278 !important;
+    border-bottom-right-radius: 4px !important;
+    color: #fff !important;
+}
+
+#chatRoom .chat-history .other-message {
+    background: #182533 !important;
+    border-bottom-left-radius: 4px !important;
+    color: #fff !important;
+}
+
+#chatRoom .tg-msg-text {
+    display: block !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    padding-right: 52px !important;
+    min-height: 1.2em;
+}
+
+#chatRoom .tg-msg-meta {
+    display: flex !important;
+    justify-content: flex-end !important;
+    margin-top: -14px !important;
+    margin-left: 8px !important;
+    float: right !important;
+    position: relative !important;
+    top: 2px;
+}
+
+#chatRoom .tg-msg-time {
+    font-size: 11px !important;
+    color: rgba(255, 255, 255, 0.45) !important;
+    white-space: nowrap !important;
+}
+
+#chatRoom .tg-msg-actions,
+#chatRoom .about-buttons,
+#chatRoom .message-reactions,
+#chatRoom .reaction-picker {
+    display: none !important;
+}
+
+#chatRoom .tg-msg:hover .tg-msg-actions {
+    display: flex !important;
+    gap: 2px !important;
+    margin-top: 4px !important;
+    justify-content: flex-end !important;
+}
+
+#chatRoom .tg-msg-actions button {
+    background: transparent !important;
+    border: none !important;
+    color: rgba(255, 255, 255, 0.45) !important;
+    padding: 2px 6px !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+}
+
+#chatRoom .chat-msg-reply {
+    border-left: 2px solid #6cb6ff !important;
+    padding: 2px 0 4px 8px !important;
+    margin: 0 0 4px !important;
+    background: transparent !important;
+}
+
+#chatRoom .chat-message {
+    background: #1c1c1c !important;
+    border-top: 1px solid #2b2b2b !important;
+    padding: 8px 10px !important;
+}
+
+#chatRoom .chat-input-container {
+    background: #242424 !important;
+    border-radius: 20px !important;
+    border: none !important;
+    padding: 6px 8px 6px 14px !important;
+}
+
+#chatRoom .chat-input-textarea {
+    background: transparent !important;
+    border: none !important;
+    color: #eee !important;
+    font-size: 15px !important;
+    padding: 6px 0 !important;
+}
+
+#chatRoom .chat-toolbar {
+    display: flex !important;
+    padding: 4px 2px 0 !important;
+}
+
+#chatRoom .chat-send-btn {
+    background: #2b5278 !important;
+    border-radius: 50% !important;
+    width: 36px !important;
+    height: 36px !important;
 }

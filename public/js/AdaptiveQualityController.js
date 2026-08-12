@@ -554,14 +554,13 @@
             let reason = 'visible_cam';
             let pause = false;
 
-            // Cam-bubble source must never be paused (shared MediaStreamTrack feeds the circle)
-            if (isBubbleSource) {
-                priority = 'high';
-                reason = 'cam_bubble';
+            // Cam-bubble source + creator must never be paused / layer-flickered
+            if (isBubbleSource || isCreator) {
+                priority = 'critical';
+                reason = isBubbleSource ? 'cam_bubble' : 'creator';
                 pause = false;
             } else if (isDialogGuest || isDialogPresenter) {
-                // Dialog tiles must stay live for ALL viewers (not only the guest themselves)
-                priority = isDialogPresenter ? 'high' : 'high';
+                priority = 'high';
                 reason = isDialogGuest ? 'dialog_guest' : 'dialog_presenter';
                 pause = false;
             } else if (hidden && !isScreen && !isPinned) {
@@ -579,9 +578,6 @@
             } else if (isPinned) {
                 priority = 'critical';
                 reason = 'pinned';
-            } else if (isCreator) {
-                priority = 'high';
-                reason = 'creator';
             } else {
                 priority = tileCssPx < this.cfg.tilePxLow ? 'low' : 'medium';
                 reason = 'visible_cam';
@@ -628,7 +624,15 @@
 
         _desiredSpatialFromTile(layout, max) {
             const maxS = max.spatialLayer | 0;
-            if (layout.priority === 'critical') return maxS;
+            // Creator / cam-bubble / screen: always top layer — mid-layer switches tear the picture
+            if (
+                layout.priority === 'critical' ||
+                layout.isBubbleSource ||
+                layout.isCreator ||
+                layout.isScreen
+            ) {
+                return maxS;
+            }
             const px = layout.tileCssPx || 320;
             if (px >= this.cfg.tilePxHigh) return maxS;
             if (px >= this.cfg.tilePxMid) return Math.min(1, maxS);
@@ -771,10 +775,15 @@
             let targetT = item.desired.temporalLayer | 0;
             let reason = item.desired.reason || item.layout.reason;
 
-            // Startup: prefer mid if never set
+            // Startup: prefer mid if never set — except critical (creator/bubble/screen)
             if (st.spatialLayer == null && !targetPause) {
                 const maxS = item.max?.spatialLayer ?? 2;
-                if (item.layout.priority === 'critical') {
+                if (
+                    item.layout.priority === 'critical' ||
+                    item.layout.isBubbleSource ||
+                    item.layout.isCreator ||
+                    item.layout.isScreen
+                ) {
                     targetS = maxS;
                 } else {
                     targetS = Math.min(targetS, Math.min(1, maxS));

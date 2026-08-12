@@ -17,7 +17,7 @@
     justify-content: center;
     vertical-align: middle;
     overflow: hidden;
-    transition: opacity 500ms;
+    transition: none;
     /* border: 3px solid blue; */
 }
 
